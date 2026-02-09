@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: interview-hub
+
+  datasource:
+    url: jdbc:postgresql://db.hoplgxtflkjweiczfsxf.supabase.co:5432/postgres
+    username: postgres
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://hoplgxtflkjweiczfsxf.supabase.co/auth/v1
+          jwk-set-uri: https://hoplgxtflkjweiczfsxf.supabase.co/auth/v1/.well-known/jwks.json
+
+logging:
+  level:
+    com.gm2dev.interview_hub: DEBUG
+    org.springframework.security: DEBUG
