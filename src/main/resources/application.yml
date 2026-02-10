@@ -3,8 +3,8 @@ spring:
     name: interview-hub
 
   datasource:
-    url: jdbc:postgresql://db.hoplgxtflkjweiczfsxf.supabase.co:5432/postgres
-    username: postgres
+    url: ${DB_URL:jdbc:postgresql://db.${SUPABASE_IDENTIFIER}.supabase.co:5432/postgres}
+    username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
@@ -21,8 +21,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: https://hoplgxtflkjweiczfsxf.supabase.co/auth/v1
-          jwk-set-uri: https://hoplgxtflkjweiczfsxf.supabase.co/auth/v1/.well-known/jwks.json
+          issuer-uri: ${JWT_ISSUER_URI:https://${SUPABASE_IDENTIFIER}.supabase.co/auth/v1}
+          jwk-set-uri: ${JWT_JWK_SET_URI:https://${SUPABASE_IDENTIFIER}.supabase.co/auth/v1/.well-known/jwks.json}
 
 logging:
   level:

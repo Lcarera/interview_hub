@@ -7,7 +7,7 @@ plugins {
 
 group = 'com.gm2dev'
 version = '0.0.1-SNAPSHOT'
-description = 'Demo project for Spring Boot'
+description = 'Interview hub is a centralization of all interviews and shadowing requests'
 
 java {
 	toolchain {
@@ -38,6 +38,9 @@ dependencies {
 
 	// Validation
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// Actuator (health checks, metrics)
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
 	// JSON Processing (for JSONB converter)
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -97,4 +100,11 @@ jacocoTestCoverageVerification {
 
 tasks.named('check') {
 	dependsOn jacocoTestCoverageVerification
+}
+
+tasks.named('bootBuildImage') {
+	imageName = "interview-hub:${version}"
+	environment = [
+		'BP_JVM_VERSION': '25'
+	]
 }

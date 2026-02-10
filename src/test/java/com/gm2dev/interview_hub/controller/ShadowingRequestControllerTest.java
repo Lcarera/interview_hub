@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ShadowingRequestController.class)
 @Import(SecurityConfig.class)
+@org.springframework.test.context.ActiveProfiles("test")
 class ShadowingRequestControllerTest {
 
     @Autowired

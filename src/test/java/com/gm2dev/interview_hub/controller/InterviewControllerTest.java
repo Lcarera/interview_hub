@@ -33,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(InterviewController.class)
 @Import(SecurityConfig.class)
+@org.springframework.test.context.ActiveProfiles("test")
 class InterviewControllerTest {
 
     @Autowired
