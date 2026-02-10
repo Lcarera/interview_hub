@@ -18,6 +18,10 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -91,14 +95,18 @@ class InterviewControllerTest {
     }
 
     @Test
-    void listInterviews_returns200() throws Exception {
+    void listInterviews_returns200WithPageStructure() throws Exception {
         Interview interview = buildInterview();
-        when(interviewService.findAll()).thenReturn(List.of(interview));
+        Page<Interview> page = new PageImpl<>(List.of(interview));
+        when(interviewService.findAll(any(Pageable.class))).thenReturn(page);
 
         mockMvc.perform(get("/api/interviews")
                         .with(jwt()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(interview.getId().toString()));
+                .andExpect(jsonPath("$.content[0].id").value(interview.getId().toString()))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.number").value(0));
     }
 
     @Test

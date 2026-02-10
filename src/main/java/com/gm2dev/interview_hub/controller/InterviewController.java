@@ -6,10 +6,11 @@ import com.gm2dev.interview_hub.service.dto.CreateInterviewRequest;
 import com.gm2dev.interview_hub.service.dto.UpdateInterviewRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -26,8 +27,8 @@ public class InterviewController {
     }
 
     @GetMapping
-    public List<Interview> listInterviews() {
-        return interviewService.findAll();
+    public Page<Interview> listInterviews(Pageable pageable) {
+        return interviewService.findAll(pageable);
     }
 
     @GetMapping("/{id}")

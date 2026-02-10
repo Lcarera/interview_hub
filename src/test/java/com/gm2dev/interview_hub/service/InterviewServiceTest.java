@@ -11,13 +11,14 @@ import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -101,8 +102,8 @@ class InterviewServiceTest {
         interviewService.createInterview(new CreateInterviewRequest(profileId, null, null, "Java", start, end));
         interviewService.createInterview(new CreateInterviewRequest(profileId, null, null, "Python", start, end));
 
-        List<Interview> all = interviewService.findAll();
-        assertTrue(all.size() >= 2);
+        Page<Interview> all = interviewService.findAll(Pageable.unpaged());
+        assertTrue(all.getTotalElements() >= 2);
     }
 
     @Test
