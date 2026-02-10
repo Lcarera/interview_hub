@@ -38,3 +38,10 @@ out/
 
 ### Environment ###
 .env
+
+### Claude Code ###
+.claude/settings.local.json
+
+### Supabase local ###
+supabase/.temp/
+supabase/.branches/
