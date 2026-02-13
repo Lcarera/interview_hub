@@ -1,0 +1,274 @@
+{
+	"info": {
+		"name": "Interview Hub",
+		"description": "Interview Hub API collection.\n\n## Authentication\n1. Open `{{base_url}}/auth/google` in your **browser**\n2. Sign in with your @gm2dev.com Google account\n3. Copy the `token` from the JSON response\n4. Paste it into the `jwt_token` environment variable\n\nThe pre-request script will auto-check expiration and extract your profile ID.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"const token = pm.environment.get('jwt_token');",
+					"if (!token) {",
+					"    console.warn('No JWT token set. Open ' + pm.environment.get('base_url') + '/auth/google in your browser to authenticate.');",
+					"    return;",
+					"}",
+					"try {",
+					"    const payload = JSON.parse(atob(token.split('.')[1]));",
+					"    const expiry = payload.exp * 1000;",
+					"    if (Date.now() > expiry) {",
+					"        throw new Error('JWT expired. Re-authenticate: open ' + pm.environment.get('base_url') + '/auth/google in your browser and paste the new token into jwt_token.');",
+					"    }",
+					"    pm.environment.set('profile_id', payload.sub);",
+					"} catch (e) {",
+					"    if (e.message.includes('JWT expired')) throw e;",
+					"    console.error('Failed to decode JWT: ' + e.message);",
+					"}"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Interviews",
+			"description": "CRUD operations for interviews. Creating/updating/deleting interviews syncs with Google Calendar.",
+			"item": [
+				{
+					"name": "Create Interview",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const body = pm.response.json();",
+									"    pm.environment.set('interview_id', body.id);",
+									"    console.log('Set interview_id = ' + body.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"interviewerId\": \"{{profile_id}}\",\n    \"techStack\": \"Java/Spring\",\n    \"candidateInfo\": {\n        \"name\": \"Jane Doe\",\n        \"level\": \"Senior\",\n        \"email\": \"jane.doe@example.com\"\n    },\n    \"startTime\": \"2026-02-20T15:00:00Z\",\n    \"endTime\": \"2026-02-20T16:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/interviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "interviews"]
+						},
+						"description": "Creates a new interview and a Google Calendar event on the interviewer's calendar. The `interview_id` environment variable is auto-set from the response."
+					},
+					"response": []
+				},
+				{
+					"name": "List Interviews",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/interviews?page=0&size=20&sort=startTime,desc",
+							"host": ["{{base_url}}"],
+							"path": ["api", "interviews"],
+							"query": [
+								{ "key": "page", "value": "0" },
+								{ "key": "size", "value": "20" },
+								{ "key": "sort", "value": "startTime,desc" }
+							]
+						},
+						"description": "Returns a paginated list of all interviews."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Interview",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/interviews/{{interview_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "interviews", "{{interview_id}}"]
+						},
+						"description": "Returns a single interview by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Interview",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"techStack\": \"Java/Spring/Hibernate\",\n    \"candidateInfo\": {\n        \"name\": \"Jane Doe\",\n        \"level\": \"Senior\",\n        \"notes\": \"Updated candidate info\"\n    },\n    \"startTime\": \"2026-02-20T16:00:00Z\",\n    \"endTime\": \"2026-02-20T17:00:00Z\",\n    \"status\": \"SCHEDULED\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/interviews/{{interview_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "interviews", "{{interview_id}}"]
+						},
+						"description": "Updates an interview and syncs changes to the Google Calendar event."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Interview",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/interviews/{{interview_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "interviews", "{{interview_id}}"]
+						},
+						"description": "Deletes an interview and cancels the Google Calendar event."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Shadowing Requests",
+			"description": "Manage requests to shadow (observe) interviews. Approving a request adds the shadower to the Google Calendar event.",
+			"item": [
+				{
+					"name": "Create Shadowing Request",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const body = pm.response.json();",
+									"    pm.environment.set('shadowing_request_id', body.id);",
+									"    console.log('Set shadowing_request_id = ' + body.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"shadowerId\": \"{{profile_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/interviews/{{interview_id}}/shadowing-requests",
+							"host": ["{{base_url}}"],
+							"path": ["api", "interviews", "{{interview_id}}", "shadowing-requests"]
+						},
+						"description": "Requests to shadow an interview. The `shadowing_request_id` environment variable is auto-set from the response."
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Shadowing Request",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/shadowing-requests/{{shadowing_request_id}}/approve",
+							"host": ["{{base_url}}"],
+							"path": ["api", "shadowing-requests", "{{shadowing_request_id}}", "approve"]
+						},
+						"description": "Approves a pending shadowing request and adds the shadower as an attendee to the Google Calendar event."
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Shadowing Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reason\": \"Interview is already at full capacity\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/shadowing-requests/{{shadowing_request_id}}/reject",
+							"host": ["{{base_url}}"],
+							"path": ["api", "shadowing-requests", "{{shadowing_request_id}}", "reject"]
+						},
+						"description": "Rejects a shadowing request with an optional reason."
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Shadowing Request",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/shadowing-requests/{{shadowing_request_id}}/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["api", "shadowing-requests", "{{shadowing_request_id}}", "cancel"]
+						},
+						"description": "Cancels a shadowing request."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/actuator/health",
+							"host": ["{{base_url}}"],
+							"path": ["actuator", "health"]
+						},
+						"description": "Public health check endpoint. No authentication required."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
