@@ -7,8 +7,11 @@ services:
       DB_URL: ${DB_URL}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
-      JWT_ISSUER_URI: https://${SUPABASE_IDENTIFIER}.supabase.co/auth/v1
-      JWT_JWK_SET_URI: https://${SUPABASE_IDENTIFIER}.supabase.co/auth/v1/.well-known/jwks.json
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      JWT_SIGNING_SECRET: ${JWT_SIGNING_SECRET}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
     env_file:
       - path: .env
         required: false

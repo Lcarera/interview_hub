@@ -19,8 +19,6 @@ public class CreateInterviewRequest {
     @NotNull
     private UUID interviewerId;
 
-    private String googleEventId;
-
     private Map<String, Object> candidateInfo;
 
     @NotBlank

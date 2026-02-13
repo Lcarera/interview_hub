@@ -23,6 +23,7 @@ public class ShadowingRequestService {
     private final ShadowingRequestRepository shadowingRequestRepository;
     private final InterviewRepository interviewRepository;
     private final ProfileRepository profileRepository;
+    private final GoogleCalendarService googleCalendarService;
 
     @Transactional
     public ShadowingRequest requestShadowing(UUID interviewId, UUID shadowerId) {
@@ -57,7 +58,22 @@ public class ShadowingRequestService {
         requirePendingStatus(request);
 
         request.setStatus(ShadowingRequestStatus.APPROVED);
-        return shadowingRequestRepository.save(request);
+        ShadowingRequest saved = shadowingRequestRepository.save(request);
+
+        Interview interview = request.getInterview();
+        if (interview.getGoogleEventId() != null) {
+            try {
+                googleCalendarService.addAttendee(
+                        interview.getInterviewer(),
+                        interview.getGoogleEventId(),
+                        request.getShadower().getEmail());
+            } catch (Exception e) {
+                log.warn("Failed to add shadower {} to Calendar event {}: {}",
+                        request.getShadower().getEmail(), interview.getGoogleEventId(), e.getMessage());
+            }
+        }
+
+        return saved;
     }
 
     @Transactional

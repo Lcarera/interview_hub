@@ -1,6 +1,7 @@
 package com.gm2dev.interview_hub.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
 import com.gm2dev.interview_hub.domain.*;
 import com.gm2dev.interview_hub.service.ShadowingRequestService;
@@ -41,6 +42,9 @@ class ShadowingRequestControllerTest {
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
+
+    @MockitoBean
+    private JwtProperties jwtProperties;
 
     private ShadowingRequest buildShadowingRequest(ShadowingRequestStatus status) {
         Profile shadower = new Profile(UUID.randomUUID(), "shadower@example.com", "interviewer", null);

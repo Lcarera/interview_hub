@@ -16,8 +16,6 @@ import java.util.Map;
 @AllArgsConstructor
 public class UpdateInterviewRequest {
 
-    private String googleEventId;
-
     private Map<String, Object> candidateInfo;
 
     @NotBlank

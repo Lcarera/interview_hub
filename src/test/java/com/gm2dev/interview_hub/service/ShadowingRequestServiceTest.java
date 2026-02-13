@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -18,6 +19,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -36,6 +38,9 @@ class ShadowingRequestServiceTest {
 
     @Autowired
     private ShadowingRequestRepository shadowingRequestRepository;
+
+    @MockitoBean
+    private GoogleCalendarService googleCalendarService;
 
     private Profile interviewer;
     private Profile shadower;
@@ -150,5 +155,17 @@ class ShadowingRequestServiceTest {
     void cancelShadowingRequest_withNonExistentId_throwsEntityNotFoundException() {
         assertThrows(EntityNotFoundException.class,
                 () -> shadowingRequestService.cancelShadowingRequest(UUID.randomUUID()));
+    }
+
+    @Test
+    void approveShadowingRequest_withGoogleEventId_invitesShaderToCalendar() throws Exception {
+        interview.setGoogleEventId("gcal-shadow-event");
+        interview = interviewRepository.save(interview);
+
+        ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
+        shadowingRequestService.approveShadowingRequest(request.getId());
+
+        verify(googleCalendarService).addAttendee(
+                interviewer, "gcal-shadow-event", "shadower@example.com");
     }
 }

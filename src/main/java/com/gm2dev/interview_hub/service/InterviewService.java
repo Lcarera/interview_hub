@@ -24,6 +24,7 @@ public class InterviewService {
 
     private final InterviewRepository interviewRepository;
     private final ProfileRepository profileRepository;
+    private final GoogleCalendarService googleCalendarService;
 
     @Transactional
     public Interview createInterview(CreateInterviewRequest request) {
@@ -34,14 +35,23 @@ public class InterviewService {
 
         Interview interview = new Interview();
         interview.setInterviewer(interviewer);
-        interview.setGoogleEventId(request.getGoogleEventId());
         interview.setCandidateInfo(request.getCandidateInfo());
         interview.setTechStack(request.getTechStack());
         interview.setStartTime(request.getStartTime());
         interview.setEndTime(request.getEndTime());
         interview.setStatus(InterviewStatus.SCHEDULED);
 
-        return interviewRepository.save(interview);
+        interview = interviewRepository.save(interview);
+
+        try {
+            String googleEventId = googleCalendarService.createEvent(interviewer, interview);
+            interview.setGoogleEventId(googleEventId);
+            interview = interviewRepository.save(interview);
+        } catch (Exception e) {
+            log.warn("Failed to create Google Calendar event for interview {}: {}", interview.getId(), e.getMessage());
+        }
+
+        return interview;
     }
 
     @Transactional(readOnly = true)
@@ -59,19 +69,37 @@ public class InterviewService {
     public Interview updateInterview(UUID id, UpdateInterviewRequest request) {
         Interview interview = findById(id);
 
-        interview.setGoogleEventId(request.getGoogleEventId());
         interview.setCandidateInfo(request.getCandidateInfo());
         interview.setTechStack(request.getTechStack());
         interview.setStartTime(request.getStartTime());
         interview.setEndTime(request.getEndTime());
         interview.setStatus(request.getStatus());
 
-        return interviewRepository.save(interview);
+        interview = interviewRepository.save(interview);
+
+        if (interview.getGoogleEventId() != null) {
+            try {
+                googleCalendarService.updateEvent(interview.getInterviewer(), interview);
+            } catch (Exception e) {
+                log.warn("Failed to update Google Calendar event {}: {}", interview.getGoogleEventId(), e.getMessage());
+            }
+        }
+
+        return interview;
     }
 
     @Transactional
     public void deleteInterview(UUID id) {
         Interview interview = findById(id);
+
+        if (interview.getGoogleEventId() != null) {
+            try {
+                googleCalendarService.deleteEvent(interview.getInterviewer(), interview.getGoogleEventId());
+            } catch (Exception e) {
+                log.warn("Failed to delete Google Calendar event {}: {}", interview.getGoogleEventId(), e.getMessage());
+            }
+        }
+
         interviewRepository.delete(interview);
     }
 }
