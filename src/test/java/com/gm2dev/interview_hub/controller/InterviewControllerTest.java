@@ -1,6 +1,7 @@
 package com.gm2dev.interview_hub.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
@@ -52,9 +53,16 @@ class InterviewControllerTest {
     @MockitoBean
     private JwtDecoder jwtDecoder;
 
+    @MockitoBean
+    private JwtProperties jwtProperties;
+
     private Interview buildInterview() {
         UUID id = UUID.randomUUID();
         Profile interviewer = new Profile(UUID.randomUUID(), "test@example.com", "interviewer", null);
+        interviewer.setGoogleSub("google-sub-123");
+        interviewer.setGoogleAccessToken("encrypted-access-token");
+        interviewer.setGoogleRefreshToken("encrypted-refresh-token");
+        interviewer.setGoogleTokenExpiry(Instant.now().plus(1, ChronoUnit.HOURS));
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
@@ -118,7 +126,13 @@ class InterviewControllerTest {
                         .with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(interview.getId().toString()))
-                .andExpect(jsonPath("$.techStack").value("Java"));
+                .andExpect(jsonPath("$.techStack").value("Java"))
+                .andExpect(jsonPath("$.interviewer.id").exists())
+                .andExpect(jsonPath("$.interviewer.email").exists())
+                .andExpect(jsonPath("$.interviewer.googleAccessToken").doesNotExist())
+                .andExpect(jsonPath("$.interviewer.googleRefreshToken").doesNotExist())
+                .andExpect(jsonPath("$.interviewer.googleTokenExpiry").doesNotExist())
+                .andExpect(jsonPath("$.interviewer.googleSub").doesNotExist());
     }
 
     @Test

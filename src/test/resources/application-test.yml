@@ -12,12 +12,15 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8080/auth
-          jwk-set-uri: http://localhost:8080/auth/jwks
+app:
+  google:
+    client-id: test-client-id
+    client-secret: test-client-secret
+    redirect-uri: http://localhost:8080/auth/google/callback
+  jwt:
+    signing-secret: test-signing-secret-that-is-at-least-32-bytes-long
+    expiration-seconds: 3600
+  token-encryption-key: test-encryption-key-32chars-long!
 
 logging:
   level:

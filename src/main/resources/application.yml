@@ -17,12 +17,15 @@ spring:
         format_sql: true
     show-sql: false
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${JWT_ISSUER_URI:https://${SUPABASE_IDENTIFIER}.supabase.co/auth/v1}
-          jwk-set-uri: ${JWT_JWK_SET_URI:https://${SUPABASE_IDENTIFIER}.supabase.co/auth/v1/.well-known/jwks.json}
+app:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID}
+    client-secret: ${GOOGLE_CLIENT_SECRET}
+    redirect-uri: ${APP_BASE_URL:http://localhost:8080}/auth/google/callback
+  jwt:
+    signing-secret: ${JWT_SIGNING_SECRET}
+    expiration-seconds: 3600
+  token-encryption-key: ${TOKEN_ENCRYPTION_KEY}
 
 logging:
   level:
