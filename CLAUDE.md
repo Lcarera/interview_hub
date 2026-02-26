@@ -13,9 +13,14 @@ Interview Hub is a Spring Boot 4.0.2 application for managing technical intervie
 ./gradlew build
 ```
 
-**Run the application:**
+**Build the Docker image:**
 ```bash
-./gradlew bootRun
+./gradlew bootBuildImage
+```
+
+**Run the application (requires `.env` file with env vars):**
+```bash
+docker compose up
 ```
 
 **Run tests:**
@@ -72,10 +77,11 @@ The application models a three-entity system:
 ### Key Technical Details
 
 **Authentication:**
-- Google OAuth2 login flow: `GET /auth/google` → Google consent → callback returns app JWT
-- Only `@gm2dev.com` Google Workspace accounts are allowed (validated via `hd` claim)
-- App issues its own HMAC-SHA256 JWTs for API authentication
-- Google OAuth tokens (access + refresh) are AES-encrypted at rest on the Profile entity
+- Login flow: `GET /auth/google` → Google consent → `GET /auth/google/callback` → returns app JWT
+- `POST /auth/token` is a Postman-compatible endpoint: accepts `code` + `redirect_uri` form params and returns `{access_token, token_type, expires_in}`
+- Only `@gm2dev.com` Google Workspace accounts are allowed — validated via `hd` claim both as OAuth hint and post-exchange assertion
+- App issues its own HMAC-SHA256 JWTs (1-hour expiry); the `NimbusJwtEncoder` is constructed inside `AuthService`, not a Spring bean
+- Google OAuth tokens (access + refresh) are AES-encrypted at rest using `TOKEN_ENCRYPTION_KEY`; the salt is derived deterministically from the key's `hashCode()` so decryption survives restarts
 - Scopes requested: openid, email, profile, calendar.events
 
 **Database:**
@@ -87,8 +93,8 @@ The application models a three-entity system:
 - OAuth2 Resource Server with HMAC-SHA256 JWT validation (app-issued tokens)
 - Custom JWT converter extracts "role" claim and prefixes with "ROLE_"
 - Stateless sessions (no server-side session management)
-- Public endpoints: `/actuator/health`, `/auth/google`, `/auth/google/callback`
-- All other endpoints require authentication via `Authorization: Bearer <token>`
+- Public endpoints: `/actuator/health`, `/auth/google`, `/auth/google/callback`, `/auth/token`
+- All other endpoints require `Authorization: Bearer <token>`
 
 **Google Calendar Integration:**
 - Creating an interview → creates a Google Calendar event on the interviewer's calendar
@@ -98,12 +104,35 @@ The application models a three-entity system:
 - Calendar failures are logged but don't block the primary operation
 
 **JSONB Handling:**
-- Custom `JsonbConverter` handles Map<String, Object> to PostgreSQL JSONB conversion
-- Applied to Interview.candidateInfo field for flexible candidate data
+- `Interview.candidateInfo` (a `Map<String, Object>`) uses `@JdbcTypeCode(SqlTypes.JSON)` + `@Column(columnDefinition = "jsonb")` — the Hibernate 6 native approach
+- A `JsonbConverter` (`AttributeConverter`) also exists in `util/` but is **not** currently applied to any entity
+
+**Error Handling:**
+- `GlobalExceptionHandler` (`@RestControllerAdvice`) maps `EntityNotFoundException` → 404, `IllegalStateException` → 409 Conflict
+
+**Role Assignment:**
+- New profiles created on first OAuth login default to `role = "interviewer"`. There is no admin role assignment flow.
 
 **Logging:**
 - DEBUG level enabled for application code and Spring Security
-- Services use SLF4j (@Slf4j annotation)
+- Services use SLF4j (`@Slf4j` annotation)
+
+## Testing
+
+Two distinct test styles are used — never mix them:
+
+**Controller Tests (`@WebMvcTest`):**
+- Annotated `@WebMvcTest(XController.class)` + `@Import(SecurityConfig.class)` + `@ActiveProfiles("test")`
+- Use `@MockitoBean` (Spring Boot 3.4+ API) for the service layer, `JwtDecoder`, and `JwtProperties`
+- Authenticate test requests using `.with(jwt())` from `spring-security-test`
+
+**Service Tests (`@SpringBootTest`):**
+- `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback` — full Spring context with H2
+- `GoogleCalendarService` is always `@MockitoBean`'d since it makes real HTTP calls
+- `AuthServiceTest` and `GoogleCalendarServiceTest` use pure `@ExtendWith(MockitoExtension.class)` (no Spring context)
+- These two services have package-private methods (`exchangeCodeForTokens`, `buildCalendarClient`) specifically to enable `spy()`-based interception without reflection
+
+**Coverage:** JaCoCo enforces 80% branch coverage. `InterviewHubApplication` and `GoogleCalendarService` are excluded from coverage checks.
 
 ## Environment Variables
 
@@ -131,4 +160,15 @@ Key libraries:
 
 ## Database Schema Management
 
-The application uses `hibernate.ddl-auto: validate`, meaning Hibernate will NOT create or modify the schema. Database migrations are managed via Supabase migrations in `supabase/migrations/`.
+The application uses `hibernate.ddl-auto: validate`, meaning Hibernate will NOT create or modify the schema. Database migrations are managed via Supabase SQL files in `supabase/migrations/`. Tests use H2 with `ddl-auto: create-drop`.
+
+## Local Development
+
+To run locally:
+1. Create a `.env` file in the project root with all required env vars (see Environment Variables above)
+2. Build the image: `./gradlew bootBuildImage`
+3. Start the container: `docker compose up`
+
+No local database service is defined — the app connects to Supabase directly. Do NOT use `./gradlew bootRun`; the `spring-boot-docker-compose` devtools will attempt to manage Docker and fail if Docker Desktop's Linux engine isn't available.
+- Health check: `GET /actuator/health`
+- The `InterviewController` `listInterviews` endpoint accepts Spring Data `Pageable` query params (`page`, `size`, `sort`) automatically.
