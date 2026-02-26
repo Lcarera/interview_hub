@@ -2,11 +2,11 @@ package com.gm2dev.interview_hub.controller;
 
 import com.gm2dev.interview_hub.domain.ShadowingRequest;
 import com.gm2dev.interview_hub.service.ShadowingRequestService;
-import com.gm2dev.interview_hub.service.dto.CreateShadowingRequest;
 import com.gm2dev.interview_hub.service.dto.RejectShadowingRequest;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -20,8 +20,9 @@ public class ShadowingRequestController {
     @PostMapping("/api/interviews/{interviewId}/shadowing-requests")
     @ResponseStatus(HttpStatus.CREATED)
     public ShadowingRequest requestShadowing(@PathVariable UUID interviewId,
-                                             @Valid @RequestBody CreateShadowingRequest request) {
-        return shadowingRequestService.requestShadowing(interviewId, request.getShadowerId());
+                                             @AuthenticationPrincipal Jwt jwt) {
+        UUID shadowerId = UUID.fromString(jwt.getSubject());
+        return shadowingRequestService.requestShadowing(interviewId, shadowerId);
     }
 
     @PostMapping("/api/shadowing-requests/{id}/cancel")

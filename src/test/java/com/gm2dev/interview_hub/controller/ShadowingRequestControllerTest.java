@@ -5,7 +5,6 @@ import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
 import com.gm2dev.interview_hub.domain.*;
 import com.gm2dev.interview_hub.service.ShadowingRequestService;
-import com.gm2dev.interview_hub.service.dto.CreateShadowingRequest;
 import com.gm2dev.interview_hub.service.dto.RejectShadowingRequest;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
@@ -74,12 +73,8 @@ class ShadowingRequestControllerTest {
 
         when(shadowingRequestService.requestShadowing(interviewId, shadowerId)).thenReturn(shadowingRequest);
 
-        CreateShadowingRequest request = new CreateShadowingRequest(shadowerId);
-
         mockMvc.perform(post("/api/interviews/{interviewId}/shadowing-requests", interviewId)
-                        .with(jwt())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .with(jwt().jwt(j -> j.subject(shadowerId.toString()))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(shadowingRequest.getId().toString()))
                 .andExpect(jsonPath("$.status").value("PENDING"));
