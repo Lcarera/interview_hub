@@ -178,22 +178,13 @@
 					],
 					"request": {
 						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"shadowerId\": \"{{profile_id}}\"\n}"
-						},
+						"header": [],
 						"url": {
 							"raw": "{{base_url}}/api/interviews/{{interview_id}}/shadowing-requests",
 							"host": ["{{base_url}}"],
 							"path": ["api", "interviews", "{{interview_id}}", "shadowing-requests"]
 						},
-						"description": "Requests to shadow an interview. The `shadowing_request_id` environment variable is auto-set from the response."
+						"description": "Requests to shadow an interview. The shadower identity is derived from the Bearer token — no request body needed. The `shadowing_request_id` environment variable is auto-set from the response."
 					},
 					"response": []
 				},
