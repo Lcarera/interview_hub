@@ -24,7 +24,10 @@
       "Bash(echo:*)",
       "WebSearch",
       "Bash(./gradlew build:*)",
-      "Bash(supabase status:*)"
+      "Bash(supabase status:*)",
+      "Bash(java:*)",
+      "Bash(scoop bucket:*)",
+      "Skill(commit-commands:commit)"
     ]
   }
 }
