@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -49,15 +50,13 @@ class AuthControllerTest {
     }
 
     @Test
-    void callback_withValidCode_returns200WithToken() throws Exception {
+    void callback_withValidCode_redirectsToFrontend() throws Exception {
         AuthResponse authResponse = new AuthResponse("jwt-token-value", 3600, "user@gm2dev.com");
         when(authService.handleCallback("valid-code")).thenReturn(authResponse);
 
         mockMvc.perform(get("/auth/google/callback").param("code", "valid-code"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("jwt-token-value"))
-                .andExpect(jsonPath("$.expiresIn").value(3600))
-                .andExpect(jsonPath("$.email").value("user@gm2dev.com"));
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", containsString("/auth/callback#token=jwt-token-value")));
     }
 
     @Test

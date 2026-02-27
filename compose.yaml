@@ -12,6 +12,7 @@ services:
       JWT_SIGNING_SECRET: ${JWT_SIGNING_SECRET}
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
     env_file:
       - path: .env
         required: false
@@ -21,3 +22,12 @@ services:
       timeout: 10s
       start_period: 30s
       retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      app:
+        condition: service_healthy
