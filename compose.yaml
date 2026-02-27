@@ -22,3 +22,12 @@ services:
       timeout: 10s
       start_period: 30s
       retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      app:
+        condition: service_healthy
