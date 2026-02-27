@@ -4,26 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Interview Hub is a Spring Boot 4.0.2 application for managing technical interviews and shadowing requests. It uses Java 25, PostgreSQL with JPA/Hibernate, Google OAuth2 authentication (restricted to @gm2dev.com accounts), and Google Calendar integration for managing interview events.
+Interview Hub is a fullstack application for managing technical interviews and shadowing requests. The backend is Spring Boot 4.0.2 (Java 25, PostgreSQL, JPA/Hibernate). The frontend is Angular 21 with Angular Material, served via nginx. Authentication is Google OAuth2 restricted to `@gm2dev.com` accounts, with Google Calendar integration for managing interview events.
 
 ## Build & Run Commands
 
-**Build the project:**
+**Build the backend:**
 ```bash
 ./gradlew build
 ```
 
-**Build the Docker image:**
+**Build the backend Docker image:**
 ```bash
 ./gradlew bootBuildImage
 ```
 
-**Run the application (requires `.env` file with env vars):**
+**Run the full stack (requires `.env` file with env vars):**
 ```bash
 docker compose up
 ```
+This starts two services: `app` (Spring Boot on port 8080) and `frontend` (Angular + nginx on port 80).
 
-**Run tests:**
+**Run backend tests:**
 ```bash
 ./gradlew test
 ```
@@ -43,17 +44,41 @@ docker compose up
 ./gradlew clean
 ```
 
+**Frontend commands (from `frontend/` directory, requires Bun):**
+```bash
+bun install          # install dependencies
+bun run start        # dev server (port 4200)
+bun run build        # production build
+bun run test         # run Vitest unit tests
+```
+
 ## Architecture
 
-### Package Structure
+### Backend Package Structure
 
-- `domain/` - JPA entities (Interview, Profile, ShadowingRequest)
-- `repository/` - Spring Data JPA repositories
-- `service/` - Business logic layer (InterviewService, ShadowingRequestService, AuthService, GoogleCalendarService, TokenEncryptionService)
-- `service/dto/` - Data transfer objects
-- `controller/` - REST controllers (InterviewController, ShadowingRequestController, AuthController)
+All under `src/main/java/com/gm2dev/interview_hub/`:
+
+- `domain/` - JPA entities (Interview, Profile, ShadowingRequest) and enums (InterviewStatus, ShadowingRequestStatus)
+- `repository/` - Spring Data JPA repositories (InterviewRepository, ProfileRepository, ShadowingRequestRepository)
+- `service/` - Business logic (InterviewService, ShadowingRequestService, AuthService, GoogleCalendarService, TokenEncryptionService)
+- `service/dto/` - Data transfer objects (AuthResponse, CreateInterviewRequest, UpdateInterviewRequest, RejectShadowingRequest)
+- `controller/` - REST controllers (InterviewController, ShadowingRequestController, AuthController, GlobalExceptionHandler)
 - `config/` - Spring configuration (SecurityConfig, GoogleOAuthProperties, JwtProperties)
 - `util/` - Utility classes (JsonbConverter)
+
+### Frontend Structure
+
+All under `frontend/src/`:
+
+- `app/core/models/` - TypeScript interfaces (interview, shadowing-request, profile)
+- `app/core/services/` - HTTP services (AuthService, InterviewService, ShadowingRequestService)
+- `app/core/guards/` - Route guards (authGuard)
+- `app/core/interceptors/` - HTTP interceptors (authInterceptor — adds Bearer token)
+- `app/features/auth/` - Login page and OAuth callback handler
+- `app/features/home/` - Main authenticated page
+- `environments/` - Environment configs (dev points to `localhost:8080`; prod uses empty string for same-origin via nginx proxy)
+
+Routes use lazy loading. The auth guard redirects unauthenticated users to `/login`.
 
 ### Core Domain Model
 
@@ -66,23 +91,25 @@ The application models a three-entity system:
    - JSONB field for flexible candidate data storage
    - Google Calendar integration via `googleEventId` (server-managed)
    - Time window (startTime, endTime)
-   - Status tracking (SCHEDULED, etc.)
+   - Status tracking (SCHEDULED, COMPLETED, CANCELLED)
    - One-to-many relationship with ShadowingRequests
 
 3. **ShadowingRequest** - Requests from team members to observe interviews:
    - References to both Interview and shadower (Profile)
-   - Status tracking (PENDING, APPROVED, etc.)
+   - Status tracking (PENDING, APPROVED, REJECTED, CANCELLED)
+   - `reason` field for rejection explanations
    - On approval, shadower is invited to the Google Calendar event
 
 ### Key Technical Details
 
 **Authentication:**
-- Login flow: `GET /auth/google` → Google consent → `GET /auth/google/callback` → returns app JWT
+- Login flow: `GET /auth/google` → Google consent → `GET /auth/google/callback` → redirects to frontend with token in URL hash fragment
 - `POST /auth/token` is a Postman-compatible endpoint: accepts `code` + `redirect_uri` form params and returns `{access_token, token_type, expires_in}`
 - Only `@gm2dev.com` Google Workspace accounts are allowed — validated via `hd` claim both as OAuth hint and post-exchange assertion
 - App issues its own HMAC-SHA256 JWTs (1-hour expiry); the `NimbusJwtEncoder` is constructed inside `AuthService`, not a Spring bean
 - Google OAuth tokens (access + refresh) are AES-encrypted at rest using `TOKEN_ENCRYPTION_KEY`; the salt is derived deterministically from the key's `hashCode()` so decryption survives restarts
 - Scopes requested: openid, email, profile, calendar.events
+- Frontend stores token, email, and expiry in localStorage (keys: `ih_token`, `ih_email`, `ih_expires_at`)
 
 **Database:**
 - PostgreSQL (Supabase-hosted) with JSONB support for semi-structured data
@@ -117,6 +144,18 @@ The application models a three-entity system:
 - DEBUG level enabled for application code and Spring Security
 - Services use SLF4j (`@Slf4j` annotation)
 
+## Docker & Deployment
+
+**Docker Compose** (`compose.yaml`) runs two services:
+- `app` — Spring Boot backend on port 8080 (built with `./gradlew bootBuildImage`, image `interview-hub:0.0.1-SNAPSHOT`)
+- `frontend` — Angular app built via multi-stage Dockerfile (Bun 1.2 → nginx 1.27) on port 80
+
+**Nginx** (`frontend/nginx.conf`) acts as reverse proxy:
+- Routes `/auth/google`, `/auth/token`, `/interviews`, `/shadowing-requests`, `/actuator` → `http://app:8080`
+- All other paths → Angular SPA (`try_files $uri $uri/ /index.html`)
+
+In production the frontend uses same-origin requests (empty `apiUrl`), so all API calls go through nginx. In dev mode (`bun run start`), the frontend calls `http://localhost:8080` directly.
+
 ## Testing
 
 Two distinct test styles are used — never mix them:
@@ -132,6 +171,8 @@ Two distinct test styles are used — never mix them:
 - `AuthServiceTest` and `GoogleCalendarServiceTest` use pure `@ExtendWith(MockitoExtension.class)` (no Spring context)
 - These two services have package-private methods (`exchangeCodeForTokens`, `buildCalendarClient`) specifically to enable `spy()`-based interception without reflection
 
+**Frontend Tests:** Vitest with jsdom environment. Run with `bun run test` from `frontend/`.
+
 **Coverage:** JaCoCo enforces 80% branch coverage. `InterviewHubApplication` and `GoogleCalendarService` are excluded from coverage checks.
 
 ## Environment Variables
@@ -145,30 +186,52 @@ Required for runtime:
 - `JWT_SIGNING_SECRET` - HMAC-SHA256 key for app JWT signing (min 32 bytes)
 - `TOKEN_ENCRYPTION_KEY` - AES key for encrypting Google OAuth tokens at rest
 - `APP_BASE_URL` - Application base URL (default: http://localhost:8080)
+- `FRONTEND_URL` - Frontend URL for OAuth callback redirects (default in compose: http://localhost)
 
 ## Dependencies
 
-Key libraries:
-- Spring Boot Web MVC
+**Backend:**
+- Spring Boot 4.0.2 Web MVC
 - Spring Data JPA with PostgreSQL
 - Spring Security OAuth2 Resource Server + Client
+- Spring Boot Actuator
 - Google Calendar API v3
 - Google Auth Library (OAuth2 HTTP)
 - Lombok (code generation)
 - Jackson (JSON processing for JSONB)
 - H2 (test database)
 
+**Frontend:**
+- Angular 21.2 with Angular Material 21.2
+- Bun 1.2 (package manager)
+- TypeScript 5.9
+- Vitest 4 (unit testing with jsdom)
+- RxJS 7.8
+
 ## Database Schema Management
 
-The application uses `hibernate.ddl-auto: validate`, meaning Hibernate will NOT create or modify the schema. Database migrations are managed via Supabase SQL files in `supabase/migrations/`. Tests use H2 with `ddl-auto: create-drop`.
+The application uses `hibernate.ddl-auto: validate`, meaning Hibernate will NOT create or modify the schema. Database migrations are managed via Supabase SQL files in `supabase/migrations/`:
+
+1. `001_create_schema.sql` — profiles, interviews, shadowing_requests tables with indexes
+2. `002_add_reason_to_shadowing_requests.sql` — adds `reason` TEXT column
+3. `003_add_google_oauth_columns.sql` — adds google_sub, encrypted token columns, token expiry
+
+Tests use H2 with `ddl-auto: create-drop`.
 
 ## Local Development
 
-To run locally:
+To run the full stack locally:
 1. Create a `.env` file in the project root with all required env vars (see Environment Variables above)
-2. Build the image: `./gradlew bootBuildImage`
-3. Start the container: `docker compose up`
+2. Build the backend image: `./gradlew bootBuildImage`
+3. Start both services: `docker compose up`
 
 No local database service is defined — the app connects to Supabase directly. Do NOT use `./gradlew bootRun`; the `spring-boot-docker-compose` devtools will attempt to manage Docker and fail if Docker Desktop's Linux engine isn't available.
+
+For frontend-only development: `cd frontend && bun install && bun run start` (assumes backend is running on port 8080).
+
 - Health check: `GET /actuator/health`
 - The `InterviewController` `listInterviews` endpoint accepts Spring Data `Pageable` query params (`page`, `size`, `sort`) automatically.
+
+## API Testing
+
+A Postman collection and environment file are available in `postman/` for manual API testing.
