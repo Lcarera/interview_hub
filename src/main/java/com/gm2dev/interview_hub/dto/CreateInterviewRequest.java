@@ -1,4 +1,4 @@
-package com.gm2dev.interview_hub.service.dto;
+package com.gm2dev.interview_hub.dto;
 
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;

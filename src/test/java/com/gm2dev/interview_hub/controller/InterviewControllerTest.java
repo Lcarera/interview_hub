@@ -8,9 +8,10 @@ import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.ShadowingRequest;
 import com.gm2dev.interview_hub.domain.ShadowingRequestStatus;
+import com.gm2dev.interview_hub.dto.CreateInterviewRequest;
+import com.gm2dev.interview_hub.dto.UpdateInterviewRequest;
 import com.gm2dev.interview_hub.service.InterviewService;
-import com.gm2dev.interview_hub.service.dto.CreateInterviewRequest;
-import com.gm2dev.interview_hub.service.dto.UpdateInterviewRequest;
+
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

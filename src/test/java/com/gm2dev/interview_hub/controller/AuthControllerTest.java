@@ -2,8 +2,9 @@ package com.gm2dev.interview_hub.controller;
 
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
+import com.gm2dev.interview_hub.dto.AuthResponse;
 import com.gm2dev.interview_hub.service.AuthService;
-import com.gm2dev.interview_hub.service.dto.AuthResponse;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;

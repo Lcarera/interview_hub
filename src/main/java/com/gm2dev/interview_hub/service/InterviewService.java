@@ -3,10 +3,11 @@ package com.gm2dev.interview_hub.service;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.dto.CreateInterviewRequest;
+import com.gm2dev.interview_hub.dto.UpdateInterviewRequest;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
-import com.gm2dev.interview_hub.service.dto.CreateInterviewRequest;
-import com.gm2dev.interview_hub.service.dto.UpdateInterviewRequest;
+
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

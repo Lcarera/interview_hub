@@ -4,8 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
 import com.gm2dev.interview_hub.domain.*;
+import com.gm2dev.interview_hub.dto.RejectShadowingRequest;
 import com.gm2dev.interview_hub.service.ShadowingRequestService;
-import com.gm2dev.interview_hub.service.dto.RejectShadowingRequest;
+
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

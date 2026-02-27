@@ -1,7 +1,8 @@
 package com.gm2dev.interview_hub.controller;
 
+import com.gm2dev.interview_hub.dto.AuthResponse;
 import com.gm2dev.interview_hub.service.AuthService;
-import com.gm2dev.interview_hub.service.dto.AuthResponse;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

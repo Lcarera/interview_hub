@@ -1,8 +1,9 @@
 package com.gm2dev.interview_hub.controller;
 
 import com.gm2dev.interview_hub.domain.ShadowingRequest;
+import com.gm2dev.interview_hub.dto.RejectShadowingRequest;
 import com.gm2dev.interview_hub.service.ShadowingRequestService;
-import com.gm2dev.interview_hub.service.dto.RejectShadowingRequest;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

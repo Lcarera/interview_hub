@@ -1,9 +1,10 @@
 package com.gm2dev.interview_hub.controller;
 
 import com.gm2dev.interview_hub.domain.Interview;
+import com.gm2dev.interview_hub.dto.CreateInterviewRequest;
+import com.gm2dev.interview_hub.dto.UpdateInterviewRequest;
 import com.gm2dev.interview_hub.service.InterviewService;
-import com.gm2dev.interview_hub.service.dto.CreateInterviewRequest;
-import com.gm2dev.interview_hub.service.dto.UpdateInterviewRequest;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

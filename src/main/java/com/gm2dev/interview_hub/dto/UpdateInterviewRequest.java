@@ -1,4 +1,4 @@
-package com.gm2dev.interview_hub.service.dto;
+package com.gm2dev.interview_hub.dto;
 
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import jakarta.validation.constraints.Future;
