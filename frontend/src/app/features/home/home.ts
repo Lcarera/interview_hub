@@ -10,7 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
   template: `
     <div class="home-container">
       <h1>Interview Hub</h1>
-      <p>Logged in as: {{ auth.email() }}</p>
+      <p>Logged in as: {{ email() }}</p>
       <button mat-stroked-button (click)="logout()">Logout</button>
     </div>
   `,
@@ -27,11 +27,12 @@ import { AuthService } from '../../core/services/auth.service';
   `]
 })
 export class HomeComponent {
-  auth = inject(AuthService);
-  private router = inject(Router);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+  protected readonly email = this.authService.email;
 
   logout(): void {
-    this.auth.logout();
+    this.authService.logout();
     this.router.navigate(['/login']);
   }
 }
