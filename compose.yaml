@@ -12,6 +12,7 @@ services:
       JWT_SIGNING_SECRET: ${JWT_SIGNING_SECRET}
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
     env_file:
       - path: .env
         required: false
