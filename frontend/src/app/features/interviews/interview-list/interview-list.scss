@@ -1,0 +1,28 @@
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.interview-table {
+  width: 100%;
+}
+
+.clickable-row {
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container);
+  }
+}

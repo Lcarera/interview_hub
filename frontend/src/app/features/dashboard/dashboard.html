@@ -1,0 +1,45 @@
+<h2>Dashboard</h2>
+
+@if (loading()) {
+  <div class="spinner-container">
+    <mat-spinner diameter="48" />
+  </div>
+} @else {
+  <div class="dashboard-grid">
+    <mat-card>
+      <mat-card-header>
+        <mat-icon matCardAvatar>event</mat-icon>
+        <mat-card-title>Upcoming Interviews</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (interviews().length === 0) {
+          <p class="empty-state">No upcoming interviews.</p>
+        } @else {
+          <mat-list>
+            @for (iv of interviews(); track iv.id) {
+              <a mat-list-item [routerLink]="['/interviews', iv.id]">
+                <span matListItemTitle>{{ iv.techStack }}</span>
+                <span matListItemLine>{{ iv.startTime | date:'medium' }} — {{ iv.interviewer.email }}</span>
+              </a>
+            }
+          </mat-list>
+        }
+      </mat-card-content>
+      <mat-card-actions>
+        <a mat-button routerLink="/interviews">View All</a>
+      </mat-card-actions>
+    </mat-card>
+
+    @if (pendingShadowingCount() > 0) {
+      <mat-card>
+        <mat-card-header>
+          <mat-icon matCardAvatar>notifications</mat-icon>
+          <mat-card-title>Pending Shadowing Requests</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ pendingShadowingCount() }} pending request{{ pendingShadowingCount() > 1 ? 's' : '' }} across your interviews.</p>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+}

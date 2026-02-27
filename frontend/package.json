@@ -11,6 +11,7 @@
   "private": true,
   "packageManager": "bun@1.2.15",
   "dependencies": {
+    "@angular/animations": "^21.2.0",
     "@angular/cdk": "~21.2.0",
     "@angular/common": "^21.2.0",
     "@angular/compiler": "^21.2.0",

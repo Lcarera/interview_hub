@@ -1,0 +1,10 @@
+.full-width {
+  width: 100%;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 400px;
+}

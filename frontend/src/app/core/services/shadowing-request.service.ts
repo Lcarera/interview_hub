@@ -7,21 +7,33 @@ import { ShadowingRequest } from '../models/shadowing-request.model';
 @Injectable({ providedIn: 'root' })
 export class ShadowingRequestService {
   private http = inject(HttpClient);
-  private base = `${environment.apiUrl}/shadowing-requests`;
+  private apiUrl = environment.apiUrl;
 
-  list(page = 0, size = 20): Observable<unknown> {
-    return this.http.get(this.base, { params: { page, size } });
+  requestShadowing(interviewId: string): Observable<ShadowingRequest> {
+    return this.http.post<ShadowingRequest>(
+      `${this.apiUrl}/api/interviews/${interviewId}/shadowing-requests`,
+      {}
+    );
   }
 
-  get(id: string): Observable<ShadowingRequest> {
-    return this.http.get<ShadowingRequest>(`${this.base}/${id}`);
+  approve(id: string): Observable<ShadowingRequest> {
+    return this.http.post<ShadowingRequest>(
+      `${this.apiUrl}/api/shadowing-requests/${id}/approve`,
+      {}
+    );
   }
 
-  create(body: Partial<ShadowingRequest>): Observable<ShadowingRequest> {
-    return this.http.post<ShadowingRequest>(this.base, body);
+  reject(id: string, reason: string): Observable<ShadowingRequest> {
+    return this.http.post<ShadowingRequest>(
+      `${this.apiUrl}/api/shadowing-requests/${id}/reject`,
+      { reason }
+    );
   }
 
-  updateStatus(id: string, status: string): Observable<ShadowingRequest> {
-    return this.http.patch<ShadowingRequest>(`${this.base}/${id}/status`, { status });
+  cancel(id: string): Observable<ShadowingRequest> {
+    return this.http.post<ShadowingRequest>(
+      `${this.apiUrl}/api/shadowing-requests/${id}/cancel`,
+      {}
+    );
   }
 }

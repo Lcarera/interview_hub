@@ -81,6 +81,22 @@ class ShadowingRequestControllerTest {
     }
 
     @Test
+    void requestShadowing_withCyclicGraph_serializesWithoutInfiniteRecursion() throws Exception {
+        UUID interviewId = UUID.randomUUID();
+        UUID shadowerId = UUID.randomUUID();
+        ShadowingRequest shadowingRequest = buildShadowingRequest(ShadowingRequestStatus.PENDING);
+
+        shadowingRequest.getInterview().setShadowingRequests(java.util.List.of(shadowingRequest));
+        when(shadowingRequestService.requestShadowing(interviewId, shadowerId)).thenReturn(shadowingRequest);
+
+        mockMvc.perform(post("/api/interviews/{interviewId}/shadowing-requests", interviewId)
+                        .with(jwt().jwt(j -> j.subject(shadowerId.toString()))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.interview.id").value(shadowingRequest.getInterview().getId().toString()))
+                .andExpect(jsonPath("$.interview.shadowingRequests[0].interview").doesNotExist());
+    }
+
+    @Test
     void cancelShadowingRequest_returns200() throws Exception {
         ShadowingRequest shadowingRequest = buildShadowingRequest(ShadowingRequestStatus.CANCELLED);
 

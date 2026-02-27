@@ -6,6 +6,8 @@ import com.gm2dev.interview_hub.config.SecurityConfig;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.domain.ShadowingRequest;
+import com.gm2dev.interview_hub.domain.ShadowingRequestStatus;
 import com.gm2dev.interview_hub.service.InterviewService;
 import com.gm2dev.interview_hub.service.dto.CreateInterviewRequest;
 import com.gm2dev.interview_hub.service.dto.UpdateInterviewRequest;
@@ -133,6 +135,26 @@ class InterviewControllerTest {
                 .andExpect(jsonPath("$.interviewer.googleRefreshToken").doesNotExist())
                 .andExpect(jsonPath("$.interviewer.googleTokenExpiry").doesNotExist())
                 .andExpect(jsonPath("$.interviewer.googleSub").doesNotExist());
+    }
+
+    @Test
+    void getInterview_withCyclicGraph_serializesWithoutInfiniteRecursion() throws Exception {
+        Interview interview = buildInterview();
+
+        ShadowingRequest request = new ShadowingRequest();
+        request.setId(UUID.randomUUID());
+        request.setInterview(interview);
+        request.setShadower(new Profile(UUID.randomUUID(), "shadow@example.com", "interviewer", null));
+        request.setStatus(ShadowingRequestStatus.PENDING);
+
+        interview.setShadowingRequests(List.of(request));
+        when(interviewService.findById(interview.getId())).thenReturn(interview);
+
+        mockMvc.perform(get("/api/interviews/{id}", interview.getId())
+                        .with(jwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shadowingRequests[0].id").value(request.getId().toString()))
+                .andExpect(jsonPath("$.shadowingRequests[0].interview").doesNotExist());
     }
 
     @Test

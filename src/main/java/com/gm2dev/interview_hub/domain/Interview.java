@@ -1,5 +1,6 @@
 package com.gm2dev.interview_hub.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -48,6 +49,7 @@ public class Interview {
     @Column(nullable = false)
     private InterviewStatus status;
 
+    @JsonIgnoreProperties("interview")
     @OneToMany(mappedBy = "interview", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ShadowingRequest> shadowingRequests = new ArrayList<>();
 }
