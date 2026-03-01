@@ -23,6 +23,7 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -177,6 +178,32 @@ class ShadowingRequestControllerTest {
         mockMvc.perform(post("/api/shadowing-requests/{id}/cancel", id)
                         .with(jwt()))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void listByInterview_returns200() throws Exception {
+        UUID interviewId = UUID.randomUUID();
+        ShadowingRequest sr = buildShadowingRequest(ShadowingRequestStatus.PENDING);
+        when(shadowingRequestService.findByInterviewId(interviewId)).thenReturn(java.util.List.of(sr));
+
+        mockMvc.perform(get("/api/interviews/{interviewId}/shadowing-requests", interviewId)
+                        .with(jwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].status").value("PENDING"));
+    }
+
+    @Test
+    void listMyShadowingRequests_returns200() throws Exception {
+        UUID shadowerId = UUID.randomUUID();
+        ShadowingRequest sr = buildShadowingRequest(ShadowingRequestStatus.APPROVED);
+        when(shadowingRequestService.findByShadowerId(shadowerId)).thenReturn(java.util.List.of(sr));
+
+        mockMvc.perform(get("/api/shadowing-requests/my")
+                        .with(jwt().jwt(j -> j.subject(shadowerId.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].status").value("APPROVED"));
     }
 
     @Test

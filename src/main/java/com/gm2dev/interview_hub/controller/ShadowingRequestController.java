@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -17,6 +18,17 @@ import java.util.UUID;
 public class ShadowingRequestController {
 
     private final ShadowingRequestService shadowingRequestService;
+
+    @GetMapping("/api/interviews/{interviewId}/shadowing-requests")
+    public List<ShadowingRequest> listByInterview(@PathVariable UUID interviewId) {
+        return shadowingRequestService.findByInterviewId(interviewId);
+    }
+
+    @GetMapping("/api/shadowing-requests/my")
+    public List<ShadowingRequest> listMyShadowingRequests(@AuthenticationPrincipal Jwt jwt) {
+        UUID shadowerId = UUID.fromString(jwt.getSubject());
+        return shadowingRequestService.findByShadowerId(shadowerId);
+    }
 
     @PostMapping("/api/interviews/{interviewId}/shadowing-requests")
     @ResponseStatus(HttpStatus.CREATED)

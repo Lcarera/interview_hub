@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -84,6 +85,16 @@ public class ShadowingRequestService {
         request.setStatus(ShadowingRequestStatus.REJECTED);
         request.setReason(reason);
         return shadowingRequestRepository.save(request);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShadowingRequest> findByInterviewId(UUID interviewId) {
+        return shadowingRequestRepository.findByInterviewId(interviewId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShadowingRequest> findByShadowerId(UUID shadowerId) {
+        return shadowingRequestRepository.findByShadowerId(shadowerId);
     }
 
     private ShadowingRequest findById(UUID id) {
