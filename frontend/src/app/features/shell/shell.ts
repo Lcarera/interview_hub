@@ -50,15 +50,32 @@ import { AuthService } from '../../core/services/auth.service';
       position: sticky;
       top: 0;
       z-index: 100;
+      background-color: var(--telus-purple) !important;
+      color: white !important;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
     }
 
     .brand {
-      font-weight: 500;
-      margin-right: 1rem;
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-right: 1.5rem;
+      letter-spacing: 0.01em;
+    }
+
+    .nav-links a {
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 400;
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover {
+      color: white;
     }
 
     .nav-links a.active {
-      border-bottom: 2px solid currentColor;
+      color: white;
+      font-weight: 600;
+      border-bottom: 2px solid var(--telus-green);
       border-radius: 0;
     }
 
@@ -68,8 +85,16 @@ import { AuthService } from '../../core/services/auth.service';
 
     .shell-content {
       max-width: 1200px;
-      margin: 1.5rem auto;
-      padding: 0 1rem;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+
+    button[mat-button] {
+      color: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    button[mat-button]:hover {
+      color: white !important;
     }
   `],
 })
