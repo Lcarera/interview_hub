@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,8 +68,11 @@ public class InterviewService {
     }
 
     @Transactional
-    public Interview updateInterview(UUID id, UpdateInterviewRequest request) {
+    public Interview updateInterview(UUID id, UpdateInterviewRequest request, UUID requesterId) {
         Interview interview = findById(id);
+        if (!interview.getInterviewer().getId().equals(requesterId)) {
+            throw new AccessDeniedException("Only the interviewer can update this interview");
+        }
 
         interview.setCandidateInfo(request.getCandidateInfo());
         interview.setTechStack(request.getTechStack());
@@ -90,8 +94,11 @@ public class InterviewService {
     }
 
     @Transactional
-    public void deleteInterview(UUID id) {
+    public void deleteInterview(UUID id, UUID requesterId) {
         Interview interview = findById(id);
+        if (!interview.getInterviewer().getId().equals(requesterId)) {
+            throw new AccessDeniedException("Only the interviewer can delete this interview");
+        }
 
         if (interview.getGoogleEventId() != null) {
             try {

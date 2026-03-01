@@ -10,6 +10,7 @@ import com.gm2dev.interview_hub.repository.ShadowingRequestRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,8 +46,11 @@ public class ShadowingRequestService {
     }
 
     @Transactional
-    public ShadowingRequest cancelShadowingRequest(UUID id) {
+    public ShadowingRequest cancelShadowingRequest(UUID id, UUID requesterId) {
         ShadowingRequest request = findById(id);
+        if (!request.getShadower().getId().equals(requesterId)) {
+            throw new AccessDeniedException("Only the shadower can cancel this request");
+        }
         requirePendingStatus(request);
 
         request.setStatus(ShadowingRequestStatus.CANCELLED);
@@ -54,8 +58,11 @@ public class ShadowingRequestService {
     }
 
     @Transactional
-    public ShadowingRequest approveShadowingRequest(UUID id) {
+    public ShadowingRequest approveShadowingRequest(UUID id, UUID requesterId) {
         ShadowingRequest request = findById(id);
+        if (!request.getInterview().getInterviewer().getId().equals(requesterId)) {
+            throw new AccessDeniedException("Only the interviewer can approve this request");
+        }
         requirePendingStatus(request);
 
         request.setStatus(ShadowingRequestStatus.APPROVED);
@@ -78,8 +85,11 @@ public class ShadowingRequestService {
     }
 
     @Transactional
-    public ShadowingRequest rejectShadowingRequest(UUID id, String reason) {
+    public ShadowingRequest rejectShadowingRequest(UUID id, String reason, UUID requesterId) {
         ShadowingRequest request = findById(id);
+        if (!request.getInterview().getInterviewer().getId().equals(requesterId)) {
+            throw new AccessDeniedException("Only the interviewer can reject this request");
+        }
         requirePendingStatus(request);
 
         request.setStatus(ShadowingRequestStatus.REJECTED);

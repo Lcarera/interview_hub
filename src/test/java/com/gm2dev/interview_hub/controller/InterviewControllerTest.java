@@ -171,7 +171,7 @@ class InterviewControllerTest {
     @Test
     void updateInterview_returns200() throws Exception {
         Interview interview = buildInterview();
-        when(interviewService.updateInterview(eq(interview.getId()), any(UpdateInterviewRequest.class)))
+        when(interviewService.updateInterview(eq(interview.getId()), any(UpdateInterviewRequest.class), any(UUID.class)))
                 .thenReturn(interview);
 
         String body = """
@@ -184,7 +184,7 @@ class InterviewControllerTest {
                 """;
 
         mockMvc.perform(put("/api/interviews/{id}", interview.getId())
-                        .with(jwt())
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
@@ -194,11 +194,46 @@ class InterviewControllerTest {
     @Test
     void deleteInterview_returns204() throws Exception {
         UUID id = UUID.randomUUID();
-        doNothing().when(interviewService).deleteInterview(id);
+        doNothing().when(interviewService).deleteInterview(eq(id), any(UUID.class));
 
         mockMvc.perform(delete("/api/interviews/{id}", id)
-                        .with(jwt()))
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void updateInterview_byNonOwner_returns403() throws Exception {
+        UUID interviewId = UUID.randomUUID();
+        UUID nonOwnerId = UUID.randomUUID();
+        when(interviewService.updateInterview(eq(interviewId), any(UpdateInterviewRequest.class), eq(nonOwnerId)))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("Not the interviewer"));
+
+        String body = """
+                {
+                    "techStack": "Kotlin",
+                    "startTime": "2026-04-15T14:00:00Z",
+                    "endTime": "2026-04-15T15:00:00Z",
+                    "status": "SCHEDULED"
+                }
+                """;
+
+        mockMvc.perform(put("/api/interviews/{id}", interviewId)
+                        .with(jwt().jwt(j -> j.subject(nonOwnerId.toString())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deleteInterview_byNonOwner_returns403() throws Exception {
+        UUID interviewId = UUID.randomUUID();
+        UUID nonOwnerId = UUID.randomUUID();
+        doThrow(new org.springframework.security.access.AccessDeniedException("Not the interviewer"))
+                .when(interviewService).deleteInterview(eq(interviewId), eq(nonOwnerId));
+
+        mockMvc.perform(delete("/api/interviews/{id}", interviewId)
+                        .with(jwt().jwt(j -> j.subject(nonOwnerId.toString()))))
+                .andExpect(status().isForbidden());
     }
 
     @Test
