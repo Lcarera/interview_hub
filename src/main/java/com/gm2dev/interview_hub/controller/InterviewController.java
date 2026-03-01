@@ -1,8 +1,9 @@
 package com.gm2dev.interview_hub.controller;
 
-import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.dto.CreateInterviewRequest;
+import com.gm2dev.interview_hub.dto.InterviewDto;
 import com.gm2dev.interview_hub.dto.UpdateInterviewRequest;
+import com.gm2dev.interview_hub.mapper.InterviewMapper;
 import com.gm2dev.interview_hub.service.InterviewService;
 
 import jakarta.validation.Valid;
@@ -20,27 +21,28 @@ import java.util.UUID;
 public class InterviewController {
 
     private final InterviewService interviewService;
+    private final InterviewMapper interviewMapper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Interview createInterview(@Valid @RequestBody CreateInterviewRequest request) {
-        return interviewService.createInterview(request);
+    public InterviewDto createInterview(@Valid @RequestBody CreateInterviewRequest request) {
+        return interviewMapper.toDto(interviewService.createInterview(request));
     }
 
     @GetMapping
-    public Page<Interview> listInterviews(Pageable pageable) {
-        return interviewService.findAll(pageable);
+    public Page<InterviewDto> listInterviews(Pageable pageable) {
+        return interviewService.findAll(pageable).map(interviewMapper::toDto);
     }
 
     @GetMapping("/{id}")
-    public Interview getInterview(@PathVariable UUID id) {
-        return interviewService.findById(id);
+    public InterviewDto getInterview(@PathVariable UUID id) {
+        return interviewMapper.toDto(interviewService.findById(id));
     }
 
     @PutMapping("/{id}")
-    public Interview updateInterview(@PathVariable UUID id,
-                                     @Valid @RequestBody UpdateInterviewRequest request) {
-        return interviewService.updateInterview(id, request);
+    public InterviewDto updateInterview(@PathVariable UUID id,
+                                        @Valid @RequestBody UpdateInterviewRequest request) {
+        return interviewMapper.toDto(interviewService.updateInterview(id, request));
     }
 
     @DeleteMapping("/{id}")
