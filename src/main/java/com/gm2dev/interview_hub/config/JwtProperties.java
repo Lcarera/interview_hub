@@ -9,5 +9,5 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "app.jwt")
 public class JwtProperties {
     private String signingSecret;
-    private int expirationSeconds = 36000;
+    private int expirationSeconds = 3600;
 }

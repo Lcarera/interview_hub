@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -39,13 +41,17 @@ public class InterviewController {
 
     @PutMapping("/{id}")
     public Interview updateInterview(@PathVariable UUID id,
-                                     @Valid @RequestBody UpdateInterviewRequest request) {
-        return interviewService.updateInterview(id, request);
+                                     @Valid @RequestBody UpdateInterviewRequest request,
+                                     @AuthenticationPrincipal Jwt jwt) {
+        UUID requesterId = UUID.fromString(jwt.getSubject());
+        return interviewService.updateInterview(id, request, requesterId);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteInterview(@PathVariable UUID id) {
-        interviewService.deleteInterview(id);
+    public void deleteInterview(@PathVariable UUID id,
+                                @AuthenticationPrincipal Jwt jwt) {
+        UUID requesterId = UUID.fromString(jwt.getSubject());
+        interviewService.deleteInterview(id, requesterId);
     }
 }

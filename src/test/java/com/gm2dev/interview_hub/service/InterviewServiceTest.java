@@ -10,6 +10,7 @@ import com.gm2dev.interview_hub.repository.ProfileRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
@@ -156,7 +157,7 @@ class InterviewServiceTest {
                 InterviewStatus.SCHEDULED
         );
 
-        Interview updated = interviewService.updateInterview(created.getId(), updateRequest);
+        Interview updated = interviewService.updateInterview(created.getId(), updateRequest, profileId);
 
         assertEquals("Kotlin", updated.getTechStack());
         assertEquals(newStart, updated.getStartTime());
@@ -172,7 +173,7 @@ class InterviewServiceTest {
                 null, "Java", start, end, InterviewStatus.SCHEDULED);
 
         assertThrows(EntityNotFoundException.class,
-                () -> interviewService.updateInterview(UUID.randomUUID(), request));
+                () -> interviewService.updateInterview(UUID.randomUUID(), request, UUID.randomUUID()));
     }
 
     @Test
@@ -187,7 +188,7 @@ class InterviewServiceTest {
         Interview created = interviewService.createInterview(
                 new CreateInterviewRequest(profileId, null, "Rust", start, end));
 
-        interviewService.deleteInterview(created.getId());
+        interviewService.deleteInterview(created.getId(), profileId);
 
         assertFalse(interviewRepository.findById(created.getId()).isPresent());
     }
@@ -195,7 +196,7 @@ class InterviewServiceTest {
     @Test
     void deleteInterview_withNonExistentId_throwsEntityNotFoundException() {
         assertThrows(EntityNotFoundException.class,
-                () -> interviewService.deleteInterview(UUID.randomUUID()));
+                () -> interviewService.deleteInterview(UUID.randomUUID(), UUID.randomUUID()));
     }
 
     @Test
@@ -254,7 +255,7 @@ class InterviewServiceTest {
         Instant newEnd = newStart.plus(1, ChronoUnit.HOURS);
 
         interviewService.updateInterview(created.getId(), new UpdateInterviewRequest(
-                null, "Kotlin", newStart, newEnd, InterviewStatus.SCHEDULED));
+                null, "Kotlin", newStart, newEnd, InterviewStatus.SCHEDULED), profileId);
 
         verify(googleCalendarService).updateEvent(any(Profile.class), any(Interview.class));
     }
@@ -274,8 +275,46 @@ class InterviewServiceTest {
         Interview created = interviewService.createInterview(
                 new CreateInterviewRequest(profileId, null, "Rust", start, end));
 
-        interviewService.deleteInterview(created.getId());
+        interviewService.deleteInterview(created.getId(), profileId);
 
         verify(googleCalendarService).deleteEvent(any(Profile.class), eq("gcal-del-event"));
+    }
+
+    @Test
+    void updateInterview_byNonOwner_throwsAccessDeniedException() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "owner-upd@example.com", "interviewer", null);
+        profileRepository.save(interviewer);
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        Interview created = interviewService.createInterview(
+                new CreateInterviewRequest(profileId, null, "Java", start, end));
+
+        UUID otherId = UUID.randomUUID();
+        UpdateInterviewRequest updateRequest = new UpdateInterviewRequest(
+                null, "Kotlin", start, end, InterviewStatus.SCHEDULED);
+
+        assertThrows(AccessDeniedException.class,
+                () -> interviewService.updateInterview(created.getId(), updateRequest, otherId));
+    }
+
+    @Test
+    void deleteInterview_byNonOwner_throwsAccessDeniedException() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "owner-del@example.com", "interviewer", null);
+        profileRepository.save(interviewer);
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        Interview created = interviewService.createInterview(
+                new CreateInterviewRequest(profileId, null, "Java", start, end));
+
+        UUID otherId = UUID.randomUUID();
+
+        assertThrows(AccessDeniedException.class,
+                () -> interviewService.deleteInterview(created.getId(), otherId));
     }
 }
