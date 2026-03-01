@@ -52,7 +52,7 @@ import { AuthService } from '../../core/services/auth.service';
       z-index: 100;
       background-color: var(--telus-purple) !important;
       color: white !important;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+      box-shadow: var(--telus-shadow-nav);
     }
 
     .brand {
@@ -63,7 +63,7 @@ import { AuthService } from '../../core/services/auth.service';
     }
 
     .nav-links a {
-      color: rgba(255, 255, 255, 0.85);
+      color: var(--telus-white-alpha-85);
       font-weight: 400;
       transition: color 0.15s;
     }
@@ -90,7 +90,7 @@ import { AuthService } from '../../core/services/auth.service';
     }
 
     button[mat-button] {
-      color: rgba(255, 255, 255, 0.9) !important;
+      color: var(--telus-white-alpha-90) !important;
     }
 
     button[mat-button]:hover {
