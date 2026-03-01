@@ -46,19 +46,25 @@ public class ShadowingRequestController {
     }
 
     @PostMapping("/api/shadowing-requests/{id}/cancel")
-    public ShadowingRequestDto cancelShadowingRequest(@PathVariable UUID id) {
-        return shadowingRequestMapper.toDto(shadowingRequestService.cancelShadowingRequest(id));
+    public ShadowingRequestDto cancelShadowingRequest(@PathVariable UUID id,
+                                                       @AuthenticationPrincipal Jwt jwt) {
+        UUID requesterId = UUID.fromString(jwt.getSubject());
+        return shadowingRequestMapper.toDto(shadowingRequestService.cancelShadowingRequest(id, requesterId));
     }
 
     @PostMapping("/api/shadowing-requests/{id}/approve")
-    public ShadowingRequestDto approveShadowingRequest(@PathVariable UUID id) {
-        return shadowingRequestMapper.toDto(shadowingRequestService.approveShadowingRequest(id));
+    public ShadowingRequestDto approveShadowingRequest(@PathVariable UUID id,
+                                                        @AuthenticationPrincipal Jwt jwt) {
+        UUID requesterId = UUID.fromString(jwt.getSubject());
+        return shadowingRequestMapper.toDto(shadowingRequestService.approveShadowingRequest(id, requesterId));
     }
 
     @PostMapping("/api/shadowing-requests/{id}/reject")
     public ShadowingRequestDto rejectShadowingRequest(@PathVariable UUID id,
-                                                       @RequestBody RejectShadowingRequest request) {
+                                                       @RequestBody RejectShadowingRequest request,
+                                                       @AuthenticationPrincipal Jwt jwt) {
+        UUID requesterId = UUID.fromString(jwt.getSubject());
         return shadowingRequestMapper.toDto(
-                shadowingRequestService.rejectShadowingRequest(id, request.getReason()));
+                shadowingRequestService.rejectShadowingRequest(id, request.getReason(), requesterId));
     }
 }

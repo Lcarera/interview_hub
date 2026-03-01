@@ -23,8 +23,10 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -104,10 +106,10 @@ class ShadowingRequestControllerTest {
     void cancelShadowingRequest_returns200() throws Exception {
         ShadowingRequest shadowingRequest = buildShadowingRequest(ShadowingRequestStatus.CANCELLED);
 
-        when(shadowingRequestService.cancelShadowingRequest(shadowingRequest.getId())).thenReturn(shadowingRequest);
+        when(shadowingRequestService.cancelShadowingRequest(eq(shadowingRequest.getId()), any(UUID.class))).thenReturn(shadowingRequest);
 
         mockMvc.perform(post("/api/shadowing-requests/{id}/cancel", shadowingRequest.getId())
-                        .with(jwt()))
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
@@ -116,10 +118,10 @@ class ShadowingRequestControllerTest {
     void approveShadowingRequest_returns200() throws Exception {
         ShadowingRequest shadowingRequest = buildShadowingRequest(ShadowingRequestStatus.APPROVED);
 
-        when(shadowingRequestService.approveShadowingRequest(shadowingRequest.getId())).thenReturn(shadowingRequest);
+        when(shadowingRequestService.approveShadowingRequest(eq(shadowingRequest.getId()), any(UUID.class))).thenReturn(shadowingRequest);
 
         mockMvc.perform(post("/api/shadowing-requests/{id}/approve", shadowingRequest.getId())
-                        .with(jwt()))
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APPROVED"));
     }
@@ -129,13 +131,13 @@ class ShadowingRequestControllerTest {
         ShadowingRequest shadowingRequest = buildShadowingRequest(ShadowingRequestStatus.REJECTED);
         shadowingRequest.setReason("Full capacity");
 
-        when(shadowingRequestService.rejectShadowingRequest(shadowingRequest.getId(), "Full capacity"))
+        when(shadowingRequestService.rejectShadowingRequest(eq(shadowingRequest.getId()), eq("Full capacity"), any(UUID.class)))
                 .thenReturn(shadowingRequest);
 
         RejectShadowingRequest request = new RejectShadowingRequest("Full capacity");
 
         mockMvc.perform(post("/api/shadowing-requests/{id}/reject", shadowingRequest.getId())
-                        .with(jwt())
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -147,13 +149,13 @@ class ShadowingRequestControllerTest {
     void rejectShadowingRequest_withoutReason_returns200() throws Exception {
         ShadowingRequest shadowingRequest = buildShadowingRequest(ShadowingRequestStatus.REJECTED);
 
-        when(shadowingRequestService.rejectShadowingRequest(shadowingRequest.getId(), null))
+        when(shadowingRequestService.rejectShadowingRequest(eq(shadowingRequest.getId()), eq(null), any(UUID.class)))
                 .thenReturn(shadowingRequest);
 
         RejectShadowingRequest request = new RejectShadowingRequest();
 
         mockMvc.perform(post("/api/shadowing-requests/{id}/reject", shadowingRequest.getId())
-                        .with(jwt())
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -163,23 +165,87 @@ class ShadowingRequestControllerTest {
     @Test
     void cancelShadowingRequest_notFound_returns404() throws Exception {
         UUID id = UUID.randomUUID();
-        when(shadowingRequestService.cancelShadowingRequest(id))
+        when(shadowingRequestService.cancelShadowingRequest(eq(id), any(UUID.class)))
                 .thenThrow(new EntityNotFoundException("Not found"));
 
         mockMvc.perform(post("/api/shadowing-requests/{id}/cancel", id)
-                        .with(jwt()))
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void cancelShadowingRequest_notPending_returns409() throws Exception {
         UUID id = UUID.randomUUID();
-        when(shadowingRequestService.cancelShadowingRequest(id))
+        when(shadowingRequestService.cancelShadowingRequest(eq(id), any(UUID.class)))
                 .thenThrow(new IllegalStateException("Not in PENDING status"));
 
         mockMvc.perform(post("/api/shadowing-requests/{id}/cancel", id)
-                        .with(jwt()))
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void listByInterview_returns200() throws Exception {
+        UUID interviewId = UUID.randomUUID();
+        ShadowingRequest sr = buildShadowingRequest(ShadowingRequestStatus.PENDING);
+        when(shadowingRequestService.findByInterviewId(interviewId)).thenReturn(java.util.List.of(sr));
+
+        mockMvc.perform(get("/api/interviews/{interviewId}/shadowing-requests", interviewId)
+                        .with(jwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].status").value("PENDING"));
+    }
+
+    @Test
+    void listMyShadowingRequests_returns200() throws Exception {
+        UUID shadowerId = UUID.randomUUID();
+        ShadowingRequest sr = buildShadowingRequest(ShadowingRequestStatus.APPROVED);
+        when(shadowingRequestService.findByShadowerId(shadowerId)).thenReturn(java.util.List.of(sr));
+
+        mockMvc.perform(get("/api/shadowing-requests/my")
+                        .with(jwt().jwt(j -> j.subject(shadowerId.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].status").value("APPROVED"));
+    }
+
+    @Test
+    void cancelShadowingRequest_byNonShadower_returns403() throws Exception {
+        UUID id = UUID.randomUUID();
+        UUID nonShadowerId = UUID.randomUUID();
+        when(shadowingRequestService.cancelShadowingRequest(eq(id), eq(nonShadowerId)))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("Not the shadower"));
+
+        mockMvc.perform(post("/api/shadowing-requests/{id}/cancel", id)
+                        .with(jwt().jwt(j -> j.subject(nonShadowerId.toString()))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void approveShadowingRequest_byNonInterviewer_returns403() throws Exception {
+        UUID id = UUID.randomUUID();
+        UUID nonInterviewerId = UUID.randomUUID();
+        when(shadowingRequestService.approveShadowingRequest(eq(id), eq(nonInterviewerId)))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("Not the interviewer"));
+
+        mockMvc.perform(post("/api/shadowing-requests/{id}/approve", id)
+                        .with(jwt().jwt(j -> j.subject(nonInterviewerId.toString()))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void rejectShadowingRequest_byNonInterviewer_returns403() throws Exception {
+        UUID id = UUID.randomUUID();
+        UUID nonInterviewerId = UUID.randomUUID();
+        when(shadowingRequestService.rejectShadowingRequest(eq(id), any(), eq(nonInterviewerId)))
+                .thenThrow(new org.springframework.security.access.AccessDeniedException("Not the interviewer"));
+
+        mockMvc.perform(post("/api/shadowing-requests/{id}/reject", id)
+                        .with(jwt().jwt(j -> j.subject(nonInterviewerId.toString())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":null}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

@@ -6,6 +6,7 @@ import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.gm2dev.interview_hub.repository.ShadowingRequestRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -90,7 +91,7 @@ class ShadowingRequestServiceTest {
     void cancelShadowingRequest_setStatusToCancelled() {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
 
-        ShadowingRequest cancelled = shadowingRequestService.cancelShadowingRequest(request.getId());
+        ShadowingRequest cancelled = shadowingRequestService.cancelShadowingRequest(request.getId(), shadower.getId());
 
         assertEquals(ShadowingRequestStatus.CANCELLED, cancelled.getStatus());
     }
@@ -98,17 +99,17 @@ class ShadowingRequestServiceTest {
     @Test
     void cancelShadowingRequest_whenNotPending_throwsIllegalStateException() {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
-        shadowingRequestService.approveShadowingRequest(request.getId());
+        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
 
         assertThrows(IllegalStateException.class,
-                () -> shadowingRequestService.cancelShadowingRequest(request.getId()));
+                () -> shadowingRequestService.cancelShadowingRequest(request.getId(), shadower.getId()));
     }
 
     @Test
     void approveShadowingRequest_setStatusToApproved() {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
 
-        ShadowingRequest approved = shadowingRequestService.approveShadowingRequest(request.getId());
+        ShadowingRequest approved = shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
 
         assertEquals(ShadowingRequestStatus.APPROVED, approved.getStatus());
     }
@@ -116,17 +117,17 @@ class ShadowingRequestServiceTest {
     @Test
     void approveShadowingRequest_whenNotPending_throwsIllegalStateException() {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
-        shadowingRequestService.rejectShadowingRequest(request.getId(), null);
+        shadowingRequestService.rejectShadowingRequest(request.getId(), null, interviewer.getId());
 
         assertThrows(IllegalStateException.class,
-                () -> shadowingRequestService.approveShadowingRequest(request.getId()));
+                () -> shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId()));
     }
 
     @Test
     void rejectShadowingRequest_setStatusToRejectedWithReason() {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
 
-        ShadowingRequest rejected = shadowingRequestService.rejectShadowingRequest(request.getId(), "Full capacity");
+        ShadowingRequest rejected = shadowingRequestService.rejectShadowingRequest(request.getId(), "Full capacity", interviewer.getId());
 
         assertEquals(ShadowingRequestStatus.REJECTED, rejected.getStatus());
         assertEquals("Full capacity", rejected.getReason());
@@ -136,7 +137,7 @@ class ShadowingRequestServiceTest {
     void rejectShadowingRequest_withNullReason_setStatusToRejected() {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
 
-        ShadowingRequest rejected = shadowingRequestService.rejectShadowingRequest(request.getId(), null);
+        ShadowingRequest rejected = shadowingRequestService.rejectShadowingRequest(request.getId(), null, interviewer.getId());
 
         assertEquals(ShadowingRequestStatus.REJECTED, rejected.getStatus());
         assertNull(rejected.getReason());
@@ -145,16 +146,16 @@ class ShadowingRequestServiceTest {
     @Test
     void rejectShadowingRequest_whenNotPending_throwsIllegalStateException() {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
-        shadowingRequestService.approveShadowingRequest(request.getId());
+        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
 
         assertThrows(IllegalStateException.class,
-                () -> shadowingRequestService.rejectShadowingRequest(request.getId(), "Too late"));
+                () -> shadowingRequestService.rejectShadowingRequest(request.getId(), "Too late", interviewer.getId()));
     }
 
     @Test
     void cancelShadowingRequest_withNonExistentId_throwsEntityNotFoundException() {
         assertThrows(EntityNotFoundException.class,
-                () -> shadowingRequestService.cancelShadowingRequest(UUID.randomUUID()));
+                () -> shadowingRequestService.cancelShadowingRequest(UUID.randomUUID(), shadower.getId()));
     }
 
     @Test
@@ -163,9 +164,36 @@ class ShadowingRequestServiceTest {
         interview = interviewRepository.save(interview);
 
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
-        shadowingRequestService.approveShadowingRequest(request.getId());
+        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
 
         verify(googleCalendarService).addAttendee(
                 interviewer, "gcal-shadow-event", "shadower@example.com");
+    }
+
+    @Test
+    void cancelShadowingRequest_byNonShadower_throwsAccessDeniedException() {
+        ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
+        UUID otherId = UUID.randomUUID();
+
+        assertThrows(AccessDeniedException.class,
+                () -> shadowingRequestService.cancelShadowingRequest(request.getId(), otherId));
+    }
+
+    @Test
+    void approveShadowingRequest_byNonInterviewer_throwsAccessDeniedException() {
+        ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
+        UUID otherId = UUID.randomUUID();
+
+        assertThrows(AccessDeniedException.class,
+                () -> shadowingRequestService.approveShadowingRequest(request.getId(), otherId));
+    }
+
+    @Test
+    void rejectShadowingRequest_byNonInterviewer_throwsAccessDeniedException() {
+        ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
+        UUID otherId = UUID.randomUUID();
+
+        assertThrows(AccessDeniedException.class,
+                () -> shadowingRequestService.rejectShadowingRequest(request.getId(), "reason", otherId));
     }
 }
