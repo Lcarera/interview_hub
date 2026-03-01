@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -24,6 +25,14 @@ public class ShadowingRequestService {
     private final InterviewRepository interviewRepository;
     private final ProfileRepository profileRepository;
     private final GoogleCalendarService googleCalendarService;
+
+    public List<ShadowingRequest> findByInterviewId(UUID interviewId) {
+        return shadowingRequestRepository.findByInterviewId(interviewId);
+    }
+
+    public List<ShadowingRequest> findByShadowerId(UUID shadowerId) {
+        return shadowingRequestRepository.findByShadowerId(shadowerId);
+    }
 
     @Transactional
     public ShadowingRequest requestShadowing(UUID interviewId, UUID shadowerId) {
