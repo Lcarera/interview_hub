@@ -3,17 +3,17 @@
     <mat-spinner diameter="48" />
   </div>
 } @else if (interview(); as iv) {
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>{{ iv.techStack }}</mat-card-title>
-      <mat-card-subtitle>
+  <mat-card class="detail-card">
+    <div class="card-header-band">
+      <div class="header-main">
+        <h2 class="card-title">{{ iv.techStack }}</h2>
         <mat-chip-set>
-          <mat-chip [highlighted]="iv.status === 'SCHEDULED'">{{ iv.status }}</mat-chip>
+          <mat-chip [class]="'status-' + iv.status.toLowerCase()">{{ iv.status }}</mat-chip>
         </mat-chip-set>
-      </mat-card-subtitle>
-    </mat-card-header>
+      </div>
+    </div>
 
-    <mat-card-content>
+    <mat-card-content class="detail-content">
       <div class="detail-grid">
         <div class="detail-item">
           <span class="label">Interviewer</span>
@@ -42,18 +42,18 @@
       </div>
     </mat-card-content>
 
-    <mat-card-actions>
+    <mat-card-actions class="card-actions">
       @if (iv.status === 'SCHEDULED') {
         @if (isOwner()) {
-          <button mat-button (click)="openEditDialog()">
+          <button mat-stroked-button class="edit-btn" (click)="openEditDialog()">
             <mat-icon>edit</mat-icon> Edit
           </button>
-          <button mat-button color="warn" (click)="cancelInterview()">
+          <button mat-stroked-button color="warn" (click)="cancelInterview()">
             <mat-icon>cancel</mat-icon> Cancel Interview
           </button>
         }
         @if (!isOwner()) {
-          <button mat-flat-button (click)="requestShadow()">
+          <button mat-flat-button class="shadow-btn" (click)="requestShadow()">
             <mat-icon>visibility</mat-icon> Request to Shadow
           </button>
         }
@@ -62,37 +62,44 @@
   </mat-card>
 
   @if (iv.shadowingRequests && iv.shadowingRequests.length > 0) {
-    <h3 class="section-title">Shadowing Requests</h3>
-    <mat-list>
-      @for (sr of iv.shadowingRequests; track sr.id) {
-        <mat-list-item>
-          <span matListItemTitle>{{ sr.shadower.email }}</span>
-          <span matListItemLine>
-            <mat-chip-set>
-              <mat-chip [highlighted]="sr.status === 'PENDING'">{{ sr.status }}</mat-chip>
-            </mat-chip-set>
-            @if (sr.reason) {
-              <span class="reason">Reason: {{ sr.reason }}</span>
-            }
-          </span>
-          <span matListItemMeta>
-            @if (sr.status === 'PENDING' && isOwner()) {
-              <button mat-icon-button color="primary" (click)="approveShadowing(sr.id)" title="Approve">
-                <mat-icon>check_circle</mat-icon>
-              </button>
-              <button mat-icon-button color="warn" (click)="rejectShadowing(sr.id)" title="Reject">
-                <mat-icon>cancel</mat-icon>
-              </button>
-            }
-            @if (sr.status === 'PENDING' && sr.shadower.id === profileId()) {
-              <button mat-icon-button (click)="cancelShadowing(sr.id)" title="Cancel Request">
-                <mat-icon>delete</mat-icon>
-              </button>
-            }
-          </span>
-        </mat-list-item>
-        <mat-divider />
-      }
-    </mat-list>
+    <mat-card class="shadowing-card">
+      <mat-card-header>
+        <mat-icon matCardAvatar class="section-icon">group</mat-icon>
+        <mat-card-title>Shadowing Requests</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-list>
+          @for (sr of iv.shadowingRequests; track sr.id) {
+            <mat-list-item class="shadowing-item">
+              <span matListItemTitle>{{ sr.shadower.email }}</span>
+              <span matListItemLine>
+                <mat-chip-set>
+                  <mat-chip [class]="'status-' + sr.status.toLowerCase()">{{ sr.status }}</mat-chip>
+                </mat-chip-set>
+                @if (sr.reason) {
+                  <span class="reason">Reason: {{ sr.reason }}</span>
+                }
+              </span>
+              <span matListItemMeta>
+                @if (sr.status === 'PENDING' && isOwner()) {
+                  <button mat-icon-button class="approve-btn" (click)="approveShadowing(sr.id)" title="Approve">
+                    <mat-icon>check_circle</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" (click)="rejectShadowing(sr.id)" title="Reject">
+                    <mat-icon>cancel</mat-icon>
+                  </button>
+                }
+                @if (sr.status === 'PENDING' && sr.shadower.id === profileId()) {
+                  <button mat-icon-button (click)="cancelShadowing(sr.id)" title="Cancel Request">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                }
+              </span>
+            </mat-list-item>
+            <mat-divider />
+          }
+        </mat-list>
+      </mat-card-content>
+    </mat-card>
   }
 }

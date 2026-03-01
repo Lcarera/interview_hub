@@ -4,15 +4,42 @@
   padding: 4rem 0;
 }
 
-.list-header {
+.page-hero {
+  background-color: var(--telus-purple);
+  color: var(--telus-white);
+  padding: 2rem 1.5rem;
+  margin: -2rem -1.5rem 2rem;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  justify-content: space-between;
+  gap: 1rem;
 
-  h2 {
-    margin: 0;
+  .hero-inner {
+    h2 {
+      margin: 0 0 0.25rem;
+      font-size: 1.75rem;
+      font-weight: 400;
+    }
+
+    .hero-subtitle {
+      margin: 0;
+      opacity: 0.8;
+      font-size: 0.95rem;
+    }
   }
+}
+
+.create-btn {
+  background-color: var(--telus-green) !important;
+  color: var(--telus-dark) !important;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.table-card {
+  padding: 0;
+  overflow: hidden;
 }
 
 .interview-table {
@@ -23,6 +50,6 @@
   cursor: pointer;
 
   &:hover {
-    background-color: var(--mat-sys-surface-container);
+    background-color: var(--telus-purple-alpha-04);
   }
 }

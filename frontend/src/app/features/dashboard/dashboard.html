@@ -1,4 +1,9 @@
-<h2>Dashboard</h2>
+<div class="page-hero">
+  <div class="hero-inner">
+    <h2>Dashboard</h2>
+    <p class="hero-subtitle">Your upcoming interviews and pending requests at a glance.</p>
+  </div>
+</div>
 
 @if (loading()) {
   <div class="spinner-container">
@@ -8,8 +13,9 @@
   <div class="dashboard-grid">
     <mat-card>
       <mat-card-header>
-        <mat-icon matCardAvatar>event</mat-icon>
+        <mat-icon matCardAvatar class="card-icon">event</mat-icon>
         <mat-card-title>Upcoming Interviews</mat-card-title>
+        <mat-card-subtitle>Next 5 scheduled interviews</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
         @if (interviews().length === 0) {
@@ -17,7 +23,7 @@
         } @else {
           <mat-list>
             @for (iv of interviews(); track iv.id) {
-              <a mat-list-item [routerLink]="['/interviews', iv.id]">
+              <a mat-list-item [routerLink]="['/interviews', iv.id]" class="interview-list-item">
                 <span matListItemTitle>{{ iv.techStack }}</span>
                 <span matListItemLine>{{ iv.startTime | date:'medium' }} — {{ iv.interviewer.email }}</span>
               </a>
@@ -26,19 +32,26 @@
         }
       </mat-card-content>
       <mat-card-actions>
-        <a mat-button routerLink="/interviews">View All</a>
+        <a mat-button routerLink="/interviews" class="view-all-btn">View All Interviews</a>
       </mat-card-actions>
     </mat-card>
 
     @if (pendingShadowingCount() > 0) {
-      <mat-card>
+      <mat-card class="pending-card">
         <mat-card-header>
-          <mat-icon matCardAvatar>notifications</mat-icon>
+          <mat-icon matCardAvatar class="card-icon pending-icon">notifications_active</mat-icon>
           <mat-card-title>Pending Shadowing Requests</mat-card-title>
+          <mat-card-subtitle>Action required</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          <p>{{ pendingShadowingCount() }} pending request{{ pendingShadowingCount() > 1 ? 's' : '' }} across your interviews.</p>
+          <div class="pending-count-row">
+            <span class="pending-count">{{ pendingShadowingCount() }}</span>
+            <span class="pending-label">pending request{{ pendingShadowingCount() > 1 ? 's' : '' }} across your interviews</span>
+          </div>
         </mat-card-content>
+        <mat-card-actions>
+          <a mat-button routerLink="/interviews" class="view-all-btn">Review Requests</a>
+        </mat-card-actions>
       </mat-card>
     }
   </div>

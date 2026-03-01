@@ -41,6 +41,7 @@ out/
 
 ### Claude Code ###
 .claude/settings.local.json
+.worktrees/
 
 ### Supabase local ###
 supabase/.temp/

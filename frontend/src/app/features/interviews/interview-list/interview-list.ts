@@ -7,6 +7,7 @@ import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { InterviewService } from '../../../core/services/interview.service';
@@ -24,6 +25,7 @@ import { InterviewFormDialogComponent } from '../interview-form-dialog/interview
     MatSortModule,
     MatButtonModule,
     MatIconModule,
+    MatCardModule,
     MatChipsModule,
     MatProgressSpinnerModule,
   ],
