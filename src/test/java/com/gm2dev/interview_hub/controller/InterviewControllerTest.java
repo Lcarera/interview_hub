@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
 import com.gm2dev.interview_hub.domain.Interview;
+import com.gm2dev.interview_hub.mapper.InterviewMapperImpl;
+import com.gm2dev.interview_hub.mapper.ProfileMapperImpl;
+import com.gm2dev.interview_hub.mapper.ShadowingRequestMapperImpl;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.ShadowingRequest;
@@ -40,7 +43,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(InterviewController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, InterviewMapperImpl.class, ProfileMapperImpl.class, ShadowingRequestMapperImpl.class})
 @org.springframework.test.context.ActiveProfiles("test")
 class InterviewControllerTest {
 
@@ -135,7 +138,8 @@ class InterviewControllerTest {
                 .andExpect(jsonPath("$.interviewer.googleAccessToken").doesNotExist())
                 .andExpect(jsonPath("$.interviewer.googleRefreshToken").doesNotExist())
                 .andExpect(jsonPath("$.interviewer.googleTokenExpiry").doesNotExist())
-                .andExpect(jsonPath("$.interviewer.googleSub").doesNotExist());
+                .andExpect(jsonPath("$.interviewer.googleSub").doesNotExist())
+                .andExpect(jsonPath("$.googleEventId").doesNotExist());
     }
 
     @Test

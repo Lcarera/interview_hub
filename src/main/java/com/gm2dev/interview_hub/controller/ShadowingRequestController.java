@@ -1,7 +1,8 @@
 package com.gm2dev.interview_hub.controller;
 
-import com.gm2dev.interview_hub.domain.ShadowingRequest;
 import com.gm2dev.interview_hub.dto.RejectShadowingRequest;
+import com.gm2dev.interview_hub.dto.ShadowingRequestDto;
+import com.gm2dev.interview_hub.mapper.ShadowingRequestMapper;
 import com.gm2dev.interview_hub.service.ShadowingRequestService;
 
 import lombok.RequiredArgsConstructor;
@@ -18,45 +19,52 @@ import java.util.UUID;
 public class ShadowingRequestController {
 
     private final ShadowingRequestService shadowingRequestService;
+    private final ShadowingRequestMapper shadowingRequestMapper;
 
     @GetMapping("/api/interviews/{interviewId}/shadowing-requests")
-    public List<ShadowingRequest> listByInterview(@PathVariable UUID interviewId) {
-        return shadowingRequestService.findByInterviewId(interviewId);
+    public List<ShadowingRequestDto> listByInterview(@PathVariable UUID interviewId) {
+        return shadowingRequestService.findByInterviewId(interviewId).stream()
+                .map(shadowingRequestMapper::toDto)
+                .toList();
     }
 
     @GetMapping("/api/shadowing-requests/my")
-    public List<ShadowingRequest> listMyShadowingRequests(@AuthenticationPrincipal Jwt jwt) {
+    public List<ShadowingRequestDto> listMyShadowingRequests(@AuthenticationPrincipal Jwt jwt) {
         UUID shadowerId = UUID.fromString(jwt.getSubject());
-        return shadowingRequestService.findByShadowerId(shadowerId);
+        return shadowingRequestService.findByShadowerId(shadowerId).stream()
+                .map(shadowingRequestMapper::toDto)
+                .toList();
     }
 
     @PostMapping("/api/interviews/{interviewId}/shadowing-requests")
     @ResponseStatus(HttpStatus.CREATED)
-    public ShadowingRequest requestShadowing(@PathVariable UUID interviewId,
-                                             @AuthenticationPrincipal Jwt jwt) {
+    public ShadowingRequestDto requestShadowing(@PathVariable UUID interviewId,
+                                                @AuthenticationPrincipal Jwt jwt) {
         UUID shadowerId = UUID.fromString(jwt.getSubject());
-        return shadowingRequestService.requestShadowing(interviewId, shadowerId);
+        return shadowingRequestMapper.toDto(
+                shadowingRequestService.requestShadowing(interviewId, shadowerId));
     }
 
     @PostMapping("/api/shadowing-requests/{id}/cancel")
-    public ShadowingRequest cancelShadowingRequest(@PathVariable UUID id,
-                                                   @AuthenticationPrincipal Jwt jwt) {
+    public ShadowingRequestDto cancelShadowingRequest(@PathVariable UUID id,
+                                                       @AuthenticationPrincipal Jwt jwt) {
         UUID requesterId = UUID.fromString(jwt.getSubject());
-        return shadowingRequestService.cancelShadowingRequest(id, requesterId);
+        return shadowingRequestMapper.toDto(shadowingRequestService.cancelShadowingRequest(id, requesterId));
     }
 
     @PostMapping("/api/shadowing-requests/{id}/approve")
-    public ShadowingRequest approveShadowingRequest(@PathVariable UUID id,
-                                                    @AuthenticationPrincipal Jwt jwt) {
+    public ShadowingRequestDto approveShadowingRequest(@PathVariable UUID id,
+                                                        @AuthenticationPrincipal Jwt jwt) {
         UUID requesterId = UUID.fromString(jwt.getSubject());
-        return shadowingRequestService.approveShadowingRequest(id, requesterId);
+        return shadowingRequestMapper.toDto(shadowingRequestService.approveShadowingRequest(id, requesterId));
     }
 
     @PostMapping("/api/shadowing-requests/{id}/reject")
-    public ShadowingRequest rejectShadowingRequest(@PathVariable UUID id,
-                                                   @RequestBody RejectShadowingRequest request,
-                                                   @AuthenticationPrincipal Jwt jwt) {
+    public ShadowingRequestDto rejectShadowingRequest(@PathVariable UUID id,
+                                                       @RequestBody RejectShadowingRequest request,
+                                                       @AuthenticationPrincipal Jwt jwt) {
         UUID requesterId = UUID.fromString(jwt.getSubject());
-        return shadowingRequestService.rejectShadowingRequest(id, request.getReason(), requesterId);
+        return shadowingRequestMapper.toDto(
+                shadowingRequestService.rejectShadowingRequest(id, request.getReason(), requesterId));
     }
 }

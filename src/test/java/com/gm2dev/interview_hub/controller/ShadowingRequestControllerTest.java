@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
 import com.gm2dev.interview_hub.domain.*;
+import com.gm2dev.interview_hub.mapper.ProfileMapperImpl;
+import com.gm2dev.interview_hub.mapper.ShadowingRequestMapperImpl;
 import com.gm2dev.interview_hub.dto.RejectShadowingRequest;
 import com.gm2dev.interview_hub.service.ShadowingRequestService;
 
@@ -29,7 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ShadowingRequestController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, ShadowingRequestMapperImpl.class, ProfileMapperImpl.class})
 @org.springframework.test.context.ActiveProfiles("test")
 class ShadowingRequestControllerTest {
 
@@ -80,7 +82,8 @@ class ShadowingRequestControllerTest {
                         .with(jwt().jwt(j -> j.subject(shadowerId.toString()))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(shadowingRequest.getId().toString()))
-                .andExpect(jsonPath("$.status").value("PENDING"));
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.interview.interviewer").doesNotExist());
     }
 
     @Test

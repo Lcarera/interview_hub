@@ -5,6 +5,7 @@ import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.dto.CreateInterviewRequest;
 import com.gm2dev.interview_hub.dto.UpdateInterviewRequest;
+import com.gm2dev.interview_hub.mapper.InterviewMapper;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 
@@ -27,6 +28,7 @@ public class InterviewService {
     private final InterviewRepository interviewRepository;
     private final ProfileRepository profileRepository;
     private final GoogleCalendarService googleCalendarService;
+    private final InterviewMapper interviewMapper;
 
     @Transactional
     public Interview createInterview(CreateInterviewRequest request) {
@@ -74,11 +76,7 @@ public class InterviewService {
             throw new AccessDeniedException("Only the interviewer can update this interview");
         }
 
-        interview.setCandidateInfo(request.getCandidateInfo());
-        interview.setTechStack(request.getTechStack());
-        interview.setStartTime(request.getStartTime());
-        interview.setEndTime(request.getEndTime());
-        interview.setStatus(request.getStatus());
+        interviewMapper.updateFromRequest(request, interview);
 
         interview = interviewRepository.save(interview);
 

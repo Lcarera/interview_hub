@@ -3,7 +3,9 @@ package com.gm2dev.interview_hub.controller;
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.mapper.ProfileMapperImpl;
 import com.gm2dev.interview_hub.service.ProfileService;
+
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ProfileController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, ProfileMapperImpl.class})
 @ActiveProfiles("test")
 class ProfileControllerTest {
 
@@ -39,10 +41,14 @@ class ProfileControllerTest {
     @MockitoBean
     private JwtProperties jwtProperties;
 
+    private Profile buildProfile(UUID id) {
+        return new Profile(id, "test@gm2dev.com", "interviewer", "test@gm2dev.com");
+    }
+
     @Test
-    void getMyProfile_returns200() throws Exception {
+    void getMyProfile_returns200WithProfileDto() throws Exception {
         UUID profileId = UUID.randomUUID();
-        Profile profile = new Profile(profileId, "test@gm2dev.com", "interviewer", null);
+        Profile profile = buildProfile(profileId);
         when(profileService.findById(profileId)).thenReturn(profile);
 
         mockMvc.perform(get("/api/profiles/me")
@@ -50,7 +56,9 @@ class ProfileControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(profileId.toString()))
                 .andExpect(jsonPath("$.email").value("test@gm2dev.com"))
-                .andExpect(jsonPath("$.role").value("interviewer"));
+                .andExpect(jsonPath("$.role").value("interviewer"))
+                .andExpect(jsonPath("$.googleSub").doesNotExist())
+                .andExpect(jsonPath("$.googleAccessToken").doesNotExist());
     }
 
     @Test
@@ -65,7 +73,7 @@ class ProfileControllerTest {
     }
 
     @Test
-    void listProfiles_returns200() throws Exception {
+    void listProfiles_returns200WithList() throws Exception {
         Profile p1 = new Profile(UUID.randomUUID(), "a@gm2dev.com", "interviewer", null);
         Profile p2 = new Profile(UUID.randomUUID(), "b@gm2dev.com", "interviewer", null);
         when(profileService.findAll()).thenReturn(List.of(p1, p2));
