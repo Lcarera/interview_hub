@@ -1,41 +1,56 @@
-<h2 mat-dialog-title>{{ isEdit ? 'Edit Interview' : 'New Interview' }}</h2>
+<h2 mat-dialog-title class="dialog-title">{{ isEdit ? 'Edit Interview' : 'New Interview' }}</h2>
 
-<mat-dialog-content>
+<mat-dialog-content class="dialog-content">
   <form [formGroup]="form" (ngSubmit)="save()" id="interviewForm">
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Tech Stack</mat-label>
-      <input matInput formControlName="techStack" required />
-    </mat-form-field>
 
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Candidate Name</mat-label>
-      <input matInput formControlName="candidateName" />
-    </mat-form-field>
+    <div class="form-section">
+      <p class="section-label">Interview Details</p>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Tech Stack</mat-label>
+        <input matInput formControlName="techStack" placeholder="e.g. Java, Spring Boot, PostgreSQL" required />
+      </mat-form-field>
+    </div>
 
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Candidate Email</mat-label>
-      <input matInput formControlName="candidateEmail" type="email" />
-    </mat-form-field>
+    <div class="form-section">
+      <p class="section-label">Candidate</p>
+      <div class="field-row">
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Candidate Name</mat-label>
+          <input matInput formControlName="candidateName" />
+        </mat-form-field>
 
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Start Time</mat-label>
-      <input matInput formControlName="startTime" type="datetime-local" required />
-    </mat-form-field>
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Candidate Email</mat-label>
+          <input matInput formControlName="candidateEmail" type="email" />
+        </mat-form-field>
+      </div>
+    </div>
 
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Duration</mat-label>
-      <mat-select formControlName="duration" required>
-        @for (opt of durationOptions; track opt.value) {
-          <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+    <div class="form-section">
+      <p class="section-label">Schedule</p>
+      <div class="field-row">
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Start Time</mat-label>
+          <input matInput formControlName="startTime" type="datetime-local" required />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Duration</mat-label>
+          <mat-select formControlName="duration" required>
+            @for (opt of durationOptions; track opt.value) {
+              <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
   </form>
 </mat-dialog-content>
 
-<mat-dialog-actions align="end">
-  <button mat-button mat-dialog-close>Cancel</button>
-  <button mat-flat-button type="submit" form="interviewForm" [disabled]="form.invalid || submitting">
-    {{ isEdit ? 'Update' : 'Create' }}
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button mat-stroked-button mat-dialog-close>Cancel</button>
+  <button mat-flat-button class="submit-btn" type="submit" form="interviewForm" [disabled]="form.invalid || submitting">
+    {{ isEdit ? 'Update Interview' : 'Create Interview' }}
   </button>
 </mat-dialog-actions>

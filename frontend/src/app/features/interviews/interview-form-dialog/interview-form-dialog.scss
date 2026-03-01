@@ -1,10 +1,71 @@
-.full-width {
-  width: 100%;
+.dialog-title {
+  border-left: 4px solid var(--telus-purple);
+  padding-left: 1rem !important;
+  color: var(--telus-purple);
+}
+
+.dialog-content {
+  padding: 8px 24px 16px !important;
+  min-width: 560px;
+
+  @media (max-width: 640px) {
+    min-width: unset;
+    width: 90vw;
+  }
 }
 
 form {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  min-width: 400px;
+  gap: 0;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 0.5rem;
+
+  & + .form-section {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--telus-divider);
+  }
+}
+
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--telus-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.5rem;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.half-width {
+  width: 100%;
+}
+
+.dialog-actions {
+  padding: 8px 24px 16px !important;
+  gap: 0.75rem;
+}
+
+.submit-btn {
+  background-color: var(--telus-purple) !important;
+  color: var(--telus-white) !important;
+  min-width: 140px;
 }
