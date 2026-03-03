@@ -68,8 +68,9 @@ backend_service = gcp.cloudrunv2.Service(
     ),
 )
 
-# Allow the global LB to invoke the backend (ingress setting prevents direct
-# internet access; allUsers here only allows the LB path)
+# Grant allUsers invoker so the global LB's serverless NEG can forward requests
+# without an identity token. INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER ensures
+# only the LB network path can reach this service — direct internet access is blocked.
 gcp.cloudrunv2.ServiceIamMember(
     "backend-invoker",
     project=project,

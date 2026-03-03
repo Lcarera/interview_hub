@@ -1,7 +1,7 @@
 import pulumi
 from registry import registry_url
-from iam import cloudrun_sa  # noqa: F401
-from secrets import secrets  # noqa: F401
+from iam import cloudrun_sa  # noqa: F401 — imported for side effects
+from secrets import secrets  # noqa: F401 — imported for side effects
 from cloudrun import backend_service, frontend_service
 from loadbalancer import static_ip
 

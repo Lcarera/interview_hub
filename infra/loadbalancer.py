@@ -109,6 +109,8 @@ url_map = gcp.compute.URLMap(
                     service=backend_lb_service.id,
                 )
             ],
+            # Note: /auth/callback is an Angular client-side route — it correctly
+            # falls through to the frontend via the default_service above.
         )
     ],
 )

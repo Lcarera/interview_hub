@@ -20,6 +20,7 @@ secret_access_binding = gcp.projects.IAMMember(
     member=pulumi.Output.concat("serviceAccount:", cloudrun_sa.email),
 )
 
-# Allow the global LB to invoke both Cloud Run services (set on individual
-# services in cloudrun.py using allUsers — ingress setting keeps them private
-# from the direct internet)
+# The allUsers invoker bindings are set per-service in cloudrun.py.
+# Combined with INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER, this allows
+# the global LB to forward requests without an identity token, while
+# preventing direct internet access to the services.

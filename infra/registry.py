@@ -11,6 +11,7 @@ repo = gcp.artifactregistry.Repository(
     location=region,
     format="DOCKER",
     description="Interview Hub Docker images",
+    project=project,
 )
 
 registry_url = pulumi.Output.concat(
