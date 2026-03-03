@@ -1,0 +1,6 @@
+name: interview-hub-infra
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: Interview Hub GCP infrastructure

@@ -49,3 +49,6 @@ supabase/.branches/
 
 ### Frontend ###
 frontend/node_modules/
+
+### Infra ###
+infra/venv/
