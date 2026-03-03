@@ -1,4 +1,4 @@
 import pulumi
+from registry import registry_url
 
-# Components are imported here as they are built
-# pulumi.export() calls go at the bottom
+pulumi.export("registry_url", registry_url)
