@@ -113,3 +113,31 @@ gcp.cloudrunv2.ServiceIamMember(
     role="roles/run.invoker",
     member="allUsers",
 )
+
+# Cloud Run domain mappings — tell Cloud Run to accept custom Host headers.
+# The CNAME targets in Cloudflare must point to ghs.googlehosted.com (not .run.app).
+frontend_domain_mapping = gcp.cloudrun.DomainMapping(
+    "frontend-domain-mapping",
+    name=domain,
+    location=region,
+    project=project,
+    metadata=gcp.cloudrun.DomainMappingMetadataArgs(
+        namespace=project,
+    ),
+    spec=gcp.cloudrun.DomainMappingSpecArgs(
+        route_name="interview-hub-frontend",
+    ),
+)
+
+backend_domain_mapping = gcp.cloudrun.DomainMapping(
+    "backend-domain-mapping",
+    name=backend_domain,
+    location=region,
+    project=project,
+    metadata=gcp.cloudrun.DomainMappingMetadataArgs(
+        namespace=project,
+    ),
+    spec=gcp.cloudrun.DomainMappingSpecArgs(
+        route_name="interview-hub-backend",
+    ),
+)
