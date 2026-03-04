@@ -9,7 +9,37 @@ env:
   REGISTRY: southamerica-east1-docker.pkg.dev
 
 jobs:
+  # Detect which parts of the codebase changed
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'src/**'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle/**'
+              - 'gradlew'
+              - 'gradlew.bat'
+            frontend:
+              - 'frontend/**'
+            infra:
+              - 'infra/**'
+              - '.github/workflows/deploy.yml'
+
   deploy:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infra == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -29,18 +59,21 @@ jobs:
         run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
 
       - name: Set up Java 25
+        if: needs.changes.outputs.backend == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
 
       - name: Build and push backend image
+        if: needs.changes.outputs.backend == 'true'
         run: |
           IMAGE=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/backend:${{ github.sha }}
           ./gradlew bootBuildImage --imageName=$IMAGE
           docker push $IMAGE
 
       - name: Build and push frontend image
+        if: needs.changes.outputs.frontend == 'true'
         run: |
           IMAGE=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/frontend:${{ github.sha }}
           docker build --build-arg NGINX_CONF=nginx.prod.conf -t $IMAGE ./frontend
@@ -58,15 +91,41 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
+      - name: Resolve backend image
+        id: backend-image
+        run: |
+          if [ "${{ needs.changes.outputs.backend }}" == "true" ]; then
+            echo "image=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/backend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            cd infra
+            source venv/bin/activate
+            pulumi stack select prod
+            IMAGE=$(pulumi config get interview-hub-infra:backend_image 2>/dev/null || echo "")
+            echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve frontend image
+        id: frontend-image
+        run: |
+          if [ "${{ needs.changes.outputs.frontend }}" == "true" ]; then
+            echo "image=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/frontend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            cd infra
+            source venv/bin/activate
+            pulumi stack select prod
+            IMAGE=$(pulumi config get interview-hub-infra:frontend_image 2>/dev/null || echo "")
+            echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy with Pulumi
         run: |
           cd infra
           source venv/bin/activate
           pulumi stack select prod
           pulumi config set interview-hub-infra:backend_image \
-            ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/backend:${{ github.sha }}
+            ${{ steps.backend-image.outputs.image }}
           pulumi config set interview-hub-infra:frontend_image \
-            ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/frontend:${{ github.sha }}
+            ${{ steps.frontend-image.outputs.image }}
           pulumi up --yes
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}

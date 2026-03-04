@@ -63,9 +63,9 @@ backend_service = gcp.cloudrunv2.Service(
                         path="/actuator/health",
                         port=8080,
                     ),
-                    initial_delay_seconds=10,
+                    initial_delay_seconds=15,
                     period_seconds=5,
-                    failure_threshold=12,
+                    failure_threshold=20,
                 ),
             )
         ],
