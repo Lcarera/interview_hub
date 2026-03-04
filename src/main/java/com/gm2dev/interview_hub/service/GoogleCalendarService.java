@@ -47,7 +47,7 @@ public class GoogleCalendarService {
     public String createEvent(Profile interviewer, Interview interview) throws IOException {
         Calendar calendar = buildCalendarClient(interviewer);
         String calendarId = getCalendarId(interviewer);
-        Event event = buildEvent(interview);
+        Event event = buildEvent(interviewer, interview);
 
         Event created = calendar.events().insert(calendarId, event)
                 .setConferenceDataVersion(1)
@@ -59,7 +59,7 @@ public class GoogleCalendarService {
     public void updateEvent(Profile interviewer, Interview interview) throws IOException {
         Calendar calendar = buildCalendarClient(interviewer);
         String calendarId = getCalendarId(interviewer);
-        Event event = buildEvent(interview);
+        Event event = buildEvent(interviewer, interview);
 
         calendar.events().update(calendarId, interview.getGoogleEventId(), event)
                 .setConferenceDataVersion(1)
@@ -131,7 +131,7 @@ public class GoogleCalendarService {
                 .build();
     }
 
-    private Event buildEvent(Interview interview) {
+    private Event buildEvent(Profile interviewer, Interview interview) {
         Event event = new Event();
 
         String candidateName = extractCandidateName(interview.getCandidateInfo());
@@ -158,11 +158,26 @@ public class GoogleCalendarService {
                 .setRequestId(UUID.randomUUID().toString());
         event.setConferenceData(new ConferenceData().setCreateRequest(conferenceRequest));
 
+        List<EventAttendee> attendees = new ArrayList<>();
+        attendees.add(new EventAttendee().setEmail(interviewer.getEmail()));
+
+        String candidateEmail = extractCandidateEmail(interview.getCandidateInfo());
+        if (candidateEmail != null) {
+            attendees.add(new EventAttendee().setEmail(candidateEmail));
+        }
+        event.setAttendees(attendees);
+
         return event;
     }
 
     private String getCalendarId(Profile interviewer) {
         return interviewer.getCalendarEmail() != null ? interviewer.getCalendarEmail() : "primary";
+    }
+
+    private String extractCandidateEmail(Map<String, Object> candidateInfo) {
+        if (candidateInfo == null) return null;
+        Object email = candidateInfo.get("email");
+        return email != null ? email.toString() : null;
     }
 
     private String extractCandidateName(Map<String, Object> candidateInfo) {
