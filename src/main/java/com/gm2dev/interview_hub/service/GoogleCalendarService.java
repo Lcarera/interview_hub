@@ -8,6 +8,9 @@ import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.calendar.Calendar;
+import com.google.api.services.calendar.model.ConferenceData;
+import com.google.api.services.calendar.model.ConferenceSolutionKey;
+import com.google.api.services.calendar.model.CreateConferenceRequest;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventAttendee;
 import com.google.api.services.calendar.model.EventDateTime;
@@ -23,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -45,7 +49,9 @@ public class GoogleCalendarService {
         String calendarId = getCalendarId(interviewer);
         Event event = buildEvent(interview);
 
-        Event created = calendar.events().insert(calendarId, event).execute();
+        Event created = calendar.events().insert(calendarId, event)
+                .setConferenceDataVersion(1)
+                .execute();
         log.debug("Created Google Calendar event: {}", created.getId());
         return created.getId();
     }
@@ -55,7 +61,9 @@ public class GoogleCalendarService {
         String calendarId = getCalendarId(interviewer);
         Event event = buildEvent(interview);
 
-        calendar.events().update(calendarId, interview.getGoogleEventId(), event).execute();
+        calendar.events().update(calendarId, interview.getGoogleEventId(), event)
+                .setConferenceDataVersion(1)
+                .execute();
         log.debug("Updated Google Calendar event: {}", interview.getGoogleEventId());
     }
 
@@ -143,6 +151,12 @@ public class GoogleCalendarService {
 
         event.setStart(start);
         event.setEnd(end);
+
+        ConferenceSolutionKey solutionKey = new ConferenceSolutionKey().setType("hangoutsMeet");
+        CreateConferenceRequest conferenceRequest = new CreateConferenceRequest()
+                .setConferenceSolutionKey(solutionKey)
+                .setRequestId(UUID.randomUUID().toString());
+        event.setConferenceData(new ConferenceData().setCreateRequest(conferenceRequest));
 
         return event;
     }
