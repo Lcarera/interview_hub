@@ -5,8 +5,8 @@ on:
     branches: [main]
 
 env:
-  GCP_REGION: us-central1
-  REGISTRY: us-central1-docker.pkg.dev
+  GCP_REGION: southamerica-east1
+  REGISTRY: southamerica-east1-docker.pkg.dev
 
 jobs:
   deploy:
