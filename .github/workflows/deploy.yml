@@ -26,8 +26,8 @@ jobs:
           filters: |
             backend:
               - 'src/**'
-              - 'build.gradle.kts'
-              - 'settings.gradle.kts'
+              - 'build.gradle'
+              - 'settings.gradle'
               - 'gradle/**'
               - 'gradlew'
               - 'gradlew.bat'
