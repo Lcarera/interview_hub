@@ -1,35 +1,31 @@
 # Interview Hub
 
-A fullstack application for managing technical interviews and shadowing requests. Built with Spring Boot 4.0.2 (Java 25) and Angular 21, deployed on GCP Cloud Run behind a Cloudflare Worker edge proxy.
+A fullstack application for managing technical interviews and shadowing requests. Built with Spring Boot 4.0.2 (Java 25) and Angular 21, deployed on GCP Cloud Run with Cloudflare DNS.
 
 ## Architecture
 
 ```
-                    interview-hub.lcarera.dev
-                             |
-                    +--------v--------+
-                    | Cloudflare      |
-                    | Worker (edge)   |
-                    +--------+--------+
-                             |
-              +--------------+--------------+
-              |  Bearer token?              |  No token / unknown path
-              |  /auth/* /actuator          |
-              v                             v
-  +-----------------------+   +-----------------------+
-  | GCP Cloud Run         |   | GCP Cloud Run         |
-  | Backend               |   | Frontend              |
-  | Spring Boot :8080     |   | Angular + nginx :80   |
-  +-----------+-----------+   +-----------------------+
-              |
-  +-----------v-----------+
-  | Supabase              |
-  | PostgreSQL            |
-  +-----+-----------+-----+
-        |           |
-   Google       Google
-   OAuth 2.0   Calendar
-                API v3
+  interview-hub.lcarera.dev          i-hub-be.lcarera.dev
+           |                                  |
+   +-------v--------+                +-------v--------+
+   | Cloudflare DNS  |                | Cloudflare DNS |
+   | (CNAME proxy)   |                | (CNAME proxy)  |
+   +-------+---------+                +-------+--------+
+           |                                  |
+  +--------v-----------+          +-----------v----------+
+  | GCP Cloud Run      |          | GCP Cloud Run        |
+  | Frontend           |          | Backend              |
+  | Angular + nginx :80|          | Spring Boot :8080    |
+  +--------------------+          +-----------+----------+
+                                              |
+                                  +-----------v-----------+
+                                  | Supabase              |
+                                  | PostgreSQL            |
+                                  +-----+-----------+-----+
+                                        |           |
+                                   Google       Google
+                                   OAuth 2.0   Calendar
+                                                API v3
 ```
 
 ## Tech Stack
@@ -39,7 +35,7 @@ A fullstack application for managing technical interviews and shadowing requests
 | Backend        | Spring Boot 4.0.2, Java 25, PostgreSQL      |
 | Frontend       | Angular 21, Angular Material 21, TypeScript 5.9 |
 | Infrastructure | Pulumi (Python), GCP Cloud Run              |
-| Edge proxy     | Cloudflare Workers                          |
+| DNS/CDN        | Cloudflare (DNS proxy)                      |
 | Auth           | Google OAuth 2.0 (@gm2dev.com), HMAC-SHA256 JWT |
 | CI/CD          | GitHub Actions                              |
 | Database       | Supabase (PostgreSQL with JSONB)            |
@@ -51,7 +47,7 @@ A fullstack application for managing technical interviews and shadowing requests
 - Bun 1.2+
 - Docker & Docker Compose
 - Pulumi CLI (for infrastructure changes)
-- Wrangler CLI (for Cloudflare Worker changes)
+- Cloudflare account (for DNS management)
 
 ## Quick Start
 
@@ -105,7 +101,6 @@ interview_hub/
 ├── src/                  # Spring Boot backend (Java 25)
 ├── frontend/             # Angular 21 SPA
 ├── infra/                # Pulumi IaC (GCP Cloud Run, Secret Manager, etc.)
-├── cloudflare/           # Cloudflare Worker edge proxy
 ├── supabase/migrations/  # PostgreSQL schema migrations
 ├── postman/              # Postman collection for API testing
 ├── .github/workflows/    # CI/CD pipeline (GitHub Actions)
@@ -118,7 +113,6 @@ See per-module documentation:
 - [Backend (src/)](src/README.md)
 - [Frontend](frontend/README.md)
 - [Infrastructure](infra/README.md)
-- [Cloudflare Worker](cloudflare/README.md)
 
 ## CI/CD
 

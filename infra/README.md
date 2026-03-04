@@ -85,7 +85,7 @@ echo -n "your-secret-value" | gcloud secrets versions add interview-hub-db-url -
 ### Cloud Run Services (`cloudrun.py`)
 
 **Backend (`interview-hub-backend`):**
-- Image: set via CI/CD (defaults to `gcr.io/cloudrun/hello` for initial deploy)
+- Image: set via CI/CD (required — no fallback default)
 - Port: 8080
 - Resources: 1 GiB memory, 1000m CPU
 - Min instances: 0 (scales to zero)
@@ -113,13 +113,14 @@ runtime:
 
 ### `Pulumi.prod.yaml`
 
-| Config Key                     | Value                        |
-|--------------------------------|------------------------------|
-| `gcp:project`                  | `interview-hub-prod`         |
-| `gcp:region`                   | `southamerica-east1`         |
-| `interview-hub-infra:domain`   | `interview-hub.lcarera.dev`  |
+| Config Key                             | Value                        |
+|----------------------------------------|------------------------------|
+| `gcp:project`                          | `interview-hub-prod`         |
+| `gcp:region`                           | `southamerica-east1`         |
+| `interview-hub-infra:domain`           | `interview-hub.lcarera.dev`  |
+| `interview-hub-infra:backend_domain`   | `i-hub-be.lcarera.dev`       |
 
-The `domain` config is used to set `APP_BASE_URL` and `FRONTEND_URL` on the backend Cloud Run service.
+The `domain` config sets `FRONTEND_URL` on the backend. The `backend_domain` config sets `APP_BASE_URL`.
 
 ## Stack Outputs
 
