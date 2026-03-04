@@ -1,3 +1,28 @@
+.page-hero {
+  background-color: var(--telus-purple);
+  color: var(--telus-white);
+  padding: 2rem 0;
+  margin: -2rem -1.5rem 2rem;
+
+  .hero-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.75rem;
+    font-weight: 400;
+  }
+
+  .hero-subtitle {
+    margin: 0;
+    opacity: 0.8;
+    font-size: 0.95rem;
+  }
+}
+
 .spinner-container {
   display: flex;
   justify-content: center;
@@ -14,8 +39,52 @@
   }
 }
 
+.card-icon {
+  color: var(--telus-purple) !important;
+  background-color: var(--telus-purple-alpha-10);
+  border-radius: 50%;
+}
+
 .empty-state {
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--telus-muted);
   text-align: center;
   padding: 2rem 0;
+  font-style: italic;
+}
+
+.interview-list-item {
+  border-left: 3px solid var(--telus-purple);
+  margin-bottom: 4px;
+  border-radius: 0 4px 4px 0;
+}
+
+.view-all-btn {
+  color: var(--telus-purple) !important;
+  font-weight: 500;
+}
+
+.pending-card {
+  .pending-icon {
+    color: var(--telus-green-accessible) !important;
+    background-color: var(--telus-green-alpha-10);
+  }
+}
+
+.pending-count-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+
+  .pending-count {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--telus-purple);
+    line-height: 1;
+  }
+
+  .pending-label {
+    color: var(--telus-muted);
+    font-size: 0.95rem;
+  }
 }

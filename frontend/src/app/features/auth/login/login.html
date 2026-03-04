@@ -1,4 +1,24 @@
 <div class="login-container">
-  <h1>Interview Hub</h1>
-  <button mat-flat-button (click)="login()">Sign in with Google</button>
+  <div class="login-hero">
+    <div class="hero-content">
+      <mat-icon class="hero-icon">hub</mat-icon>
+      <h1>Interview Hub</h1>
+      <p class="hero-tagline">Streamline technical interviews and shadowing requests for your team.</p>
+    </div>
+  </div>
+
+  <div class="login-panel">
+    <mat-card class="login-card">
+      <mat-card-header>
+        <mat-card-title>Welcome</mat-card-title>
+        <mat-card-subtitle>Sign in with your @gm2dev.com account</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <button mat-flat-button class="google-btn" (click)="login()">
+          <mat-icon>login</mat-icon>
+          Sign in with Google
+        </button>
+      </mat-card-content>
+    </mat-card>
+  </div>
 </div>

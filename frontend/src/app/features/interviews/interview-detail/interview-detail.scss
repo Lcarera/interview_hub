@@ -4,11 +4,44 @@
   padding: 4rem 0;
 }
 
+.detail-card {
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.card-header-band {
+  background-color: var(--telus-purple);
+  color: var(--telus-white);
+  padding: 1.5rem 1.5rem 1.25rem;
+
+  .header-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .card-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: var(--telus-white);
+  }
+
+  mat-chip {
+    background-color: var(--telus-white-alpha-20) !important;
+    color: var(--telus-white) !important;
+  }
+}
+
+.detail-content {
+  padding: 1.5rem !important;
+}
+
 .detail-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 1.25rem;
 }
 
 .detail-item {
@@ -17,18 +50,49 @@
 
   .label {
     font-size: 0.75rem;
-    color: var(--mat-sys-on-surface-variant);
-    margin-bottom: 0.25rem;
+    font-weight: 600;
+    color: var(--telus-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.3rem;
   }
 }
 
-.section-title {
-  margin-top: 2rem;
-  margin-bottom: 0.5rem;
+.card-actions {
+  padding: 0.75rem 1.5rem 1.25rem !important;
+  gap: 0.75rem;
+}
+
+.edit-btn {
+  color: var(--telus-purple) !important;
+  border-color: var(--telus-purple) !important;
+}
+
+.shadow-btn {
+  background-color: var(--telus-green) !important;
+  color: var(--telus-dark) !important;
+  font-weight: 600;
+}
+
+.shadowing-card {
+  .section-icon {
+    color: var(--telus-purple) !important;
+    background-color: var(--telus-purple-alpha-10);
+    border-radius: 50%;
+  }
+}
+
+.shadowing-item {
+  padding: 0.25rem 0;
+}
+
+.approve-btn {
+  color: var(--telus-green-accessible) !important;
 }
 
 .reason {
   font-style: italic;
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--telus-muted);
   margin-left: 0.5rem;
+  font-size: 0.85rem;
 }
