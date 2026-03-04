@@ -1,0 +1,7 @@
+name = "interview-hub"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+routes = [
+  { pattern = "interview-hub.lcarera.dev/*", zone_name = "lcarera.dev" }
+]
