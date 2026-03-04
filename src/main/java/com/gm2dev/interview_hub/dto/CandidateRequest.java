@@ -1,4 +1,4 @@
-package com.gm2dev.interview_hub.service.dto;
+package com.gm2dev.interview_hub.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UpdateCandidateRequest {
+public class CandidateRequest {
 
     @NotBlank
     private String name;
