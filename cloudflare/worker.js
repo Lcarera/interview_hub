@@ -20,6 +20,7 @@ export default {
       method: request.method,
       headers: request.headers,
       body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body,
+      redirect: 'manual',
     });
   },
 };
