@@ -139,8 +139,15 @@ public class GoogleCalendarService {
 
         StringBuilder description = new StringBuilder();
         description.append("Tech Stack: ").append(interview.getTechStack());
-        if (interview.getCandidateInfo() != null) {
-            description.append("\nCandidate Info: ").append(interview.getCandidateInfo());
+
+        if (interview.getCandidateInfo() != null && !interview.getCandidateInfo().isEmpty()) {
+            description.append("\n\nCandidate Details:");
+            interview.getCandidateInfo().forEach((key, value) -> {
+                if (value != null) {
+                    String label = key.substring(0, 1).toUpperCase() + key.substring(1);
+                    description.append("\n  ").append(label).append(": ").append(value);
+                }
+            });
         }
         event.setDescription(description.toString());
 

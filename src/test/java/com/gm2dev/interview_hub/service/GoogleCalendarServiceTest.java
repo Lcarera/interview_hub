@@ -228,6 +228,32 @@ class GoogleCalendarServiceTest {
     }
 
     @Test
+    void createEvent_formatsDescriptionCleanly() throws IOException {
+        Profile profile = buildProfile();
+        Interview interview = buildInterview();
+        interview.setCandidateInfo(Map.of("name", "Jane Doe", "email", "jane@example.com"));
+
+        Event createdEvent = new Event().setId("event-desc");
+        doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
+        when(calendarClient.events()).thenReturn(events);
+        when(events.insert(eq("primary"), any(Event.class))).thenReturn(insert);
+        when(insert.setConferenceDataVersion(1)).thenReturn(insert);
+        when(insert.execute()).thenReturn(createdEvent);
+
+        googleCalendarService.createEvent(profile, interview);
+
+        ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+        verify(events).insert(eq("primary"), captor.capture());
+        String desc = captor.getValue().getDescription();
+
+        assertTrue(desc.contains("Tech Stack: Java"));
+        assertTrue(desc.contains("Candidate Details:"));
+        assertTrue(desc.contains("Name: Jane Doe"));
+        assertTrue(desc.contains("Email: jane@example.com"));
+        assertFalse(desc.contains("{"), "Description should not contain raw map format");
+    }
+
+    @Test
     void createEvent_includesInterviewerAndCandidateAsAttendees() throws IOException {
         Profile profile = buildProfile();
         Interview interview = buildInterview();
