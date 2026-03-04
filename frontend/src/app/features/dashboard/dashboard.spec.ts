@@ -34,8 +34,8 @@ describe('DashboardComponent', () => {
 
     const req = httpTesting.expectOne(r => r.url.includes('/api/interviews'));
     expect(req.request.params.get('sort')).toBe('startTime,asc');
-    expect(req.request.params.get('size')).toBe('5');
-    req.flush({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 5 });
+    expect(req.request.params.get('size')).toBe('100');
+    req.flush({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 100 });
 
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;

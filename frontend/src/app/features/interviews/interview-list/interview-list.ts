@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { InterviewService } from '../../../core/services/interview.service';
 import { Interview } from '../../../core/models/interview.model';
@@ -36,10 +37,12 @@ export class InterviewListComponent implements OnInit {
   private readonly interviewService = inject(InterviewService);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
 
   readonly displayedColumns = ['techStack', 'candidateName', 'interviewer', 'dateTime', 'status'];
   readonly page = signal<Page<Interview> | null>(null);
   readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
 
   pageIndex = 0;
   pageSize = 20;
@@ -52,6 +55,7 @@ export class InterviewListComponent implements OnInit {
 
   loadInterviews(): void {
     this.loading.set(true);
+    this.error.set(null);
     const sort = this.sortActive && this.sortDirection
       ? `${this.sortActive},${this.sortDirection}`
       : undefined;
@@ -60,7 +64,10 @@ export class InterviewListComponent implements OnInit {
         this.page.set(page);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: () => {
+        this.error.set('Failed to load interviews. Please try again.');
+        this.loading.set(false);
+      },
     });
   }
 
@@ -86,7 +93,10 @@ export class InterviewListComponent implements OnInit {
       width: '500px',
     });
     ref.afterClosed().subscribe((created) => {
-      if (created) this.loadInterviews();
+      if (created) {
+        this.snackBar.open('Interview created successfully', 'Dismiss', { duration: 3000 });
+        this.loadInterviews();
+      }
     });
   }
 

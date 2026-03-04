@@ -53,3 +53,32 @@
     background-color: var(--telus-purple-alpha-04);
   }
 }
+
+.error-state,
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+
+  .error-icon,
+  .empty-icon {
+    font-size: 3rem;
+    height: 3rem;
+    width: 3rem;
+    color: var(--telus-muted);
+    margin-bottom: 1rem;
+  }
+
+  h3 {
+    margin: 0 0 0.5rem;
+    font-weight: 500;
+  }
+
+  p {
+    color: var(--telus-muted);
+    margin: 0 0 1.5rem;
+  }
+}

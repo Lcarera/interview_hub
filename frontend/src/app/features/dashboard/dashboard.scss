@@ -29,6 +29,50 @@
   padding: 4rem 0;
 }
 
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem;
+  text-align: center;
+
+  .stat-icon {
+    font-size: 2rem;
+    height: 2rem;
+    width: 2rem;
+    margin-bottom: 0.75rem;
+
+    &.total { color: var(--telus-purple); }
+    &.upcoming { color: #1976d2; }
+    &.pending { color: #f57c00; }
+    &.completed { color: var(--telus-green-accessible); }
+  }
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--telus-dark);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.85rem;
+    color: var(--telus-muted);
+    margin-top: 0.25rem;
+  }
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

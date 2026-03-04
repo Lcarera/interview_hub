@@ -1,7 +1,7 @@
 <div class="page-hero">
   <div class="hero-inner">
-    <h2>Dashboard</h2>
-    <p class="hero-subtitle">Your upcoming interviews and pending requests at a glance.</p>
+    <h2>Welcome back{{ userName() ? ', ' + userName() : '' }}!</h2>
+    <p class="hero-subtitle">Here's an overview of your interviews and shadowing requests.</p>
   </div>
 </div>
 
@@ -10,6 +10,29 @@
     <mat-spinner diameter="48" />
   </div>
 } @else {
+  <div class="stat-cards">
+    <mat-card class="stat-card">
+      <mat-icon class="stat-icon total">event_note</mat-icon>
+      <span class="stat-value">{{ totalInterviews() }}</span>
+      <span class="stat-label">Total Interviews</span>
+    </mat-card>
+    <mat-card class="stat-card">
+      <mat-icon class="stat-icon upcoming">schedule</mat-icon>
+      <span class="stat-value">{{ upcomingCount() }}</span>
+      <span class="stat-label">Upcoming</span>
+    </mat-card>
+    <mat-card class="stat-card">
+      <mat-icon class="stat-icon pending">hourglass_top</mat-icon>
+      <span class="stat-value">{{ pendingShadowingCount() }}</span>
+      <span class="stat-label">Pending Shadows</span>
+    </mat-card>
+    <mat-card class="stat-card">
+      <mat-icon class="stat-icon completed">check_circle</mat-icon>
+      <span class="stat-value">{{ completedCount() }}</span>
+      <span class="stat-label">Completed</span>
+    </mat-card>
+  </div>
+
   <div class="dashboard-grid">
     <mat-card>
       <mat-card-header>

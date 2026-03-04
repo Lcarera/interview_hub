@@ -2,6 +2,15 @@
   <div class="spinner-container">
     <mat-spinner diameter="48" />
   </div>
+} @else if (error(); as err) {
+  <div class="error-state">
+    <mat-icon class="error-icon">cloud_off</mat-icon>
+    <h3>Something went wrong</h3>
+    <p>{{ err }}</p>
+    <button mat-flat-button (click)="retry()">
+      <mat-icon>refresh</mat-icon> Retry
+    </button>
+  </div>
 } @else if (interview(); as iv) {
   <mat-card class="detail-card">
     <div class="card-header-band">
