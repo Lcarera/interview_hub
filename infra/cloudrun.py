@@ -9,9 +9,10 @@ project = gcp_config.require("project")
 region = gcp_config.require("region")
 domain = config.require("domain")
 
-# Image URIs are set at deploy time via CI (or Pulumi config for manual deploys)
-backend_image = config.get("backend_image") or "gcr.io/cloudrun/hello"
-frontend_image = config.get("frontend_image") or "gcr.io/cloudrun/hello"
+# Image URIs are set at deploy time via CI — no fallback to prevent deploying placeholder containers
+backend_image = config.require("backend_image")
+frontend_image = config.require("frontend_image")
+backend_domain = config.get("backend_domain") or "i-hub-be.lcarera.dev"
 
 # Build secret env var list from Secret Manager secrets
 _secret_envs = [
@@ -48,7 +49,7 @@ backend_service = gcp.cloudrunv2.Service(
                 envs=_secret_envs + [
                     gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
                         name="APP_BASE_URL",
-                        value=pulumi.Output.concat("https://", domain),
+                        value=pulumi.Output.concat("https://", backend_domain),
                     ),
                     gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
                         name="FRONTEND_URL",
@@ -72,9 +73,8 @@ backend_service = gcp.cloudrunv2.Service(
     ),
 )
 
-# Grant allUsers invoker so Cloudflare Worker can call the services without
-# identity tokens. INGRESS_TRAFFIC_ALL allows direct internet access — the
-# Worker is the only intended entry point, but the .run.app URLs are public.
+# Grant allUsers invoker so the services are publicly accessible via custom domains.
+# INGRESS_TRAFFIC_ALL allows direct internet access through Cloudflare DNS proxy.
 gcp.cloudrunv2.ServiceIamMember(
     "backend-invoker",
     project=project,

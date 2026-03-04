@@ -1,8 +1,0 @@
-name = "interview-hub"
-main = "worker.js"
-compatibility_date = "2024-01-01"
-account_id = "2d2538075eba2c237873330becf25add"
-
-routes = [
-  { pattern = "interview-hub.lcarera.dev/*", zone_id = "6591d4a4ddf40f6735d2a3a31f258102" }
-]
