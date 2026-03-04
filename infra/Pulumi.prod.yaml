@@ -1,4 +1,4 @@
 config:
   gcp:project: interview-hub-prod
-  gcp:region: us-central1
+  gcp:region: southamerica-east1
   interview-hub-infra:domain: yourdomain.com
