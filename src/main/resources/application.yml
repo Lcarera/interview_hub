@@ -1,3 +1,4 @@
+# Interview Hub backend configuration
 spring:
   application:
     name: interview-hub

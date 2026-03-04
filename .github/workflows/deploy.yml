@@ -93,39 +93,17 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
-      - name: Resolve backend image
-        id: backend-image
-        run: |
-          if [ "${{ needs.changes.outputs.backend }}" == "true" ]; then
-            echo "image=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/backend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
-          else
-            cd infra
-            source venv/bin/activate
-            pulumi stack select prod
-            IMAGE=$(pulumi config get interview-hub-infra:backend_image 2>/dev/null || echo "")
-            echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Resolve frontend image
-        id: frontend-image
-        run: |
-          if [ "${{ needs.changes.outputs.frontend }}" == "true" ]; then
-            echo "image=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/frontend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
-          else
-            cd infra
-            source venv/bin/activate
-            pulumi stack select prod
-            IMAGE=$(pulumi config get interview-hub-infra:frontend_image 2>/dev/null || echo "")
-            echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Deploy with Pulumi
         run: |
           cd infra
           source venv/bin/activate
           pulumi stack select prod
-          pulumi config set interview-hub-infra:backend_image \
-            ${{ steps.backend-image.outputs.image }}
-          pulumi config set interview-hub-infra:frontend_image \
-            ${{ steps.frontend-image.outputs.image }}
+          if [ "${{ needs.changes.outputs.backend }}" == "true" ]; then
+            pulumi config set interview-hub-infra:backend_image \
+              ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/backend:${{ github.sha }}
+          fi
+          if [ "${{ needs.changes.outputs.frontend }}" == "true" ]; then
+            pulumi config set interview-hub-infra:frontend_image \
+              ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/frontend:${{ github.sha }}
+          fi
           pulumi up --yes
