@@ -1,6 +1,6 @@
 import pulumi
 import pulumi_gcp as gcp
-from iam import cloudrun_sa
+from iam import cloudrun_sa, secret_access_binding
 from secrets import secrets
 
 gcp_config = pulumi.Config("gcp")
@@ -34,6 +34,8 @@ backend_service = gcp.cloudrunv2.Service(
     project=project,
     # Only reachable via the global LB — not directly from the internet
     ingress="INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+    scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=0),
+    opts=pulumi.ResourceOptions(depends_on=[secret_access_binding]),
     template=gcp.cloudrunv2.ServiceTemplateArgs(
         service_account=cloudrun_sa.email,
         containers=[
@@ -86,6 +88,7 @@ frontend_service = gcp.cloudrunv2.Service(
     location=region,
     project=project,
     ingress="INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+    scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=0),
     template=gcp.cloudrunv2.ServiceTemplateArgs(
         containers=[
             gcp.cloudrunv2.ServiceTemplateContainerArgs(
