@@ -32,8 +32,7 @@ backend_service = gcp.cloudrunv2.Service(
     name="interview-hub-backend",
     location=region,
     project=project,
-    # Only reachable via the global LB — not directly from the internet
-    ingress="INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+    ingress="INGRESS_TRAFFIC_ALL",
     scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=0),
     opts=pulumi.ResourceOptions(depends_on=[secret_access_binding]),
     template=gcp.cloudrunv2.ServiceTemplateArgs(
@@ -73,9 +72,9 @@ backend_service = gcp.cloudrunv2.Service(
     ),
 )
 
-# Grant allUsers invoker so the global LB's serverless NEG can forward requests
-# without an identity token. INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER ensures
-# only the LB network path can reach this service — direct internet access is blocked.
+# Grant allUsers invoker so Cloudflare Worker can call the services without
+# identity tokens. INGRESS_TRAFFIC_ALL allows direct internet access — the
+# Worker is the only intended entry point, but the .run.app URLs are public.
 gcp.cloudrunv2.ServiceIamMember(
     "backend-invoker",
     project=project,
@@ -90,7 +89,7 @@ frontend_service = gcp.cloudrunv2.Service(
     name="interview-hub-frontend",
     location=region,
     project=project,
-    ingress="INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER",
+    ingress="INGRESS_TRAFFIC_ALL",
     scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=0),
     template=gcp.cloudrunv2.ServiceTemplateArgs(
         containers=[
