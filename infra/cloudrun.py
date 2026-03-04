@@ -56,6 +56,9 @@ backend_service = gcp.cloudrunv2.Service(
                         value=pulumi.Output.concat("https://", domain),
                     ),
                 ],
+                resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
+                    limits={"memory": "1Gi", "cpu": "1000m"},
+                ),
                 startup_probe=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeArgs(
                     http_get=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeHttpGetArgs(
                         path="/actuator/health",

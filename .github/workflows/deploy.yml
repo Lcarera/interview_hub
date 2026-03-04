@@ -43,7 +43,7 @@ jobs:
       - name: Build and push frontend image
         run: |
           IMAGE=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/frontend:${{ github.sha }}
-          docker build -t $IMAGE ./frontend
+          docker build --build-arg NGINX_CONF=nginx.prod.conf -t $IMAGE ./frontend
           docker push $IMAGE
 
       - name: Set up Python
