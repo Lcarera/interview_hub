@@ -101,9 +101,21 @@ jobs:
           if [ "${{ needs.changes.outputs.backend }}" == "true" ]; then
             pulumi config set interview-hub-infra:backend_image \
               ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/backend:${{ github.sha }}
+          else
+            CURRENT=$(gcloud run services describe interview-hub-backend \
+              --region=${{ env.GCP_REGION }} --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || echo "")
+            if [ -n "$CURRENT" ]; then
+              pulumi config set interview-hub-infra:backend_image "$CURRENT"
+            fi
           fi
           if [ "${{ needs.changes.outputs.frontend }}" == "true" ]; then
             pulumi config set interview-hub-infra:frontend_image \
               ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/frontend:${{ github.sha }}
+          else
+            CURRENT=$(gcloud run services describe interview-hub-frontend \
+              --region=${{ env.GCP_REGION }} --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || echo "")
+            if [ -n "$CURRENT" ]; then
+              pulumi config set interview-hub-infra:frontend_image "$CURRENT"
+            fi
           fi
           pulumi up --yes
