@@ -1,6 +1,7 @@
 package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
+import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
@@ -134,20 +135,28 @@ public class GoogleCalendarService {
     private Event buildEvent(Profile interviewer, Interview interview) {
         Event event = new Event();
 
-        String candidateName = extractCandidateName(interview.getCandidateInfo());
+        Candidate candidate = interview.getCandidate();
+        String candidateName = candidate != null && candidate.getName() != null ? candidate.getName() : "Unknown";
         event.setSummary(interview.getTechStack() + " Interview - " + candidateName);
 
         StringBuilder description = new StringBuilder();
         description.append("Tech Stack: ").append(interview.getTechStack());
 
-        if (interview.getCandidateInfo() != null && !interview.getCandidateInfo().isEmpty()) {
+        if (candidate != null) {
             description.append("\n\nCandidate Details:");
-            interview.getCandidateInfo().forEach((key, value) -> {
-                if (value != null) {
-                    String label = key.substring(0, 1).toUpperCase() + key.substring(1);
-                    description.append("\n  ").append(label).append(": ").append(value);
-                }
-            });
+            description.append("\n  Name: ").append(candidate.getName());
+            if (candidate.getEmail() != null) {
+                description.append("\n  Email: ").append(candidate.getEmail());
+            }
+            if (candidate.getLinkedinUrl() != null) {
+                description.append("\n  LinkedIn: ").append(candidate.getLinkedinUrl());
+            }
+            if (candidate.getPrimaryArea() != null) {
+                description.append("\n  Primary Area: ").append(candidate.getPrimaryArea());
+            }
+            if (candidate.getFeedbackLink() != null) {
+                description.append("\n  Feedback Link: ").append(candidate.getFeedbackLink());
+            }
         }
         event.setDescription(description.toString());
 
@@ -168,9 +177,8 @@ public class GoogleCalendarService {
         List<EventAttendee> attendees = new ArrayList<>();
         attendees.add(new EventAttendee().setEmail(interviewer.getEmail()));
 
-        String candidateEmail = extractCandidateEmail(interview.getCandidateInfo());
-        if (candidateEmail != null) {
-            attendees.add(new EventAttendee().setEmail(candidateEmail));
+        if (candidate != null && candidate.getEmail() != null) {
+            attendees.add(new EventAttendee().setEmail(candidate.getEmail()));
         }
         event.setAttendees(attendees);
 
@@ -179,19 +187,5 @@ public class GoogleCalendarService {
 
     private String getCalendarId(Profile interviewer) {
         return interviewer.getCalendarEmail() != null ? interviewer.getCalendarEmail() : "primary";
-    }
-
-    private String extractCandidateEmail(Map<String, Object> candidateInfo) {
-        if (candidateInfo == null) return null;
-        Object email = candidateInfo.get("email");
-        return email != null ? email.toString() : null;
-    }
-
-    private String extractCandidateName(Map<String, Object> candidateInfo) {
-        if (candidateInfo == null) {
-            return "Unknown";
-        }
-        Object name = candidateInfo.get("name");
-        return name != null ? name.toString() : "Unknown";
     }
 }
