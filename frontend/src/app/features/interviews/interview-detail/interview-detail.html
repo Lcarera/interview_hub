@@ -28,16 +28,38 @@
           <span class="label">Interviewer</span>
           <span>{{ iv.interviewer.email }}</span>
         </div>
-        @if (iv.candidateInfo['name']) {
+        @if (iv.candidate) {
           <div class="detail-item">
             <span class="label">Candidate</span>
-            <span>{{ iv.candidateInfo['name'] }}</span>
+            <span>{{ iv.candidate.name }}</span>
           </div>
-        }
-        @if (iv.candidateInfo['email']) {
           <div class="detail-item">
             <span class="label">Candidate Email</span>
-            <span>{{ iv.candidateInfo['email'] }}</span>
+            <span>{{ iv.candidate.email }}</span>
+          </div>
+          @if (iv.candidate.linkedinUrl) {
+            <div class="detail-item">
+              <span class="label">LinkedIn</span>
+              <a [href]="iv.candidate.linkedinUrl" target="_blank">{{ iv.candidate.linkedinUrl }}</a>
+            </div>
+          }
+          @if (iv.candidate.primaryArea) {
+            <div class="detail-item">
+              <span class="label">Primary Area</span>
+              <span>{{ iv.candidate.primaryArea }}</span>
+            </div>
+          }
+          @if (iv.candidate.feedbackLink) {
+            <div class="detail-item">
+              <span class="label">Feedback</span>
+              <a [href]="iv.candidate.feedbackLink" target="_blank">View Feedback</a>
+            </div>
+          }
+        }
+        @if (iv.talentAcquisition) {
+          <div class="detail-item">
+            <span class="label">Talent Acquisition</span>
+            <span>{{ iv.talentAcquisition.email }}</span>
           </div>
         }
         <div class="detail-item">
