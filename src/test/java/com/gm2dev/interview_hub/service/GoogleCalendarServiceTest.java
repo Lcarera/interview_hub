@@ -1,6 +1,7 @@
 package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
+import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
@@ -19,7 +20,6 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -85,7 +85,11 @@ class GoogleCalendarServiceTest {
         Interview interview = new Interview();
         interview.setId(UUID.randomUUID());
         interview.setTechStack("Java");
-        interview.setCandidateInfo(Map.of("name", "Jane Doe"));
+        Candidate candidate = new Candidate();
+        candidate.setId(UUID.randomUUID());
+        candidate.setName("Jane Doe");
+        candidate.setEmail("jane@example.com");
+        interview.setCandidate(candidate);
         interview.setStartTime(Instant.now().plus(1, ChronoUnit.DAYS));
         interview.setEndTime(Instant.now().plus(1, ChronoUnit.DAYS).plus(1, ChronoUnit.HOURS));
         interview.setStatus(InterviewStatus.SCHEDULED);
@@ -186,10 +190,10 @@ class GoogleCalendarServiceTest {
     }
 
     @Test
-    void createEvent_withNullCandidateInfo_usesUnknownInSummary() throws IOException {
+    void createEvent_withNullCandidate_usesUnknownInSummary() throws IOException {
         Profile profile = buildProfile();
         Interview interview = buildInterview();
-        interview.setCandidateInfo(null);
+        interview.setCandidate(null);
 
         Event createdEvent = new Event().setId("event-null-candidate");
         doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
@@ -207,10 +211,14 @@ class GoogleCalendarServiceTest {
     }
 
     @Test
-    void createEvent_withCandidateInfoMissingName_usesUnknownInSummary() throws IOException {
+    void createEvent_withCandidateNullName_usesUnknownInSummary() throws IOException {
         Profile profile = buildProfile();
         Interview interview = buildInterview();
-        interview.setCandidateInfo(Map.of("email", "test@example.com"));
+        Candidate candidate = new Candidate();
+        candidate.setId(UUID.randomUUID());
+        candidate.setEmail("test@example.com");
+        // name is null
+        interview.setCandidate(candidate);
 
         Event createdEvent = new Event().setId("event-no-name");
         doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
@@ -231,7 +239,6 @@ class GoogleCalendarServiceTest {
     void createEvent_formatsDescriptionCleanly() throws IOException {
         Profile profile = buildProfile();
         Interview interview = buildInterview();
-        interview.setCandidateInfo(Map.of("name", "Jane Doe", "email", "jane@example.com"));
 
         Event createdEvent = new Event().setId("event-desc");
         doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
@@ -257,7 +264,6 @@ class GoogleCalendarServiceTest {
     void createEvent_includesInterviewerAndCandidateAsAttendees() throws IOException {
         Profile profile = buildProfile();
         Interview interview = buildInterview();
-        interview.setCandidateInfo(Map.of("name", "Jane Doe", "email", "jane@example.com"));
 
         Event createdEvent = new Event().setId("event-attendees");
         doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
@@ -280,7 +286,12 @@ class GoogleCalendarServiceTest {
     @Test
     void createEvent_onlyInterviewerAttendee_whenNoCandidateEmail() throws IOException {
         Profile profile = buildProfile();
-        Interview interview = buildInterview(); // candidateInfo has only "name"
+        Interview interview = buildInterview();
+        Candidate candidate = new Candidate();
+        candidate.setId(UUID.randomUUID());
+        candidate.setName("Jane Doe");
+        // email is null
+        interview.setCandidate(candidate);
 
         Event createdEvent = new Event().setId("event-no-candidate-email");
         doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);

@@ -9,14 +9,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
-import java.util.Map;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateInterviewRequest {
 
-    private Map<String, Object> candidateInfo;
+    @NotNull
+    private UUID candidateId;
+
+    private UUID talentAcquisitionId;
 
     @NotBlank
     private String techStack;

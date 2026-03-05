@@ -3,7 +3,9 @@ package com.gm2dev.interview_hub.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
+import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
+import com.gm2dev.interview_hub.mapper.CandidateMapperImpl;
 import com.gm2dev.interview_hub.mapper.InterviewMapperImpl;
 import com.gm2dev.interview_hub.mapper.ProfileMapperImpl;
 import com.gm2dev.interview_hub.mapper.ShadowingRequestMapperImpl;
@@ -32,7 +34,6 @@ import org.springframework.data.domain.Pageable;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -43,7 +44,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(InterviewController.class)
-@Import({SecurityConfig.class, InterviewMapperImpl.class, ProfileMapperImpl.class, ShadowingRequestMapperImpl.class})
+@Import({SecurityConfig.class, InterviewMapperImpl.class, ProfileMapperImpl.class, ShadowingRequestMapperImpl.class, CandidateMapperImpl.class})
 @org.springframework.test.context.ActiveProfiles("test")
 class InterviewControllerTest {
 
@@ -76,7 +77,11 @@ class InterviewControllerTest {
         interview.setId(id);
         interview.setInterviewer(interviewer);
         interview.setTechStack("Java");
-        interview.setCandidateInfo(Map.of("name", "Jane Doe"));
+        Candidate candidate = new Candidate();
+        candidate.setId(UUID.randomUUID());
+        candidate.setName("Jane Doe");
+        candidate.setEmail("jane@example.com");
+        interview.setCandidate(candidate);
         interview.setStartTime(start);
         interview.setEndTime(end);
         interview.setStatus(InterviewStatus.SCHEDULED);
@@ -91,12 +96,12 @@ class InterviewControllerTest {
         String body = """
                 {
                     "interviewerId": "%s",
-                    "candidateInfo": {"name": "Jane"},
+                    "candidateId": "%s",
                     "techStack": "Java",
                     "startTime": "2026-03-15T10:00:00Z",
                     "endTime": "2026-03-15T11:00:00Z"
                 }
-                """.formatted(UUID.randomUUID());
+                """.formatted(UUID.randomUUID(), UUID.randomUUID());
 
         mockMvc.perform(post("/api/interviews")
                         .with(jwt())
@@ -180,12 +185,13 @@ class InterviewControllerTest {
 
         String body = """
                 {
+                    "candidateId": "%s",
                     "techStack": "Kotlin",
                     "startTime": "2026-04-15T14:00:00Z",
                     "endTime": "2026-04-15T15:00:00Z",
                     "status": "SCHEDULED"
                 }
-                """;
+                """.formatted(UUID.randomUUID());
 
         mockMvc.perform(put("/api/interviews/{id}", interview.getId())
                         .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
@@ -214,12 +220,13 @@ class InterviewControllerTest {
 
         String body = """
                 {
+                    "candidateId": "%s",
                     "techStack": "Kotlin",
                     "startTime": "2026-04-15T14:00:00Z",
                     "endTime": "2026-04-15T15:00:00Z",
                     "status": "SCHEDULED"
                 }
-                """;
+                """.formatted(UUID.randomUUID());
 
         mockMvc.perform(put("/api/interviews/{id}", interviewId)
                         .with(jwt().jwt(j -> j.subject(nonOwnerId.toString())))
