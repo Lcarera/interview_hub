@@ -356,6 +356,36 @@ class InterviewServiceTest {
     }
 
     @Test
+    void updateInterview_withTalentAcquisition_setsRelation() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "upd-ta@example.com", "interviewer", null);
+        profileRepository.save(interviewer);
+
+        UUID taId = UUID.randomUUID();
+        Profile ta = new Profile(taId, "upd-ta-role@example.com", "interviewer", null);
+        profileRepository.save(ta);
+
+        Candidate candidate = createTestCandidate();
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        Interview created = interviewService.createInterview(
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
+
+        Instant newStart = Instant.now().plus(2, ChronoUnit.DAYS);
+        Instant newEnd = newStart.plus(1, ChronoUnit.HOURS);
+
+        UpdateInterviewRequest updateRequest = new UpdateInterviewRequest(
+                candidate.getId(), taId, "Kotlin", newStart, newEnd, InterviewStatus.SCHEDULED);
+
+        Interview updated = interviewService.updateInterview(created.getId(), updateRequest, profileId);
+
+        assertNotNull(updated.getTalentAcquisition());
+        assertEquals(taId, updated.getTalentAcquisition().getId());
+    }
+
+    @Test
     void createInterview_withTalentAcquisition_setsRelation() {
         UUID profileId = UUID.randomUUID();
         Profile interviewer = new Profile(profileId, "ta-test@example.com", "interviewer", null);
