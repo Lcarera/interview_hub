@@ -2,14 +2,16 @@ import { InterviewStatus } from './interview.model';
 
 export interface CreateInterviewRequest {
   interviewerId: string;
-  candidateInfo?: Record<string, unknown>;
+  candidateId: string;
+  talentAcquisitionId?: string;
   techStack: string;
   startTime: string;
   endTime: string;
 }
 
 export interface UpdateInterviewRequest {
-  candidateInfo?: Record<string, unknown>;
+  candidateId: string;
+  talentAcquisitionId?: string;
   techStack: string;
   startTime: string;
   endTime: string;
