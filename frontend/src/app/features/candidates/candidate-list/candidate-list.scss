@@ -1,0 +1,76 @@
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}
+
+.page-hero {
+  background-color: var(--telus-purple);
+  color: var(--telus-white);
+  padding: 2rem 1.5rem;
+  margin: -2rem -1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  .hero-inner {
+    h2 {
+      margin: 0 0 0.25rem;
+      font-size: 1.75rem;
+      font-weight: 400;
+    }
+
+    .hero-subtitle {
+      margin: 0;
+      opacity: 0.8;
+      font-size: 0.95rem;
+    }
+  }
+}
+
+.create-btn {
+  background-color: var(--telus-green) !important;
+  color: var(--telus-dark) !important;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.candidate-table {
+  width: 100%;
+}
+
+.error-state,
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+
+  .error-icon,
+  .empty-icon {
+    font-size: 3rem;
+    height: 3rem;
+    width: 3rem;
+    color: var(--telus-muted);
+    margin-bottom: 1rem;
+  }
+
+  h3 {
+    margin: 0 0 0.5rem;
+    font-weight: 500;
+  }
+
+  p {
+    color: var(--telus-muted);
+    margin: 0 0 1.5rem;
+  }
+}

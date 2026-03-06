@@ -42,7 +42,7 @@
 
         <ng-container matColumnDef="candidateName">
           <th mat-header-cell *matHeaderCellDef>Candidate</th>
-          <td mat-cell *matCellDef="let row">{{ row.candidateInfo?.['name'] || '—' }}</td>
+          <td mat-cell *matCellDef="let row">{{ row.candidate?.name || '—' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="interviewer">

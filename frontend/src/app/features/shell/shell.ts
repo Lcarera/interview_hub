@@ -25,6 +25,7 @@ import { AuthService } from '../../core/services/auth.service';
       <nav class="nav-links">
         <a mat-button routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
         <a mat-button routerLink="/interviews" routerLinkActive="active">Interviews</a>
+        <a mat-button routerLink="/candidates" routerLinkActive="active">Candidates</a>
       </nav>
 
       <span class="spacer"></span>
