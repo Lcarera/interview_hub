@@ -4,6 +4,7 @@ import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.dto.CandidateRequest;
 import com.gm2dev.interview_hub.mapper.CandidateMapper;
 import com.gm2dev.interview_hub.repository.CandidateRepository;
+import com.gm2dev.interview_hub.repository.InterviewRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ public class CandidateService {
 
     private final CandidateRepository candidateRepository;
     private final CandidateMapper candidateMapper;
+    private final InterviewRepository interviewRepository;
 
     @Transactional
     public Candidate createCandidate(CandidateRequest request) {
@@ -51,6 +53,9 @@ public class CandidateService {
     @Transactional
     public void deleteCandidate(UUID id) {
         Candidate candidate = findById(id);
+        if (!interviewRepository.findByCandidateId(id).isEmpty()) {
+            throw new IllegalStateException("Cannot delete candidate with existing interviews");
+        }
         candidateRepository.delete(candidate);
     }
 }

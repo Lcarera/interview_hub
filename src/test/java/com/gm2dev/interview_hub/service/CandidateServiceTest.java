@@ -1,7 +1,13 @@
 package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.domain.Candidate;
+import com.gm2dev.interview_hub.domain.Interview;
+import com.gm2dev.interview_hub.domain.InterviewStatus;
+import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.dto.CandidateRequest;
+import com.gm2dev.interview_hub.repository.InterviewRepository;
+import com.gm2dev.interview_hub.repository.ProfileRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,6 +30,15 @@ class CandidateServiceTest {
 
     @Autowired
     private CandidateService candidateService;
+
+    @Autowired
+    private InterviewRepository interviewRepository;
+
+    @Autowired
+    private ProfileRepository profileRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @MockitoBean
     private GoogleCalendarService googleCalendarService;
@@ -104,5 +120,27 @@ class CandidateServiceTest {
     @Test
     void deleteCandidate_withNonExistentId_throwsEntityNotFoundException() {
         assertThrows(EntityNotFoundException.class, () -> candidateService.deleteCandidate(UUID.randomUUID()));
+    }
+
+    @Test
+    void deleteCandidate_withExistingInterviews_throwsIllegalStateException() {
+        Candidate candidate = candidateService.createCandidate(
+                new CandidateRequest("Jane Doe", "jane@example.com", null, null, null)
+        );
+
+        Profile interviewer = new Profile(UUID.randomUUID(), "interviewer@gm2dev.com", "interviewer", null);
+        profileRepository.save(interviewer);
+        entityManager.flush();
+
+        Interview interview = new Interview();
+        interview.setInterviewer(interviewer);
+        interview.setCandidate(candidate);
+        interview.setStartTime(Instant.now());
+        interview.setEndTime(Instant.now().plusSeconds(3600));
+        interview.setStatus(InterviewStatus.SCHEDULED);
+        interviewRepository.save(interview);
+        entityManager.flush();
+
+        assertThrows(IllegalStateException.class, () -> candidateService.deleteCandidate(candidate.getId()));
     }
 }

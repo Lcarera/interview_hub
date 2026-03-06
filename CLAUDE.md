@@ -89,6 +89,8 @@ The application models a four-entity system:
 2. **Candidate** - External candidates being interviewed:
    - Name, email (required), LinkedIn URL, primary area/tech, feedback link
    - One-to-many relationship with Interviews (same candidate can have multiple interviews)
+   - Candidates must be created before interviews — `candidateId` is `@NotNull` on Create/UpdateInterviewRequest (intentional design, no inline candidate creation)
+   - Deletion is guarded: candidates with existing interviews cannot be deleted (returns 409 Conflict)
 
 3. **Interview** - Scheduled interviews with:
    - Reference to interviewer (Profile)

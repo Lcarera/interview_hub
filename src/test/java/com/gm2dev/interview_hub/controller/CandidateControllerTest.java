@@ -23,7 +23,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -130,6 +130,17 @@ class CandidateControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(candidateService).deleteCandidate(id);
+    }
+
+    @Test
+    void deleteCandidate_withExistingInterviews_returns409() throws Exception {
+        UUID id = UUID.randomUUID();
+        doThrow(new IllegalStateException("Cannot delete candidate with existing interviews"))
+                .when(candidateService).deleteCandidate(id);
+
+        mockMvc.perform(delete("/api/candidates/{id}", id)
+                        .with(jwt()))
+                .andExpect(status().isConflict());
     }
 
     @Test
