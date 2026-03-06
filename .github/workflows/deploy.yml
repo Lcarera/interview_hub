@@ -3,6 +3,12 @@ name: Deploy to GCP
 on:
   push:
     branches: [prod]
+  workflow_dispatch:
+    inputs:
+      force_full_deploy:
+        description: 'Deploy all services (skip change detection)'
+        type: boolean
+        default: true
 
 env:
   GCP_REGION: southamerica-east1
@@ -15,9 +21,9 @@ jobs:
     permissions:
       contents: read
     outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      infra: ${{ steps.filter.outputs.infra }}
+      backend: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.backend }}
+      frontend: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.frontend }}
+      infra: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v4
         with:
