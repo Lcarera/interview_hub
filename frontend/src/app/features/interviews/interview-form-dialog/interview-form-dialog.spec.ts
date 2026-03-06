@@ -101,6 +101,28 @@ describe('InterviewFormDialogComponent', () => {
       req.flush({ id: 'new-1' });
       httpTesting.verify();
     });
+
+    it('should reset submitting and skip API call when profileId is missing', () => {
+      const fixture = TestBed.createComponent(InterviewFormDialogComponent);
+      const httpTesting = TestBed.inject(HttpTestingController);
+
+      // No auth → profileId() returns null
+      const form = fixture.componentInstance.form;
+      form.controls.techStack.setValue('Java');
+      form.controls.candidateId.setValue('c-1');
+      form.controls.startTime.setValue('2026-03-01T10:00');
+      form.controls.duration.setValue(60);
+
+      fixture.componentInstance.save();
+
+      // Flush ngOnInit requests
+      httpTesting.match(r => r.url.includes('/api/candidates') || r.url.includes('/api/profiles'))
+        .forEach(r => r.flush([]));
+
+      // No interview create call should have been made
+      httpTesting.expectNone(r => r.url.includes('/api/interviews'));
+      expect(fixture.componentInstance.submitting).toBe(false);
+    });
   });
 
   describe('edit mode', () => {

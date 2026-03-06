@@ -100,7 +100,10 @@ export class InterviewFormDialogComponent implements OnInit {
       });
     } else {
       const profileId = this.authService.profileId();
-      if (!profileId) return;
+      if (!profileId) {
+        this.submitting = false;
+        return;
+      }
       this.interviewService.create({
         interviewerId: profileId,
         candidateId: v.candidateId,

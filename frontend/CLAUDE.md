@@ -126,6 +126,7 @@ All routes use lazy loading (`loadComponent`):
 ## Architectural Patterns
 
 - **Standalone components** — no NgModules, all components are `standalone: true`
+- **Default change detection** — no component uses `ChangeDetectionStrategy.OnPush`; all use Angular's default strategy
 - **Functional DI** — use `inject()` instead of constructor injection
 - **Functional guards/interceptors** — `CanActivateFn` and `HttpInterceptorFn`
 - **Signals for state** — `signal()` for reactive local state (e.g. `AuthService.email`)

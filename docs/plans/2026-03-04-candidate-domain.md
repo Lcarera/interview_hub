@@ -6,7 +6,7 @@
 
 **Architecture:** Create a new `Candidate` JPA entity with its own table, repository, service, controller, DTOs, and mapper. Modify `Interview` to replace `candidateInfo` (JSONB Map) with a `@ManyToOne` to `Candidate`, and add a nullable `@ManyToOne` to `Profile` for the talent acquisition relation. Update `GoogleCalendarService` to read candidate data from the entity instead of the JSONB map.
 
-**Interview–Candidate UX pattern (either/or):** When creating or updating an interview, the caller provides **either** `candidateId` (reference an existing candidate) **or** inline `candidate` data (create a new one). Exactly one must be non-null — the backend validates this. This avoids forcing a two-step "create candidate then create interview" flow while still allowing reuse of existing candidates.
+**Interview–Candidate workflow (two-step):** Candidates are always created as a separate step first via the Candidate API, then referenced by `candidateId` (required, `@NotNull`) when creating or updating an interview. This was an intentional scope decision — there is no single-step interview+candidate creation flow. The frontend enforces this workflow.
 
 **Tech Stack:** Spring Boot 4.0.2, Java 25, JPA/Hibernate, H2 (tests), PostgreSQL (prod), MapStruct, Lombok, JUnit 5, Mockito
 
