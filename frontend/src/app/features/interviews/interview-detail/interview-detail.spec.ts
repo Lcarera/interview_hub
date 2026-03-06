@@ -8,7 +8,7 @@ import { InterviewDetailComponent } from './interview-detail';
 const mockInterview = {
   id: 'iv-1',
   techStack: 'React',
-  candidateInfo: { name: 'Bob', email: 'bob@example.com' },
+  candidate: { id: 'c-1', name: 'Bob', email: 'bob@example.com' },
   interviewer: { id: 'p-1', email: 'dev@gm2dev.com', role: 'interviewer' },
   startTime: '2026-03-01T10:00:00Z',
   endTime: '2026-03-01T11:00:00Z',

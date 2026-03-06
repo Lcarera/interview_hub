@@ -13,17 +13,27 @@
 
     <div class="form-section">
       <p class="section-label">Candidate</p>
-      <div class="field-row">
-        <mat-form-field appearance="outline" class="half-width">
-          <mat-label>Candidate Name</mat-label>
-          <input matInput formControlName="candidateName" />
-        </mat-form-field>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Candidate</mat-label>
+        <mat-select formControlName="candidateId" required>
+          @for (c of candidates(); track c.id) {
+            <mat-option [value]="c.id">{{ c.name }} ({{ c.email }})</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
 
-        <mat-form-field appearance="outline" class="half-width">
-          <mat-label>Candidate Email</mat-label>
-          <input matInput formControlName="candidateEmail" type="email" />
-        </mat-form-field>
-      </div>
+    <div class="form-section">
+      <p class="section-label">Talent Acquisition (optional)</p>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Talent Acquisition Contact</mat-label>
+        <mat-select formControlName="talentAcquisitionId">
+          <mat-option value="">None</mat-option>
+          @for (p of profiles(); track p.id) {
+            <mat-option [value]="p.id">{{ p.email }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
     </div>
 
     <div class="form-section">

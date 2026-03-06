@@ -43,6 +43,7 @@ describe('InterviewService', () => {
   it('should create an interview', () => {
     const body = {
       interviewerId: 'p-1',
+      candidateId: 'c-1',
       techStack: 'Java',
       startTime: '2026-03-01T10:00:00Z',
       endTime: '2026-03-01T11:00:00Z',
@@ -56,6 +57,7 @@ describe('InterviewService', () => {
 
   it('should update an interview', () => {
     const body = {
+      candidateId: 'c-1',
       techStack: 'Python',
       startTime: '2026-03-01T10:00:00Z',
       endTime: '2026-03-01T11:00:00Z',
