@@ -771,58 +771,41 @@ git commit -m "feat: add CandidateController with tests"
 
 **Step 1: Update CreateInterviewRequest**
 
-Replace `candidateInfo` field with the either/or candidate pattern:
-```java
-private UUID candidateId;
+> **Scope change (implemented):** The either/or `candidateId` XOR inline `candidate` pattern was not implemented. Instead, `candidateId` is mandatory (`@NotNull`). Candidates are always created separately first.
 
-private CreateCandidateRequest candidate;
+Replace `candidateInfo` field with mandatory `candidateId`:
+```java
+@NotNull
+private UUID candidateId;
 
 private UUID talentAcquisitionId;
 ```
 
-No `@NotNull` on either candidate field — validation is custom (exactly one must be non-null). Remove the `Map` import, add `import com.gm2dev.interview_hub.service.dto.CreateCandidateRequest;`.
-
 Full field list after changes:
 - `interviewerId` (UUID, @NotNull)
-- `candidateId` (UUID, nullable — mutually exclusive with `candidate`)
-- `candidate` (CreateCandidateRequest, nullable — mutually exclusive with `candidateId`)
+- `candidateId` (UUID, @NotNull)
 - `talentAcquisitionId` (UUID, nullable)
 - `techStack` (String, @NotBlank)
 - `startTime` (Instant, @NotNull @Future)
 - `endTime` (Instant, @NotNull @Future)
 
-Add a custom validation method:
-```java
-@AssertTrue(message = "Exactly one of candidateId or candidate must be provided")
-@JsonIgnore
-public boolean isCandidateValid() {
-    return (candidateId != null) ^ (candidate != null);
-}
-```
-
-Add imports: `jakarta.validation.constraints.AssertTrue`, `com.fasterxml.jackson.annotation.JsonIgnore`.
-
 **Step 2: Update UpdateInterviewRequest**
 
-Same either/or pattern for candidate:
+Same mandatory `candidateId` pattern:
 ```java
+@NotNull
 private UUID candidateId;
-
-private CreateCandidateRequest candidate;
 
 private UUID talentAcquisitionId;
 ```
 
 Full field list after changes:
-- `candidateId` (UUID, nullable — mutually exclusive with `candidate`)
-- `candidate` (CreateCandidateRequest, nullable — mutually exclusive with `candidateId`)
+- `candidateId` (UUID, @NotNull)
 - `talentAcquisitionId` (UUID, nullable)
 - `techStack` (String, @NotBlank)
 - `startTime` (Instant, @NotNull @Future)
 - `endTime` (Instant, @NotNull @Future)
 - `status` (InterviewStatus, @NotNull)
-
-Same `@AssertTrue isCandidateValid()` method as CreateInterviewRequest.
 
 **Step 3: Update InterviewDto**
 
@@ -902,30 +885,18 @@ Add to the class fields:
 private final CandidateRepository candidateRepository;
 ```
 
-**Step 2: Add a private helper to resolve the either/or candidate**
+**Step 2: Update createInterview**
 
-```java
-private Candidate resolveCandidate(UUID candidateId, CreateCandidateRequest candidateRequest) {
-    if (candidateId != null) {
-        return candidateRepository.findById(candidateId)
-                .orElseThrow(() -> new EntityNotFoundException("Candidate not found: " + candidateId));
-    }
-    return candidateService.createCandidate(candidateRequest);
-}
-```
+> **Scope change (implemented):** No `resolveCandidate` helper needed — `candidateId` is always required. Look up candidate by ID directly.
 
-Add `CandidateService` as a dependency (constructor injection via `@RequiredArgsConstructor`).
-
-**Step 3: Update createInterview**
-
-Replace the `candidateInfo` line with the either/or candidate resolution and TA lookups:
 ```java
 @Transactional
 public Interview createInterview(CreateInterviewRequest request) {
     Profile interviewer = profileRepository.findById(request.getInterviewerId())
             .orElseThrow(() -> new EntityNotFoundException("Interviewer not found"));
 
-    Candidate candidate = resolveCandidate(request.getCandidateId(), request.getCandidate());
+    Candidate candidate = candidateRepository.findById(request.getCandidateId())
+            .orElseThrow(() -> new EntityNotFoundException("Candidate not found: " + request.getCandidateId()));
 
     Interview interview = new Interview();
     interview.setInterviewer(interviewer);
@@ -956,11 +927,12 @@ public Interview createInterview(CreateInterviewRequest request) {
 }
 ```
 
-**Step 4: Update updateInterview**
+**Step 3: Update updateInterview**
 
-After `interviewMapper.updateFromRequest(request, interview)`, add either/or candidate resolution and TA resolution:
+After `interviewMapper.updateFromRequest(request, interview)`, look up candidate by ID and resolve TA:
 ```java
-Candidate candidate = resolveCandidate(request.getCandidateId(), request.getCandidate());
+Candidate candidate = candidateRepository.findById(request.getCandidateId())
+        .orElseThrow(() -> new EntityNotFoundException("Candidate not found: " + request.getCandidateId()));
 interview.setCandidate(candidate);
 
 if (request.getTalentAcquisitionId() != null) {
@@ -1063,7 +1035,7 @@ All test helper methods that build `Interview` objects need updating:
   candidate = candidateRepository.save(candidate);
   ```
 - Add `@Autowired CandidateRepository candidateRepository;`
-- Update `CreateInterviewRequest` constructor calls — replace `Map<> candidateInfo` arg with either `candidateId` (existing) or inline `CreateCandidateRequest` (new)
+- Update `CreateInterviewRequest` constructor calls — replace `Map<> candidateInfo` arg with `candidateId` (mandatory)
 - Update `UpdateInterviewRequest` similarly
 - Add tests for both candidate resolution paths:
   ```java
@@ -1084,23 +1056,7 @@ All test helper methods that build `Interview` objects need updating:
       assertEquals(candidate.getId(), interview.getCandidate().getId());
   }
 
-  @Test
-  void createInterview_withInlineCandidate_createsNewCandidate() {
-      CreateCandidateRequest candidateReq = new CreateCandidateRequest(
-              "New Candidate", "new@example.com", null, "Java", null);
-
-      CreateInterviewRequest request = new CreateInterviewRequest();
-      request.setInterviewerId(interviewer.getId());
-      request.setCandidate(candidateReq);
-      request.setTechStack("Java");
-      request.setStartTime(Instant.now().plus(1, ChronoUnit.DAYS));
-      request.setEndTime(Instant.now().plus(1, ChronoUnit.DAYS).plus(1, ChronoUnit.HOURS));
-
-      Interview interview = interviewService.createInterview(request);
-
-      assertNotNull(interview.getCandidate().getId());
-      assertEquals("New Candidate", interview.getCandidate().getName());
-  }
+  // Note: inline candidate creation test removed — not implemented (mandatory candidateId workflow)
 
   @Test
   void createInterview_withTalentAcquisition_setsTaProfile() {
