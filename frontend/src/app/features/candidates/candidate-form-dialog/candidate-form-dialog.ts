@@ -46,7 +46,14 @@ export class CandidateFormDialogComponent {
     if (this.form.invalid || this.submitting) return;
     this.submitting = true;
 
-    const body = this.form.getRawValue();
+    const v = this.form.getRawValue();
+    const body = {
+      name: v.name,
+      email: v.email,
+      linkedinUrl: v.linkedinUrl || undefined,
+      primaryArea: v.primaryArea || undefined,
+      feedbackLink: v.feedbackLink || undefined,
+    };
 
     const request$ = this.isEdit
       ? this.candidateService.update(this.data!.candidate!.id, body)
@@ -54,7 +61,7 @@ export class CandidateFormDialogComponent {
 
     request$.subscribe({
       next: (result) => this.dialogRef.close(result),
-      error: () => this.submitting = false,
+      error: () => (this.submitting = false),
     });
   }
 }
