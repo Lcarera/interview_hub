@@ -1,6 +1,9 @@
 <h2 mat-dialog-title class="dialog-title">{{ isEdit ? 'Edit Interview' : 'New Interview' }}</h2>
 
 <mat-dialog-content class="dialog-content">
+  @if (loadError(); as err) {
+    <p class="load-error">{{ err }} <a (click)="loadDropdownData()">Retry</a></p>
+  }
   <form [formGroup]="form" (ngSubmit)="save()" id="interviewForm">
 
     <div class="form-section">

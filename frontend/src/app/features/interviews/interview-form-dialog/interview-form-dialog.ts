@@ -43,6 +43,7 @@ export class InterviewFormDialogComponent implements OnInit {
   readonly isEdit = !!this.data?.interview;
   readonly candidates = signal<Candidate[]>([]);
   readonly profiles = signal<Profile[]>([]);
+  readonly loadError = signal<string | null>(null);
   readonly durationOptions = [
     { value: 30, label: '30 minutes' },
     { value: 45, label: '45 minutes' },
@@ -62,8 +63,19 @@ export class InterviewFormDialogComponent implements OnInit {
   submitting = false;
 
   ngOnInit(): void {
-    this.candidateService.list().subscribe(c => this.candidates.set(c));
-    this.profileService.list().subscribe(p => this.profiles.set(p));
+    this.loadDropdownData();
+  }
+
+  loadDropdownData(): void {
+    this.loadError.set(null);
+    this.candidateService.list().subscribe({
+      next: c => this.candidates.set(c),
+      error: () => this.loadError.set('Failed to load candidates.'),
+    });
+    this.profileService.list().subscribe({
+      next: p => this.profiles.set(p),
+      error: () => this.loadError.set('Failed to load profiles.'),
+    });
   }
 
   save(): void {

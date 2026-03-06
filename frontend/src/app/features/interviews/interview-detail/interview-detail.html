@@ -40,7 +40,7 @@
           @if (iv.candidate.linkedinUrl) {
             <div class="detail-item">
               <span class="label">LinkedIn</span>
-              <a [href]="iv.candidate.linkedinUrl" target="_blank">{{ iv.candidate.linkedinUrl }}</a>
+              <a [href]="iv.candidate.linkedinUrl" target="_blank" rel="noopener noreferrer">{{ iv.candidate.linkedinUrl }}</a>
             </div>
           }
           @if (iv.candidate.primaryArea) {
@@ -52,7 +52,7 @@
           @if (iv.candidate.feedbackLink) {
             <div class="detail-item">
               <span class="label">Feedback</span>
-              <a [href]="iv.candidate.feedbackLink" target="_blank">View Feedback</a>
+              <a [href]="iv.candidate.feedbackLink" target="_blank" rel="noopener noreferrer">View Feedback</a>
             </div>
           }
         }

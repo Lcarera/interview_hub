@@ -10,7 +10,7 @@ const mockPage = {
     {
       id: '1',
       techStack: 'Angular',
-      candidateInfo: { name: 'Jane Doe' },
+      candidate: { id: 'c-1', name: 'Jane Doe', email: 'jane@test.com' },
       interviewer: { id: 'p-1', email: 'dev@gm2dev.com', role: 'interviewer' },
       startTime: '2026-03-01T10:00:00Z',
       endTime: '2026-03-01T11:00:00Z',
@@ -58,6 +58,7 @@ describe('InterviewListComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Angular');
     expect(el.textContent).toContain('dev@gm2dev.com');
+    expect(el.textContent).toContain('Jane Doe');
   });
 
   it('should show spinner while loading', () => {
