@@ -5,13 +5,10 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -32,9 +29,13 @@ public class Interview {
     @JoinColumn(name = "interviewer_id", nullable = false)
     private Profile interviewer;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
-    private Map<String, Object> candidateInfo;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "candidate_id")
+    private Candidate candidate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "talent_acquisition_id")
+    private Profile talentAcquisition;
 
     @Column(name = "tech_stack")
     private String techStack;

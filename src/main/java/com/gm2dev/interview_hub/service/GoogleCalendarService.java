@@ -1,6 +1,7 @@
 package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
+import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
@@ -8,6 +9,9 @@ import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.calendar.Calendar;
+import com.google.api.services.calendar.model.ConferenceData;
+import com.google.api.services.calendar.model.ConferenceSolutionKey;
+import com.google.api.services.calendar.model.CreateConferenceRequest;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventAttendee;
 import com.google.api.services.calendar.model.EventDateTime;
@@ -23,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -43,9 +48,11 @@ public class GoogleCalendarService {
     public String createEvent(Profile interviewer, Interview interview) throws IOException {
         Calendar calendar = buildCalendarClient(interviewer);
         String calendarId = getCalendarId(interviewer);
-        Event event = buildEvent(interview);
+        Event event = buildEvent(interviewer, interview);
 
-        Event created = calendar.events().insert(calendarId, event).execute();
+        Event created = calendar.events().insert(calendarId, event)
+                .setConferenceDataVersion(1)
+                .execute();
         log.debug("Created Google Calendar event: {}", created.getId());
         return created.getId();
     }
@@ -53,9 +60,11 @@ public class GoogleCalendarService {
     public void updateEvent(Profile interviewer, Interview interview) throws IOException {
         Calendar calendar = buildCalendarClient(interviewer);
         String calendarId = getCalendarId(interviewer);
-        Event event = buildEvent(interview);
+        Event event = buildEvent(interviewer, interview);
 
-        calendar.events().update(calendarId, interview.getGoogleEventId(), event).execute();
+        calendar.events().update(calendarId, interview.getGoogleEventId(), event)
+                .setConferenceDataVersion(1)
+                .execute();
         log.debug("Updated Google Calendar event: {}", interview.getGoogleEventId());
     }
 
@@ -123,16 +132,31 @@ public class GoogleCalendarService {
                 .build();
     }
 
-    private Event buildEvent(Interview interview) {
+    private Event buildEvent(Profile interviewer, Interview interview) {
         Event event = new Event();
 
-        String candidateName = extractCandidateName(interview.getCandidateInfo());
+        Candidate candidate = interview.getCandidate();
+        String candidateName = candidate != null && candidate.getName() != null ? candidate.getName() : "Unknown";
         event.setSummary(interview.getTechStack() + " Interview - " + candidateName);
 
         StringBuilder description = new StringBuilder();
         description.append("Tech Stack: ").append(interview.getTechStack());
-        if (interview.getCandidateInfo() != null) {
-            description.append("\nCandidate Info: ").append(interview.getCandidateInfo());
+
+        if (candidate != null) {
+            description.append("\n\nCandidate Details:");
+            description.append("\n  Name: ").append(candidate.getName());
+            if (candidate.getEmail() != null) {
+                description.append("\n  Email: ").append(candidate.getEmail());
+            }
+            if (candidate.getLinkedinUrl() != null) {
+                description.append("\n  LinkedIn: ").append(candidate.getLinkedinUrl());
+            }
+            if (candidate.getPrimaryArea() != null) {
+                description.append("\n  Primary Area: ").append(candidate.getPrimaryArea());
+            }
+            if (candidate.getFeedbackLink() != null) {
+                description.append("\n  Feedback Link: ").append(candidate.getFeedbackLink());
+            }
         }
         event.setDescription(description.toString());
 
@@ -144,18 +168,24 @@ public class GoogleCalendarService {
         event.setStart(start);
         event.setEnd(end);
 
+        ConferenceSolutionKey solutionKey = new ConferenceSolutionKey().setType("hangoutsMeet");
+        CreateConferenceRequest conferenceRequest = new CreateConferenceRequest()
+                .setConferenceSolutionKey(solutionKey)
+                .setRequestId(UUID.randomUUID().toString());
+        event.setConferenceData(new ConferenceData().setCreateRequest(conferenceRequest));
+
+        List<EventAttendee> attendees = new ArrayList<>();
+        attendees.add(new EventAttendee().setEmail(interviewer.getEmail()));
+
+        if (candidate != null && candidate.getEmail() != null) {
+            attendees.add(new EventAttendee().setEmail(candidate.getEmail()));
+        }
+        event.setAttendees(attendees);
+
         return event;
     }
 
     private String getCalendarId(Profile interviewer) {
         return interviewer.getCalendarEmail() != null ? interviewer.getCalendarEmail() : "primary";
-    }
-
-    private String extractCandidateName(Map<String, Object> candidateInfo) {
-        if (candidateInfo == null) {
-            return "Unknown";
-        }
-        Object name = candidateInfo.get("name");
-        return name != null ? name.toString() : "Unknown";
     }
 }

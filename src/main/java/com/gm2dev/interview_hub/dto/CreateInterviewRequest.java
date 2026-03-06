@@ -8,7 +8,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 
 @Data
@@ -19,7 +18,10 @@ public class CreateInterviewRequest {
     @NotNull
     private UUID interviewerId;
 
-    private Map<String, Object> candidateInfo;
+    @NotNull
+    private UUID candidateId;
+
+    private UUID talentAcquisitionId;
 
     @NotBlank
     private String techStack;

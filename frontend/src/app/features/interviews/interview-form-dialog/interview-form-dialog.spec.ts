@@ -14,7 +14,11 @@ describe('InterviewFormDialogComponent', () => {
     { provide: MatDialogRef, useValue: { close: vi.fn() } },
   ];
 
-  afterEach(() => localStorage.clear());
+  afterEach(() => {
+    const httpTesting = TestBed.inject(HttpTestingController);
+    httpTesting.match(() => true);
+    localStorage.clear();
+  });
 
   describe('create mode', () => {
     beforeEach(async () => {
@@ -53,9 +57,19 @@ describe('InterviewFormDialogComponent', () => {
       const fixture = TestBed.createComponent(InterviewFormDialogComponent);
       const form = fixture.componentInstance.form;
       form.controls.techStack.setValue('Java');
+      form.controls.candidateId.setValue('c-1');
       form.controls.startTime.setValue('2026-03-01T10:00');
       form.controls.duration.setValue(60);
       expect(form.valid).toBe(true);
+    });
+
+    it('should be invalid when candidateId is empty', () => {
+      const fixture = TestBed.createComponent(InterviewFormDialogComponent);
+      const form = fixture.componentInstance.form;
+      form.controls.techStack.setValue('Java');
+      form.controls.startTime.setValue('2026-03-01T10:00');
+      form.controls.duration.setValue(60);
+      expect(form.valid).toBe(false);
     });
 
     it('should compute endTime from startTime + duration on save', () => {
@@ -68,18 +82,46 @@ describe('InterviewFormDialogComponent', () => {
 
       const form = fixture.componentInstance.form;
       form.controls.techStack.setValue('Java');
+      form.controls.candidateId.setValue('c-1');
       form.controls.startTime.setValue('2026-03-01T10:00');
       form.controls.duration.setValue(90);
 
       fixture.componentInstance.save();
+
+      // Flush candidate and profile list requests from ngOnInit
+      httpTesting.match(r => r.url.includes('/api/candidates') || r.url.includes('/api/profiles'))
+        .forEach(r => r.flush([]));
 
       const req = httpTesting.expectOne(r => r.url.includes('/api/interviews'));
       const body = req.request.body;
       const start = new Date(body.startTime);
       const end = new Date(body.endTime);
       expect(end.getTime() - start.getTime()).toBe(90 * 60_000);
+      expect(body.candidateId).toBe('c-1');
       req.flush({ id: 'new-1' });
       httpTesting.verify();
+    });
+
+    it('should reset submitting and skip API call when profileId is missing', () => {
+      const fixture = TestBed.createComponent(InterviewFormDialogComponent);
+      const httpTesting = TestBed.inject(HttpTestingController);
+
+      // No auth → profileId() returns null
+      const form = fixture.componentInstance.form;
+      form.controls.techStack.setValue('Java');
+      form.controls.candidateId.setValue('c-1');
+      form.controls.startTime.setValue('2026-03-01T10:00');
+      form.controls.duration.setValue(60);
+
+      fixture.componentInstance.save();
+
+      // Flush ngOnInit requests
+      httpTesting.match(r => r.url.includes('/api/candidates') || r.url.includes('/api/profiles'))
+        .forEach(r => r.flush([]));
+
+      // No interview create call should have been made
+      httpTesting.expectNone(r => r.url.includes('/api/interviews'));
+      expect(fixture.componentInstance.submitting).toBe(false);
     });
   });
 
@@ -87,7 +129,7 @@ describe('InterviewFormDialogComponent', () => {
     const existingInterview = {
       id: 'iv-1',
       techStack: 'Python',
-      candidateInfo: { name: 'Alice' },
+      candidate: { id: 'c-1', name: 'Alice', email: 'alice@test.com' },
       interviewer: { id: 'p-1', email: 'dev@gm2dev.com', role: 'interviewer' },
       startTime: '2026-03-01T10:00:00Z',
       endTime: '2026-03-01T10:45:00Z',

@@ -1,6 +1,7 @@
 package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
+import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
@@ -19,7 +20,6 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -85,7 +85,11 @@ class GoogleCalendarServiceTest {
         Interview interview = new Interview();
         interview.setId(UUID.randomUUID());
         interview.setTechStack("Java");
-        interview.setCandidateInfo(Map.of("name", "Jane Doe"));
+        Candidate candidate = new Candidate();
+        candidate.setId(UUID.randomUUID());
+        candidate.setName("Jane Doe");
+        candidate.setEmail("jane@example.com");
+        interview.setCandidate(candidate);
         interview.setStartTime(Instant.now().plus(1, ChronoUnit.DAYS));
         interview.setEndTime(Instant.now().plus(1, ChronoUnit.DAYS).plus(1, ChronoUnit.HOURS));
         interview.setStatus(InterviewStatus.SCHEDULED);
@@ -101,6 +105,7 @@ class GoogleCalendarServiceTest {
         doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("primary"), any(Event.class))).thenReturn(insert);
+        when(insert.setConferenceDataVersion(1)).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         String eventId = googleCalendarService.createEvent(profile, interview);
@@ -119,6 +124,7 @@ class GoogleCalendarServiceTest {
         doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("team-calendar@gm2dev.com"), any(Event.class))).thenReturn(insert);
+        when(insert.setConferenceDataVersion(1)).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         String eventId = googleCalendarService.createEvent(profile, interview);
@@ -136,6 +142,7 @@ class GoogleCalendarServiceTest {
         doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("primary"), any(Event.class))).thenReturn(insert);
+        when(insert.setConferenceDataVersion(1)).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         googleCalendarService.createEvent(profile, interview);
@@ -160,6 +167,7 @@ class GoogleCalendarServiceTest {
         doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
         when(calendarClient.events()).thenReturn(events);
         when(events.update(eq("primary"), eq("existing-event-id"), any(Event.class))).thenReturn(update);
+        when(update.setConferenceDataVersion(1)).thenReturn(update);
         when(update.execute()).thenReturn(updatedEvent);
 
         googleCalendarService.updateEvent(profile, interview);
@@ -182,15 +190,16 @@ class GoogleCalendarServiceTest {
     }
 
     @Test
-    void createEvent_withNullCandidateInfo_usesUnknownInSummary() throws IOException {
+    void createEvent_withNullCandidate_usesUnknownInSummary() throws IOException {
         Profile profile = buildProfile();
         Interview interview = buildInterview();
-        interview.setCandidateInfo(null);
+        interview.setCandidate(null);
 
         Event createdEvent = new Event().setId("event-null-candidate");
         doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("primary"), any(Event.class))).thenReturn(insert);
+        when(insert.setConferenceDataVersion(1)).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         googleCalendarService.createEvent(profile, interview);
@@ -202,15 +211,20 @@ class GoogleCalendarServiceTest {
     }
 
     @Test
-    void createEvent_withCandidateInfoMissingName_usesUnknownInSummary() throws IOException {
+    void createEvent_withCandidateNullName_usesUnknownInSummary() throws IOException {
         Profile profile = buildProfile();
         Interview interview = buildInterview();
-        interview.setCandidateInfo(Map.of("email", "test@example.com"));
+        Candidate candidate = new Candidate();
+        candidate.setId(UUID.randomUUID());
+        candidate.setEmail("test@example.com");
+        // name is null
+        interview.setCandidate(candidate);
 
         Event createdEvent = new Event().setId("event-no-name");
         doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("primary"), any(Event.class))).thenReturn(insert);
+        when(insert.setConferenceDataVersion(1)).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         googleCalendarService.createEvent(profile, interview);
@@ -219,6 +233,81 @@ class GoogleCalendarServiceTest {
         verify(events).insert(eq("primary"), eventCaptor.capture());
         Event event = eventCaptor.getValue();
         assertTrue(event.getSummary().contains("Unknown"));
+    }
+
+    @Test
+    void createEvent_formatsDescriptionCleanly() throws IOException {
+        Profile profile = buildProfile();
+        Interview interview = buildInterview();
+
+        Event createdEvent = new Event().setId("event-desc");
+        doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
+        when(calendarClient.events()).thenReturn(events);
+        when(events.insert(eq("primary"), any(Event.class))).thenReturn(insert);
+        when(insert.setConferenceDataVersion(1)).thenReturn(insert);
+        when(insert.execute()).thenReturn(createdEvent);
+
+        googleCalendarService.createEvent(profile, interview);
+
+        ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+        verify(events).insert(eq("primary"), captor.capture());
+        String desc = captor.getValue().getDescription();
+
+        assertTrue(desc.contains("Tech Stack: Java"));
+        assertTrue(desc.contains("Candidate Details:"));
+        assertTrue(desc.contains("Name: Jane Doe"));
+        assertTrue(desc.contains("Email: jane@example.com"));
+        assertFalse(desc.contains("{"), "Description should not contain raw map format");
+    }
+
+    @Test
+    void createEvent_includesInterviewerAndCandidateAsAttendees() throws IOException {
+        Profile profile = buildProfile();
+        Interview interview = buildInterview();
+
+        Event createdEvent = new Event().setId("event-attendees");
+        doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
+        when(calendarClient.events()).thenReturn(events);
+        when(events.insert(eq("primary"), any(Event.class))).thenReturn(insert);
+        when(insert.setConferenceDataVersion(1)).thenReturn(insert);
+        when(insert.execute()).thenReturn(createdEvent);
+
+        googleCalendarService.createEvent(profile, interview);
+
+        ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+        verify(events).insert(eq("primary"), captor.capture());
+        List<EventAttendee> attendees = captor.getValue().getAttendees();
+
+        assertEquals(2, attendees.size());
+        assertTrue(attendees.stream().anyMatch(a -> "interviewer@gm2dev.com".equals(a.getEmail())));
+        assertTrue(attendees.stream().anyMatch(a -> "jane@example.com".equals(a.getEmail())));
+    }
+
+    @Test
+    void createEvent_onlyInterviewerAttendee_whenNoCandidateEmail() throws IOException {
+        Profile profile = buildProfile();
+        Interview interview = buildInterview();
+        Candidate candidate = new Candidate();
+        candidate.setId(UUID.randomUUID());
+        candidate.setName("Jane Doe");
+        // email is null
+        interview.setCandidate(candidate);
+
+        Event createdEvent = new Event().setId("event-no-candidate-email");
+        doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
+        when(calendarClient.events()).thenReturn(events);
+        when(events.insert(eq("primary"), any(Event.class))).thenReturn(insert);
+        when(insert.setConferenceDataVersion(1)).thenReturn(insert);
+        when(insert.execute()).thenReturn(createdEvent);
+
+        googleCalendarService.createEvent(profile, interview);
+
+        ArgumentCaptor<Event> captor = ArgumentCaptor.forClass(Event.class);
+        verify(events).insert(eq("primary"), captor.capture());
+        List<EventAttendee> attendees = captor.getValue().getAttendees();
+
+        assertEquals(1, attendees.size());
+        assertEquals("interviewer@gm2dev.com", attendees.get(0).getEmail());
     }
 
     @Test
@@ -273,6 +362,29 @@ class GoogleCalendarServiceTest {
         Event patched = eventCaptor.getValue();
         assertEquals(1, patched.getAttendees().size());
         assertEquals("new@gm2dev.com", patched.getAttendees().get(0).getEmail());
+    }
+
+    @Test
+    void createEvent_includesGoogleMeetConferenceData() throws IOException {
+        Profile profile = buildProfile();
+        Interview interview = buildInterview();
+
+        Event createdEvent = new Event().setId("event-meet");
+        doReturn(calendarClient).when(googleCalendarService).buildCalendarClient(profile);
+        when(calendarClient.events()).thenReturn(events);
+        when(events.insert(eq("primary"), any(Event.class))).thenReturn(insert);
+        when(insert.setConferenceDataVersion(1)).thenReturn(insert);
+        when(insert.execute()).thenReturn(createdEvent);
+
+        googleCalendarService.createEvent(profile, interview);
+
+        ArgumentCaptor<Event> eventCaptor = ArgumentCaptor.forClass(Event.class);
+        verify(events).insert(eq("primary"), eventCaptor.capture());
+        Event event = eventCaptor.getValue();
+        assertNotNull(event.getConferenceData());
+        assertEquals("hangoutsMeet",
+                event.getConferenceData().getCreateRequest().getConferenceSolutionKey().getType());
+        assertNotNull(event.getConferenceData().getCreateRequest().getRequestId());
     }
 
     @Test

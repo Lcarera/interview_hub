@@ -1,0 +1,47 @@
+<h2 mat-dialog-title class="dialog-title">{{ isEdit ? 'Edit Candidate' : 'New Candidate' }}</h2>
+
+<mat-dialog-content class="dialog-content">
+  <form [formGroup]="form" (ngSubmit)="save()" id="candidateForm">
+
+    <div class="form-section">
+      <p class="section-label">Basic Info</p>
+      <div class="field-row">
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Name</mat-label>
+          <input matInput formControlName="name" required />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="half-width">
+          <mat-label>Email</mat-label>
+          <input matInput formControlName="email" type="email" required />
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <p class="section-label">Details (optional)</p>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Primary Area / Tech</mat-label>
+        <input matInput formControlName="primaryArea" placeholder="e.g. Backend, React, DevOps" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>LinkedIn URL</mat-label>
+        <input matInput formControlName="linkedinUrl" type="url" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Feedback Link</mat-label>
+        <input matInput formControlName="feedbackLink" type="url" />
+      </mat-form-field>
+    </div>
+
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button mat-stroked-button mat-dialog-close>Cancel</button>
+  <button mat-flat-button class="submit-btn" type="submit" form="candidateForm" [disabled]="form.invalid || submitting">
+    {{ isEdit ? 'Update Candidate' : 'Create Candidate' }}
+  </button>
+</mat-dialog-actions>

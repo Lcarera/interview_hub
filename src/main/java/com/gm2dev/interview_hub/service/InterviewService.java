@@ -1,11 +1,13 @@
 package com.gm2dev.interview_hub.service;
 
+import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.dto.CreateInterviewRequest;
 import com.gm2dev.interview_hub.dto.UpdateInterviewRequest;
 import com.gm2dev.interview_hub.mapper.InterviewMapper;
+import com.gm2dev.interview_hub.repository.CandidateRepository;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 
@@ -27,6 +29,7 @@ public class InterviewService {
 
     private final InterviewRepository interviewRepository;
     private final ProfileRepository profileRepository;
+    private final CandidateRepository candidateRepository;
     private final GoogleCalendarService googleCalendarService;
     private final InterviewMapper interviewMapper;
 
@@ -37,13 +40,22 @@ public class InterviewService {
         Profile interviewer = profileRepository.findById(request.getInterviewerId())
                 .orElseThrow(() -> new EntityNotFoundException("Interviewer not found: " + request.getInterviewerId()));
 
+        Candidate candidate = candidateRepository.findById(request.getCandidateId())
+                .orElseThrow(() -> new EntityNotFoundException("Candidate not found: " + request.getCandidateId()));
+
         Interview interview = new Interview();
         interview.setInterviewer(interviewer);
-        interview.setCandidateInfo(request.getCandidateInfo());
+        interview.setCandidate(candidate);
         interview.setTechStack(request.getTechStack());
         interview.setStartTime(request.getStartTime());
         interview.setEndTime(request.getEndTime());
         interview.setStatus(InterviewStatus.SCHEDULED);
+
+        if (request.getTalentAcquisitionId() != null) {
+            Profile ta = profileRepository.findById(request.getTalentAcquisitionId())
+                    .orElseThrow(() -> new EntityNotFoundException("Talent acquisition profile not found"));
+            interview.setTalentAcquisition(ta);
+        }
 
         interview = interviewRepository.save(interview);
 
@@ -77,6 +89,18 @@ public class InterviewService {
         }
 
         interviewMapper.updateFromRequest(request, interview);
+
+        Candidate candidate = candidateRepository.findById(request.getCandidateId())
+                .orElseThrow(() -> new EntityNotFoundException("Candidate not found: " + request.getCandidateId()));
+        interview.setCandidate(candidate);
+
+        if (request.getTalentAcquisitionId() != null) {
+            Profile ta = profileRepository.findById(request.getTalentAcquisitionId())
+                    .orElseThrow(() -> new EntityNotFoundException("Talent acquisition profile not found"));
+            interview.setTalentAcquisition(ta);
+        } else {
+            interview.setTalentAcquisition(null);
+        }
 
         interview = interviewRepository.save(interview);
 

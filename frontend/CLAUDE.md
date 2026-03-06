@@ -37,11 +37,15 @@ src/
     ├── core/
     │   ├── models/                   # TypeScript interfaces
     │   │   ├── profile.model.ts      # { id, email, role }
-    │   │   ├── interview.model.ts    # { id, interviewerId, candidateInfo, startTime, endTime, status, googleEventId? }
-    │   │   └── shadowing-request.model.ts  # { id, interviewId, shadowerId, status }
+    │   │   ├── candidate.model.ts    # { id, name, email, linkedinUrl?, primaryArea?, feedbackLink? }
+    │   │   ├── interview.model.ts    # { id, interviewer: Profile, candidate: Candidate, talentAcquisition?: Profile, ... }
+    │   │   ├── dto.model.ts          # CreateInterviewRequest, UpdateInterviewRequest, RejectShadowingRequest
+    │   │   └── shadowing-request.model.ts  # { id, interview?, shadower, status, reason? }
     │   ├── services/
     │   │   ├── auth.service.ts       # Token management, login/logout, email signal
-    │   │   ├── interview.service.ts  # CRUD: list, get, create, update, remove
+    │   │   ├── interview.service.ts  # CRUD: list (paginated), get, create, update, remove
+    │   │   ├── candidate.service.ts  # CRUD: list, get, create, update, remove
+    │   │   ├── profile.service.ts    # list, getMe
     │   │   └── shadowing-request.service.ts  # CRUD: list, get, create, updateStatus
     │   ├── guards/
     │   │   └── auth.guard.ts         # Redirects to /login if not authenticated
@@ -55,6 +59,9 @@ src/
         │   │   └── login.scss
         │   └── callback/
         │       └── auth-callback.ts  # Parses token from URL hash, stores in localStorage
+        ├── candidates/
+        │   ├── candidate-list/       # Table with create/edit/delete actions
+        │   └── candidate-form-dialog/ # Create/edit candidate dialog
         └── home/
             └── home.ts               # Shows email, logout button (placeholder)
 ```
@@ -67,7 +74,10 @@ All routes use lazy loading (`loadComponent`):
 |------|-----------|-------|---------|
 | `/login` | LoginComponent | — | Google sign-in |
 | `/auth/callback` | AuthCallbackComponent | — | Processes OAuth redirect |
-| `/` (default) | HomeComponent | authGuard | Main app page |
+| `/` (default) | DashboardComponent | authGuard | Main dashboard |
+| `/interviews` | InterviewListComponent | authGuard | Paginated interview list |
+| `/interviews/:id` | InterviewDetailComponent | authGuard | Interview detail + shadowing |
+| `/candidates` | CandidateListComponent | authGuard | Candidate CRUD list |
 | `**` | — | — | Redirects to `/` |
 
 ## Authentication Flow
@@ -89,14 +99,25 @@ All routes use lazy loading (`loadComponent`):
 - `isAuthenticated(): boolean` — checks token + expiry
 - `logout()` — clears localStorage, resets signal
 
-**InterviewService** — base URL: `${apiUrl}/interviews`:
-- `list(page?, size?): Observable<unknown>` — paginated list
+**InterviewService** — base URL: `${apiUrl}/api/interviews`:
+- `list(page?, size?, sort?): Observable<Page<Interview>>` — paginated list
 - `get(id): Observable<Interview>` — single interview
-- `create(body): Observable<Interview>` — POST
-- `update(id, body): Observable<Interview>` — PUT
+- `create(body: CreateInterviewRequest): Observable<Interview>` — POST (requires candidateId)
+- `update(id, body: UpdateInterviewRequest): Observable<Interview>` — PUT
 - `remove(id): Observable<void>` — DELETE
 
-**ShadowingRequestService** — base URL: `${apiUrl}/shadowing-requests`:
+**CandidateService** — base URL: `${apiUrl}/api/candidates`:
+- `list(): Observable<Candidate[]>` — all candidates
+- `get(id): Observable<Candidate>` — single candidate
+- `create(body: CandidateRequest): Observable<Candidate>` — POST
+- `update(id, body: CandidateRequest): Observable<Candidate>` — PUT
+- `remove(id): Observable<void>` — DELETE
+
+**ProfileService** — base URL: `${apiUrl}/api/profiles`:
+- `list(): Observable<Profile[]>` — all profiles
+- `getMe(): Observable<Profile>` — current user's profile
+
+**ShadowingRequestService** — base URL: `${apiUrl}/api/shadowing-requests`:
 - `list(page?, size?): Observable<unknown>` — paginated list
 - `get(id): Observable<ShadowingRequest>` — single request
 - `create(body): Observable<ShadowingRequest>` — POST
@@ -105,6 +126,7 @@ All routes use lazy loading (`loadComponent`):
 ## Architectural Patterns
 
 - **Standalone components** — no NgModules, all components are `standalone: true`
+- **Default change detection** — no component uses `ChangeDetectionStrategy.OnPush`; all use Angular's default strategy
 - **Functional DI** — use `inject()` instead of constructor injection
 - **Functional guards/interceptors** — `CanActivateFn` and `HttpInterceptorFn`
 - **Signals for state** — `signal()` for reactive local state (e.g. `AuthService.email`)

@@ -1,10 +1,12 @@
 package com.gm2dev.interview_hub.service;
 
+import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.dto.CreateInterviewRequest;
 import com.gm2dev.interview_hub.dto.UpdateInterviewRequest;
+import com.gm2dev.interview_hub.repository.CandidateRepository;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 
@@ -22,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,8 +45,15 @@ class InterviewServiceTest {
     @Autowired
     private InterviewRepository interviewRepository;
 
+    @Autowired
+    private CandidateRepository candidateRepository;
+
     @MockitoBean
     private GoogleCalendarService googleCalendarService;
+
+    private Candidate createTestCandidate() {
+        return candidateRepository.save(new Candidate(null, "Test Candidate", "candidate@example.com", null, null, null));
+    }
 
     @Test
     void createInterview_withExistingInterviewer_savesInterview() {
@@ -53,12 +61,15 @@ class InterviewServiceTest {
         Profile interviewer = new Profile(profileId, "test@example.com", "interviewer", null);
         profileRepository.save(interviewer);
 
+        Candidate candidate = createTestCandidate();
+
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
         CreateInterviewRequest request = new CreateInterviewRequest(
                 profileId,
-                Map.of("name", "Candidate"),
+                candidate.getId(),
+                null,
                 "Java",
                 start,
                 end
@@ -80,9 +91,12 @@ class InterviewServiceTest {
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
+        Candidate candidate = createTestCandidate();
+
         CreateInterviewRequest request = new CreateInterviewRequest(
                 nonExistentId,
-                Map.of("name", "Candidate"),
+                candidate.getId(),
+                null,
                 "Python",
                 start,
                 end
@@ -101,11 +115,13 @@ class InterviewServiceTest {
         Profile interviewer = new Profile(profileId, "all@example.com", "interviewer", null);
         profileRepository.save(interviewer);
 
+        Candidate candidate = createTestCandidate();
+
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
-        interviewService.createInterview(new CreateInterviewRequest(profileId, null, "Java", start, end));
-        interviewService.createInterview(new CreateInterviewRequest(profileId, null, "Python", start, end));
+        interviewService.createInterview(new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
+        interviewService.createInterview(new CreateInterviewRequest(profileId, candidate.getId(), null, "Python", start, end));
 
         Page<Interview> all = interviewService.findAll(Pageable.unpaged());
         assertTrue(all.getTotalElements() >= 2);
@@ -117,11 +133,13 @@ class InterviewServiceTest {
         Profile interviewer = new Profile(profileId, "find@example.com", "interviewer", null);
         profileRepository.save(interviewer);
 
+        Candidate candidate = createTestCandidate();
+
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
         Interview created = interviewService.createInterview(
-                new CreateInterviewRequest(profileId, null, "Go", start, end));
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Go", start, end));
 
         Interview found = interviewService.findById(created.getId());
         assertEquals(created.getId(), found.getId());
@@ -140,17 +158,20 @@ class InterviewServiceTest {
         Profile interviewer = new Profile(profileId, "update@example.com", "interviewer", null);
         profileRepository.save(interviewer);
 
+        Candidate candidate = createTestCandidate();
+
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
         Interview created = interviewService.createInterview(
-                new CreateInterviewRequest(profileId, null, "Java", start, end));
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
 
         Instant newStart = Instant.now().plus(2, ChronoUnit.DAYS);
         Instant newEnd = newStart.plus(1, ChronoUnit.HOURS);
 
         UpdateInterviewRequest updateRequest = new UpdateInterviewRequest(
-                Map.of("name", "Updated Candidate"),
+                candidate.getId(),
+                null,
                 "Kotlin",
                 newStart,
                 newEnd,
@@ -166,11 +187,13 @@ class InterviewServiceTest {
 
     @Test
     void updateInterview_withNonExistentId_throwsEntityNotFoundException() {
+        Candidate candidate = createTestCandidate();
+
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
         UpdateInterviewRequest request = new UpdateInterviewRequest(
-                null, "Java", start, end, InterviewStatus.SCHEDULED);
+                candidate.getId(), null, "Java", start, end, InterviewStatus.SCHEDULED);
 
         assertThrows(EntityNotFoundException.class,
                 () -> interviewService.updateInterview(UUID.randomUUID(), request, UUID.randomUUID()));
@@ -182,11 +205,13 @@ class InterviewServiceTest {
         Profile interviewer = new Profile(profileId, "delete@example.com", "interviewer", null);
         profileRepository.save(interviewer);
 
+        Candidate candidate = createTestCandidate();
+
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
         Interview created = interviewService.createInterview(
-                new CreateInterviewRequest(profileId, null, "Rust", start, end));
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Rust", start, end));
 
         interviewService.deleteInterview(created.getId(), profileId);
 
@@ -205,6 +230,8 @@ class InterviewServiceTest {
         Profile interviewer = new Profile(profileId, "cal@example.com", "interviewer", null);
         profileRepository.save(interviewer);
 
+        Candidate candidate = createTestCandidate();
+
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
@@ -212,7 +239,7 @@ class InterviewServiceTest {
                 .thenReturn("gcal-event-123");
 
         Interview result = interviewService.createInterview(
-                new CreateInterviewRequest(profileId, null, "Java", start, end));
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
 
         assertEquals("gcal-event-123", result.getGoogleEventId());
     }
@@ -223,6 +250,8 @@ class InterviewServiceTest {
         Profile interviewer = new Profile(profileId, "calfail@example.com", "interviewer", null);
         profileRepository.save(interviewer);
 
+        Candidate candidate = createTestCandidate();
+
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
@@ -230,7 +259,7 @@ class InterviewServiceTest {
                 .thenThrow(new RuntimeException("Calendar unavailable"));
 
         Interview result = interviewService.createInterview(
-                new CreateInterviewRequest(profileId, null, "Java", start, end));
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
 
         assertNotNull(result.getId());
         assertNull(result.getGoogleEventId());
@@ -242,6 +271,8 @@ class InterviewServiceTest {
         Profile interviewer = new Profile(profileId, "upd-cal@example.com", "interviewer", null);
         profileRepository.save(interviewer);
 
+        Candidate candidate = createTestCandidate();
+
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
@@ -249,13 +280,13 @@ class InterviewServiceTest {
                 .thenReturn("gcal-upd-event");
 
         Interview created = interviewService.createInterview(
-                new CreateInterviewRequest(profileId, null, "Java", start, end));
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
 
         Instant newStart = Instant.now().plus(2, ChronoUnit.DAYS);
         Instant newEnd = newStart.plus(1, ChronoUnit.HOURS);
 
         interviewService.updateInterview(created.getId(), new UpdateInterviewRequest(
-                null, "Kotlin", newStart, newEnd, InterviewStatus.SCHEDULED), profileId);
+                candidate.getId(), null, "Kotlin", newStart, newEnd, InterviewStatus.SCHEDULED), profileId);
 
         verify(googleCalendarService).updateEvent(any(Profile.class), any(Interview.class));
     }
@@ -266,6 +297,8 @@ class InterviewServiceTest {
         Profile interviewer = new Profile(profileId, "del-cal@example.com", "interviewer", null);
         profileRepository.save(interviewer);
 
+        Candidate candidate = createTestCandidate();
+
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
@@ -273,7 +306,7 @@ class InterviewServiceTest {
                 .thenReturn("gcal-del-event");
 
         Interview created = interviewService.createInterview(
-                new CreateInterviewRequest(profileId, null, "Rust", start, end));
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Rust", start, end));
 
         interviewService.deleteInterview(created.getId(), profileId);
 
@@ -286,15 +319,17 @@ class InterviewServiceTest {
         Profile interviewer = new Profile(profileId, "owner-upd@example.com", "interviewer", null);
         profileRepository.save(interviewer);
 
+        Candidate candidate = createTestCandidate();
+
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
         Interview created = interviewService.createInterview(
-                new CreateInterviewRequest(profileId, null, "Java", start, end));
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
 
         UUID otherId = UUID.randomUUID();
         UpdateInterviewRequest updateRequest = new UpdateInterviewRequest(
-                null, "Kotlin", start, end, InterviewStatus.SCHEDULED);
+                candidate.getId(), null, "Kotlin", start, end, InterviewStatus.SCHEDULED);
 
         assertThrows(AccessDeniedException.class,
                 () -> interviewService.updateInterview(created.getId(), updateRequest, otherId));
@@ -306,15 +341,71 @@ class InterviewServiceTest {
         Profile interviewer = new Profile(profileId, "owner-del@example.com", "interviewer", null);
         profileRepository.save(interviewer);
 
+        Candidate candidate = createTestCandidate();
+
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
         Interview created = interviewService.createInterview(
-                new CreateInterviewRequest(profileId, null, "Java", start, end));
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
 
         UUID otherId = UUID.randomUUID();
 
         assertThrows(AccessDeniedException.class,
                 () -> interviewService.deleteInterview(created.getId(), otherId));
+    }
+
+    @Test
+    void updateInterview_withTalentAcquisition_setsRelation() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "upd-ta@example.com", "interviewer", null);
+        profileRepository.save(interviewer);
+
+        UUID taId = UUID.randomUUID();
+        Profile ta = new Profile(taId, "upd-ta-role@example.com", "interviewer", null);
+        profileRepository.save(ta);
+
+        Candidate candidate = createTestCandidate();
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        Interview created = interviewService.createInterview(
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
+
+        Instant newStart = Instant.now().plus(2, ChronoUnit.DAYS);
+        Instant newEnd = newStart.plus(1, ChronoUnit.HOURS);
+
+        UpdateInterviewRequest updateRequest = new UpdateInterviewRequest(
+                candidate.getId(), taId, "Kotlin", newStart, newEnd, InterviewStatus.SCHEDULED);
+
+        Interview updated = interviewService.updateInterview(created.getId(), updateRequest, profileId);
+
+        assertNotNull(updated.getTalentAcquisition());
+        assertEquals(taId, updated.getTalentAcquisition().getId());
+    }
+
+    @Test
+    void createInterview_withTalentAcquisition_setsRelation() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "ta-test@example.com", "interviewer", null);
+        profileRepository.save(interviewer);
+
+        UUID taId = UUID.randomUUID();
+        Profile ta = new Profile(taId, "ta@example.com", "interviewer", null);
+        profileRepository.save(ta);
+
+        Candidate candidate = createTestCandidate();
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        CreateInterviewRequest request = new CreateInterviewRequest(
+                profileId, candidate.getId(), taId, "Java", start, end);
+
+        Interview result = interviewService.createInterview(request);
+
+        assertNotNull(result.getTalentAcquisition());
+        assertEquals(taId, result.getTalentAcquisition().getId());
     }
 }

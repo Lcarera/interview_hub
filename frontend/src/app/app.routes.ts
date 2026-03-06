@@ -27,6 +27,10 @@ export const routes: Routes = [
         path: 'interviews/:id',
         loadComponent: () => import('./features/interviews/interview-detail/interview-detail').then(m => m.InterviewDetailComponent),
       },
+      {
+        path: 'candidates',
+        loadComponent: () => import('./features/candidates/candidate-list/candidate-list').then(m => m.CandidateListComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

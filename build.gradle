@@ -88,7 +88,8 @@ jacocoTestReport {
 		classDirectories.setFrom(files(classDirectories.files.collect {
 			fileTree(dir: it, exclude: [
 				'**/InterviewHubApplication.class',
-				'**/GoogleCalendarService.class'
+				'**/GoogleCalendarService.class',
+				'**/*MapperImpl.class'
 			])
 		}))
 	}
@@ -99,7 +100,8 @@ jacocoTestCoverageVerification {
 		classDirectories.setFrom(files(classDirectories.files.collect {
 			fileTree(dir: it, exclude: [
 				'**/InterviewHubApplication.class',
-				'**/GoogleCalendarService.class'
+				'**/GoogleCalendarService.class',
+				'**/*MapperImpl.class'
 			])
 		}))
 	}
@@ -107,7 +109,7 @@ jacocoTestCoverageVerification {
 		rule {
 			limit {
 				counter = 'BRANCH'
-				minimum = 0.80
+				minimum = 0.95
 			}
 		}
 	}
