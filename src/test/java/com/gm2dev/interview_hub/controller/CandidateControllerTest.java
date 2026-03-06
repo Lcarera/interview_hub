@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -141,6 +142,18 @@ class CandidateControllerTest {
         mockMvc.perform(delete("/api/candidates/{id}", id)
                         .with(jwt()))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void deleteCandidate_dataIntegrityViolation_returns409() throws Exception {
+        UUID id = UUID.randomUUID();
+        doThrow(new DataIntegrityViolationException("FK constraint violation"))
+                .when(candidateService).deleteCandidate(id);
+
+        mockMvc.perform(delete("/api/candidates/{id}", id)
+                        .with(jwt()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("Operation conflicts with existing data"));
     }
 
     @Test
