@@ -53,7 +53,7 @@ public class CandidateService {
     @Transactional
     public void deleteCandidate(UUID id) {
         Candidate candidate = findById(id);
-        if (!interviewRepository.findByCandidateId(id).isEmpty()) {
+        if (interviewRepository.existsByCandidateId(id)) {
             throw new IllegalStateException("Cannot delete candidate with existing interviews");
         }
         candidateRepository.delete(candidate);
