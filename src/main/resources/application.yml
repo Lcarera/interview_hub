@@ -4,10 +4,16 @@ spring:
     name: interview-hub
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://db.${SUPABASE_IDENTIFIER}.supabase.co:5432/postgres}
+    url: ${DB_URL:jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:6543/postgres}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:3}
+      minimum-idle: 1
+      connection-timeout: 20000
+      data-source-properties:
+        prepareThreshold: 0
 
   jpa:
     hibernate:
