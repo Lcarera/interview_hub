@@ -143,4 +143,20 @@ class AuthControllerTest {
         mockMvc.perform(get("/auth/google"))
                 .andExpect(status().isFound());
     }
+
+    @Test
+    void swaggerEndpoints_arePublic() throws Exception {
+        // Swagger controller isn't loaded in @WebMvcTest, so 404 proves
+        // the security filter allowed anonymous access (401 would mean blocked)
+        mockMvc.perform(get("/swagger-ui.html"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void protectedEndpoints_requireAuthentication() throws Exception {
+        mockMvc.perform(get("/api/interviews"))
+                .andExpect(status().isUnauthorized());
+    }
 }

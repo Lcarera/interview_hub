@@ -5,7 +5,6 @@ import com.gm2dev.interview_hub.service.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +24,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Authentication", description = "Google OAuth2 authentication endpoints")
-@SecurityRequirement(name = "")
 public class AuthController {
 
     private final AuthService authService;
