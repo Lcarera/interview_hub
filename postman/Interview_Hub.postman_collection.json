@@ -42,6 +42,172 @@
 	],
 	"item": [
 		{
+			"name": "Candidates",
+			"description": "CRUD operations for interview candidates. Candidates must be created before interviews.",
+			"item": [
+				{
+					"name": "Create Candidate",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const body = pm.response.json();",
+									"    pm.environment.set('candidate_id', body.id);",
+									"    console.log('Set candidate_id = ' + body.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Jane Doe\",\n    \"email\": \"jane.doe@example.com\",\n    \"linkedinUrl\": \"https://linkedin.com/in/janedoe\",\n    \"primaryArea\": \"Backend\",\n    \"feedbackLink\": \"https://forms.example.com/feedback/jane\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/candidates",
+							"host": ["{{base_url}}"],
+							"path": ["api", "candidates"]
+						},
+						"description": "Creates a new candidate. The `candidate_id` environment variable is auto-set from the response."
+					},
+					"response": [
+						{
+							"name": "201 Created",
+							"status": "Created",
+							"code": 201,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"name\": \"Jane Doe\",\n    \"email\": \"jane.doe@example.com\",\n    \"linkedinUrl\": \"https://linkedin.com/in/janedoe\",\n    \"primaryArea\": \"Backend\",\n    \"feedbackLink\": \"https://forms.example.com/feedback/jane\"\n}"
+						}
+					]
+				},
+				{
+					"name": "List Candidates",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/candidates",
+							"host": ["{{base_url}}"],
+							"path": ["api", "candidates"]
+						},
+						"description": "Returns all candidates."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "[\n    {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"name\": \"Jane Doe\",\n        \"email\": \"jane.doe@example.com\",\n        \"linkedinUrl\": \"https://linkedin.com/in/janedoe\",\n        \"primaryArea\": \"Backend\",\n        \"feedbackLink\": null\n    }\n]"
+						}
+					]
+				},
+				{
+					"name": "Get Candidate",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/candidates/{{candidate_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "candidates", "{{candidate_id}}"]
+						},
+						"description": "Returns a single candidate by ID."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"name\": \"Jane Doe\",\n    \"email\": \"jane.doe@example.com\",\n    \"linkedinUrl\": \"https://linkedin.com/in/janedoe\",\n    \"primaryArea\": \"Backend\",\n    \"feedbackLink\": null\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Candidate",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Jane Doe\",\n    \"email\": \"jane.doe@example.com\",\n    \"linkedinUrl\": \"https://linkedin.com/in/janedoe\",\n    \"primaryArea\": \"Fullstack\",\n    \"feedbackLink\": \"https://forms.example.com/feedback/jane\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/candidates/{{candidate_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "candidates", "{{candidate_id}}"]
+						},
+						"description": "Updates a candidate by ID."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"name\": \"Jane Doe\",\n    \"email\": \"jane.doe@example.com\",\n    \"linkedinUrl\": \"https://linkedin.com/in/janedoe\",\n    \"primaryArea\": \"Fullstack\",\n    \"feedbackLink\": \"https://forms.example.com/feedback/jane\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete Candidate",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/candidates/{{candidate_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "candidates", "{{candidate_id}}"]
+						},
+						"description": "Deletes a candidate by ID. Returns 409 Conflict if the candidate has existing interviews."
+					},
+					"response": [
+						{
+							"name": "204 No Content",
+							"status": "No Content",
+							"code": 204,
+							"header": [],
+							"body": ""
+						},
+						{
+							"name": "409 Conflict",
+							"status": "Conflict",
+							"code": 409,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"error\": \"Cannot delete candidate with existing interviews\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "Interviews",
 			"description": "CRUD operations for interviews. Creating/updating/deleting interviews syncs with Google Calendar.",
 			"item": [
@@ -72,7 +238,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"interviewerId\": \"{{profile_id}}\",\n    \"techStack\": \"Java/Spring\",\n    \"candidateInfo\": {\n        \"name\": \"Jane Doe\",\n        \"level\": \"Senior\",\n        \"email\": \"jane.doe@example.com\"\n    },\n    \"startTime\": \"2026-02-20T15:00:00Z\",\n    \"endTime\": \"2026-02-20T16:00:00Z\"\n}"
+							"raw": "{\n    \"interviewerId\": \"{{profile_id}}\",\n    \"candidateId\": \"{{candidate_id}}\",\n    \"techStack\": \"Java/Spring\",\n    \"startTime\": \"2026-04-20T15:00:00Z\",\n    \"endTime\": \"2026-04-20T16:00:00Z\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/interviews",
@@ -81,7 +247,17 @@
 						},
 						"description": "Creates a new interview and a Google Calendar event on the interviewer's calendar. The `interview_id` environment variable is auto-set from the response."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "201 Created",
+							"status": "Created",
+							"code": 201,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n    \"interviewer\": {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"email\": \"user@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"user@gm2dev.com\"\n    },\n    \"candidate\": {\n        \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n        \"name\": \"Jane Doe\",\n        \"email\": \"jane.doe@example.com\",\n        \"linkedinUrl\": null,\n        \"primaryArea\": \"Backend\",\n        \"feedbackLink\": null\n    },\n    \"talentAcquisition\": null,\n    \"techStack\": \"Java/Spring\",\n    \"startTime\": \"2026-04-20T15:00:00Z\",\n    \"endTime\": \"2026-04-20T16:00:00Z\",\n    \"status\": \"SCHEDULED\",\n    \"shadowingRequests\": []\n}"
+						}
+					]
 				},
 				{
 					"name": "List Interviews",
@@ -98,9 +274,19 @@
 								{ "key": "sort", "value": "startTime,desc" }
 							]
 						},
-						"description": "Returns a paginated list of all interviews."
+						"description": "Returns a paginated list of all interviews. Supports page, size, and sort query parameters."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"content\": [],\n    \"pageable\": {\n        \"pageNumber\": 0,\n        \"pageSize\": 20\n    },\n    \"totalElements\": 0,\n    \"totalPages\": 0\n}"
+						}
+					]
 				},
 				{
 					"name": "Get Interview",
@@ -114,7 +300,17 @@
 						},
 						"description": "Returns a single interview by ID."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n    \"interviewer\": {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"email\": \"user@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"user@gm2dev.com\"\n    },\n    \"candidate\": {\n        \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n        \"name\": \"Jane Doe\",\n        \"email\": \"jane.doe@example.com\",\n        \"linkedinUrl\": null,\n        \"primaryArea\": \"Backend\",\n        \"feedbackLink\": null\n    },\n    \"talentAcquisition\": null,\n    \"techStack\": \"Java/Spring\",\n    \"startTime\": \"2026-04-20T15:00:00Z\",\n    \"endTime\": \"2026-04-20T16:00:00Z\",\n    \"status\": \"SCHEDULED\",\n    \"shadowingRequests\": []\n}"
+						}
+					]
 				},
 				{
 					"name": "Update Interview",
@@ -128,7 +324,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"techStack\": \"Java/Spring/Hibernate\",\n    \"candidateInfo\": {\n        \"name\": \"Jane Doe\",\n        \"level\": \"Senior\",\n        \"notes\": \"Updated candidate info\"\n    },\n    \"startTime\": \"2026-02-20T16:00:00Z\",\n    \"endTime\": \"2026-02-20T17:00:00Z\",\n    \"status\": \"SCHEDULED\"\n}"
+							"raw": "{\n    \"candidateId\": \"{{candidate_id}}\",\n    \"techStack\": \"Java/Spring/Hibernate\",\n    \"startTime\": \"2026-04-20T16:00:00Z\",\n    \"endTime\": \"2026-04-20T17:00:00Z\",\n    \"status\": \"SCHEDULED\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/interviews/{{interview_id}}",
@@ -137,7 +333,17 @@
 						},
 						"description": "Updates an interview and syncs changes to the Google Calendar event."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n    \"interviewer\": {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"email\": \"user@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"user@gm2dev.com\"\n    },\n    \"candidate\": {\n        \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n        \"name\": \"Jane Doe\",\n        \"email\": \"jane.doe@example.com\",\n        \"linkedinUrl\": null,\n        \"primaryArea\": \"Backend\",\n        \"feedbackLink\": null\n    },\n    \"talentAcquisition\": null,\n    \"techStack\": \"Java/Spring/Hibernate\",\n    \"startTime\": \"2026-04-20T16:00:00Z\",\n    \"endTime\": \"2026-04-20T17:00:00Z\",\n    \"status\": \"SCHEDULED\",\n    \"shadowingRequests\": []\n}"
+						}
+					]
 				},
 				{
 					"name": "Delete Interview",
@@ -151,7 +357,15 @@
 						},
 						"description": "Deletes an interview and cancels the Google Calendar event."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "204 No Content",
+							"status": "No Content",
+							"code": 204,
+							"header": [],
+							"body": ""
+						}
+					]
 				}
 			]
 		},
@@ -159,6 +373,54 @@
 			"name": "Shadowing Requests",
 			"description": "Manage requests to shadow (observe) interviews. Approving a request adds the shadower to the Google Calendar event.",
 			"item": [
+				{
+					"name": "List Shadowing Requests for Interview",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/interviews/{{interview_id}}/shadowing-requests",
+							"host": ["{{base_url}}"],
+							"path": ["api", "interviews", "{{interview_id}}", "shadowing-requests"]
+						},
+						"description": "Returns all shadowing requests for a specific interview."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "[\n    {\n        \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n        \"interview\": {\n            \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n            \"techStack\": \"Java/Spring\",\n            \"startTime\": \"2026-04-20T15:00:00Z\",\n            \"endTime\": \"2026-04-20T16:00:00Z\",\n            \"status\": \"SCHEDULED\"\n        },\n        \"shadower\": {\n            \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n            \"email\": \"shadower@gm2dev.com\",\n            \"role\": \"interviewer\",\n            \"calendarEmail\": \"shadower@gm2dev.com\"\n        },\n        \"status\": \"PENDING\",\n        \"reason\": null\n    }\n]"
+						}
+					]
+				},
+				{
+					"name": "List My Shadowing Requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/shadowing-requests/my",
+							"host": ["{{base_url}}"],
+							"path": ["api", "shadowing-requests", "my"]
+						},
+						"description": "Returns all shadowing requests for the authenticated user."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "[]"
+						}
+					]
+				},
 				{
 					"name": "Create Shadowing Request",
 					"event": [
@@ -186,7 +448,17 @@
 						},
 						"description": "Requests to shadow an interview. The shadower identity is derived from the Bearer token — no request body needed. The `shadowing_request_id` environment variable is auto-set from the response."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "201 Created",
+							"status": "Created",
+							"code": 201,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n    \"interview\": {\n        \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n        \"techStack\": \"Java/Spring\",\n        \"startTime\": \"2026-04-20T15:00:00Z\",\n        \"endTime\": \"2026-04-20T16:00:00Z\",\n        \"status\": \"SCHEDULED\"\n    },\n    \"shadower\": {\n        \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n        \"email\": \"shadower@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"shadower@gm2dev.com\"\n    },\n    \"status\": \"PENDING\",\n    \"reason\": null\n}"
+						}
+					]
 				},
 				{
 					"name": "Approve Shadowing Request",
@@ -200,7 +472,17 @@
 						},
 						"description": "Approves a pending shadowing request and adds the shadower as an attendee to the Google Calendar event."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n    \"interview\": {\n        \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n        \"techStack\": \"Java/Spring\",\n        \"startTime\": \"2026-04-20T15:00:00Z\",\n        \"endTime\": \"2026-04-20T16:00:00Z\",\n        \"status\": \"SCHEDULED\"\n    },\n    \"shadower\": {\n        \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n        \"email\": \"shadower@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"shadower@gm2dev.com\"\n    },\n    \"status\": \"APPROVED\",\n    \"reason\": null\n}"
+						}
+					]
 				},
 				{
 					"name": "Reject Shadowing Request",
@@ -223,7 +505,17 @@
 						},
 						"description": "Rejects a shadowing request with an optional reason."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n    \"interview\": {\n        \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n        \"techStack\": \"Java/Spring\",\n        \"startTime\": \"2026-04-20T15:00:00Z\",\n        \"endTime\": \"2026-04-20T16:00:00Z\",\n        \"status\": \"SCHEDULED\"\n    },\n    \"shadower\": {\n        \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n        \"email\": \"shadower@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"shadower@gm2dev.com\"\n    },\n    \"status\": \"REJECTED\",\n    \"reason\": \"Interview is already at full capacity\"\n}"
+						}
+					]
 				},
 				{
 					"name": "Cancel Shadowing Request",
@@ -237,7 +529,114 @@
 						},
 						"description": "Cancels a shadowing request."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n    \"interview\": {\n        \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n        \"techStack\": \"Java/Spring\",\n        \"startTime\": \"2026-04-20T15:00:00Z\",\n        \"endTime\": \"2026-04-20T16:00:00Z\",\n        \"status\": \"SCHEDULED\"\n    },\n    \"shadower\": {\n        \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n        \"email\": \"shadower@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"shadower@gm2dev.com\"\n    },\n    \"status\": \"CANCELLED\",\n    \"reason\": null\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Profiles",
+			"description": "User profile operations.",
+			"item": [
+				{
+					"name": "Get My Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/profiles/me",
+							"host": ["{{base_url}}"],
+							"path": ["api", "profiles", "me"]
+						},
+						"description": "Returns the authenticated user's profile."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"email\": \"user@gm2dev.com\",\n    \"role\": \"interviewer\",\n    \"calendarEmail\": \"user@gm2dev.com\"\n}"
+						}
+					]
+				},
+				{
+					"name": "List Profiles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/profiles",
+							"host": ["{{base_url}}"],
+							"path": ["api", "profiles"]
+						},
+						"description": "Returns all user profiles."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "[\n    {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"email\": \"user@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"user@gm2dev.com\"\n    }\n]"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Auth",
+			"description": "Authentication endpoints. No Bearer token required.",
+			"item": [
+				{
+					"name": "Exchange Token",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{ "key": "code", "value": "PASTE_AUTH_CODE_HERE", "type": "text" },
+								{ "key": "redirect_uri", "value": "{{base_url}}/auth/google/callback", "type": "text" }
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/token",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "token"]
+						},
+						"description": "Postman-compatible token exchange. Accepts an authorization code and redirect_uri, returns an access token."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"access_token\": \"eyJhbGciOiJIUzI1NiJ9...\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": 3600\n}"
+						}
+					]
 				}
 			]
 		},
@@ -257,7 +656,17 @@
 						},
 						"description": "Public health check endpoint. No authentication required."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"status\": \"UP\"\n}"
+						}
+					]
 				}
 			]
 		}
