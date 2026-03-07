@@ -3,6 +3,9 @@ package com.gm2dev.interview_hub.controller;
 import com.gm2dev.interview_hub.dto.ProfileDto;
 import com.gm2dev.interview_hub.mapper.ProfileMapper;
 import com.gm2dev.interview_hub.service.ProfileService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -16,17 +19,20 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/profiles")
 @RequiredArgsConstructor
+@Tag(name = "Profiles", description = "User profile operations")
 public class ProfileController {
 
     private final ProfileService profileService;
     private final ProfileMapper profileMapper;
 
+    @Operation(summary = "Get my profile", description = "Returns the authenticated user's profile.")
     @GetMapping("/me")
-    public ProfileDto getMyProfile(@AuthenticationPrincipal Jwt jwt) {
+    public ProfileDto getMyProfile(@Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
         UUID profileId = UUID.fromString(jwt.getSubject());
         return profileMapper.toDto(profileService.findById(profileId));
     }
 
+    @Operation(summary = "List all profiles")
     @GetMapping
     public List<ProfileDto> listProfiles() {
         return profileService.findAll().stream()

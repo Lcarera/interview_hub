@@ -3,6 +3,9 @@ package com.gm2dev.interview_hub.controller;
 import com.gm2dev.interview_hub.dto.AuthResponse;
 import com.gm2dev.interview_hub.service.AuthService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +23,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Authentication", description = "Google OAuth2 authentication endpoints")
 public class AuthController {
 
     private final AuthService authService;
@@ -27,6 +31,8 @@ public class AuthController {
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
+    @Operation(summary = "Redirect to Google consent screen", description = "Initiates the Google OAuth2 login flow. Redirects the user to Google's consent page.",
+            security = {}, responses = {@ApiResponse(responseCode = "302", description = "Redirect to Google")})
     @GetMapping("/auth/google")
     public ResponseEntity<Void> redirectToGoogle() {
         String authUrl = authService.buildAuthorizationUrl();
@@ -35,6 +41,11 @@ public class AuthController {
                 .build();
     }
 
+    @Operation(summary = "Handle Google OAuth callback", description = "Exchanges the authorization code for tokens and redirects to the frontend with a JWT.",
+            security = {}, responses = {
+                    @ApiResponse(responseCode = "302", description = "Redirect to frontend with token"),
+                    @ApiResponse(responseCode = "403", description = "Non-@gm2dev.com account"),
+                    @ApiResponse(responseCode = "502", description = "Google token exchange failed")})
     @GetMapping("/auth/google/callback")
     public ResponseEntity<Void> handleCallback(@RequestParam String code) {
         try {
@@ -55,6 +66,11 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "Exchange authorization code for token", description = "Postman-compatible endpoint. Accepts code + redirect_uri and returns an access token.",
+            security = {}, responses = {
+                    @ApiResponse(responseCode = "200", description = "Token issued"),
+                    @ApiResponse(responseCode = "403", description = "Non-@gm2dev.com account"),
+                    @ApiResponse(responseCode = "502", description = "Google token exchange failed")})
     @PostMapping("/auth/token")
     public ResponseEntity<Map<String, Object>> exchangeToken(
             @RequestParam("code") String code,

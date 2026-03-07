@@ -43,6 +43,9 @@ dependencies {
 	// Actuator (health checks, metrics)
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
+	// API Documentation
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
+
 	// JSON Processing (for JSONB converter)
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 
@@ -89,6 +92,7 @@ jacocoTestReport {
 			fileTree(dir: it, exclude: [
 				'**/InterviewHubApplication.class',
 				'**/GoogleCalendarService.class',
+				'**/OpenApiConfig.class',
 				'**/*MapperImpl.class'
 			])
 		}))
@@ -101,6 +105,7 @@ jacocoTestCoverageVerification {
 			fileTree(dir: it, exclude: [
 				'**/InterviewHubApplication.class',
 				'**/GoogleCalendarService.class',
+				'**/OpenApiConfig.class',
 				'**/*MapperImpl.class'
 			])
 		}))
