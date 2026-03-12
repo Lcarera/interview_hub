@@ -44,6 +44,13 @@ public class Profile {
     @Column(name = "google_token_expiry")
     private Instant googleTokenExpiry;
 
+    @JsonIgnore
+    @Column(name = "password_hash")
+    private String passwordHash;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
+
     public Profile(UUID id, String email, String role, String calendarEmail) {
         this.id = id;
         this.email = email;
