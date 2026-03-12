@@ -3,15 +3,23 @@
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
-        "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '\\.(ts|html|scss|css|json)$'; then cd \"$(git rev-parse --show-toplevel)/frontend\" && npx prettier --write \"$CLAUDE_FILE_PATH\" 2>/dev/null; fi; exit 0",
-        "description": "Auto-format frontend files with Prettier"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '\\.(ts|html|scss|css|json)$'; then cd \"$(git rev-parse --show-toplevel)/frontend\" && npx prettier --write \"$CLAUDE_FILE_PATH\" 2>/dev/null; fi; exit 0"
+          }
+        ]
       }
     ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write",
-        "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '(\\.env|bun\\.lockb|package-lock\\.json)$'; then echo 'BLOCKED: Do not edit lock files or .env files' >&2; exit 2; fi; exit 0",
-        "description": "Block edits to lock files and .env"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '(\\.env|bun\\.lockb|package-lock\\.json)$'; then echo 'BLOCKED: Do not edit lock files or .env files' >&2; exit 2; fi; exit 0"
+          }
+        ]
       }
     ]
   }
