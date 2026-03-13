@@ -118,6 +118,12 @@ The application models a four-entity system:
 - Scopes requested: openid, email, profile, calendar.events
 - Frontend stores token, email, and expiry in localStorage (keys: `ih_token`, `ih_email`, `ih_expires_at`)
 
+**Email/Password Authentication:**
+- Additional endpoints: `POST /auth/register`, `GET /auth/verify`, `POST /auth/login`, `POST /auth/forgot-password`, `POST /auth/reset-password`
+- Email/password users get profiles with `google_sub=null` and a BCrypt-hashed password
+- Email verification is required before login — a verification token is sent via email on registration
+- Password reset uses a similar token-based flow with expiring links
+
 **Database:**
 - PostgreSQL (Supabase-hosted)
 - Hibernate validation mode (`ddl-auto: validate`) - schema changes require Supabase migrations
@@ -127,7 +133,8 @@ The application models a four-entity system:
 - OAuth2 Resource Server with HMAC-SHA256 JWT validation (app-issued tokens)
 - Custom JWT converter extracts "role" claim and prefixes with "ROLE_"
 - Stateless sessions (no server-side session management)
-- Public endpoints: `/actuator/health`, `/auth/google`, `/auth/google/callback`, `/auth/token`
+- Public endpoints: `/actuator/health`, `/auth/**`
+- `/admin/**` endpoints require `ROLE_admin`
 - All other endpoints require `Authorization: Bearer <token>`
 
 **Google Calendar Integration:**
@@ -141,7 +148,9 @@ The application models a four-entity system:
 - `GlobalExceptionHandler` (`@RestControllerAdvice`) maps `EntityNotFoundException` → 404, `IllegalStateException` → 409 Conflict
 
 **Role Assignment:**
-- New profiles created on first OAuth login default to `role = "interviewer"`. There is no admin role assignment flow.
+- New profiles created on first OAuth login or email/password registration default to `role = "interviewer"`.
+- `luciano.carera@gm2dev.com` is the initial admin user (seeded via migration `006_seed_admin_user.sql`).
+- Admins can promote/demote users via `PUT /admin/users/{id}/role`.
 
 **Logging:**
 - DEBUG level enabled for application code and Spring Security
@@ -154,7 +163,7 @@ The application models a four-entity system:
 - `frontend` — Angular app built via multi-stage Dockerfile (Bun 1.2 → nginx 1.27) on port 80
 
 **Nginx** (`frontend/nginx.conf`) acts as reverse proxy:
-- Routes `/api/*`, `/auth/google`, `/auth/token`, `/actuator` → `http://app:8080`
+- Routes `/api/*`, `/auth/*`, `/admin/*`, `/actuator` → `http://app:8080`
 - All other paths → Angular SPA (`try_files $uri $uri/ /index.html`)
 
 In production the frontend uses same-origin requests (empty `apiUrl`), so all API calls go through nginx. In dev mode (`bun run start`), the frontend calls `http://localhost:8080` directly.
@@ -190,6 +199,12 @@ Required for runtime:
 - `TOKEN_ENCRYPTION_KEY` - AES key for encrypting Google OAuth tokens at rest
 - `APP_BASE_URL` - Application base URL (default: http://localhost:8080)
 - `FRONTEND_URL` - Frontend URL for OAuth callback redirects (default in compose: http://localhost)
+- `MAIL_HOST` - SMTP server host
+- `MAIL_PORT` - SMTP server port
+- `MAIL_USERNAME` - SMTP username
+- `MAIL_PASSWORD` - SMTP password
+- `MAIL_FROM` - From email address (default: noreply@gm2dev.com)
+- `GOOGLE_SERVICE_ACCOUNT_KEY` - Service account JSON key for calendar domain-wide delegation
 
 ## Dependencies
 
@@ -220,6 +235,8 @@ The application uses `hibernate.ddl-auto: validate`, meaning Hibernate will NOT 
 2. `002_add_reason_to_shadowing_requests.sql` — adds `reason` TEXT column
 3. `003_add_google_oauth_columns.sql` — adds google_sub, encrypted token columns, token expiry
 4. `004_create_candidates_table.sql` — creates candidates table, adds candidate_id and talent_acquisition_id FKs to interviews, drops candidate_info JSONB column
+5. `005_add_email_password_auth.sql` — adds password_hash, email_verified to profiles; creates verification_tokens table
+6. `006_seed_admin_user.sql` — promotes luciano.carera@gm2dev.com to admin role
 
 Tests use H2 with `ddl-auto: create-drop`.
 
