@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
@@ -26,6 +26,9 @@ import { AuthService } from '../../core/services/auth.service';
         <a mat-button routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
         <a mat-button routerLink="/interviews" routerLinkActive="active">Interviews</a>
         <a mat-button routerLink="/candidates" routerLinkActive="active">Candidates</a>
+        @if (isAdmin()) {
+          <a mat-button routerLink="/admin/users" routerLinkActive="active">Admin</a>
+        }
       </nav>
 
       <span class="spacer"></span>
@@ -103,6 +106,7 @@ export class ShellComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   protected readonly email = this.authService.email;
+  protected readonly isAdmin = computed(() => this.authService.isAdmin());
 
   logout(): void {
     this.authService.logout();
