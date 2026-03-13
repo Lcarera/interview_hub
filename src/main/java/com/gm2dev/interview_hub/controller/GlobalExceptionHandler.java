@@ -29,4 +29,10 @@ public class GlobalExceptionHandler {
     public Map<String, String> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         return Map.of("error", "Operation conflicts with existing data");
     }
+
+    @ExceptionHandler(SecurityException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Map<String, String> handleSecurityException(SecurityException ex) {
+        return Map.of("error", ex.getMessage());
+    }
 }

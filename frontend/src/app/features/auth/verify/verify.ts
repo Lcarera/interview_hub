@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -41,6 +41,7 @@ import { AuthService } from '../../../core/services/auth.service';
     .status-icon.success { color: #4caf50; }
     .status-icon.error { color: #f44336; }
   `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VerifyComponent implements OnInit {
   private auth = inject(AuthService);

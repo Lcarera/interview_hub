@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -57,6 +57,7 @@ import { AuthService } from '../../../core/services/auth.service';
     .success-message { text-align: center; padding: 1rem; }
     .success-message mat-icon { font-size: 48px; width: 48px; height: 48px; color: #4caf50; }
   `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ForgotPasswordComponent {
   private auth = inject(AuthService);

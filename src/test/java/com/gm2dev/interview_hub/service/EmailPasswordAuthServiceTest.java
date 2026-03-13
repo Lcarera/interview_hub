@@ -2,6 +2,7 @@ package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.domain.TokenType;
 import com.gm2dev.interview_hub.domain.VerificationToken;
 import com.gm2dev.interview_hub.dto.AuthResponse;
@@ -20,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -67,14 +69,14 @@ class EmailPasswordAuthServiceTest {
     @Test
     void register_withValidGm2devEmail_createsProfileAndSendsVerification() {
         RegisterRequest request = new RegisterRequest("user@gm2dev.com", "Password1");
-        
+
         Profile mappedProfile = new Profile();
         mappedProfile.setId(UUID.randomUUID());
         mappedProfile.setEmail("user@gm2dev.com");
         mappedProfile.setCalendarEmail("user@gm2dev.com");
-        mappedProfile.setRole("interviewer");
+        mappedProfile.setRole(Role.interviewer);
         mappedProfile.setEmailVerified(false);
-        
+
         when(profileRepository.findByEmail("user@gm2dev.com")).thenReturn(Optional.empty());
         when(profileMapper.toProfileFromRegisterRequest(request)).thenReturn(mappedProfile);
         when(passwordEncoder.encode("Password1")).thenReturn("hashed");
@@ -88,14 +90,39 @@ class EmailPasswordAuthServiceTest {
         Profile saved = profileCaptor.getValue();
         assertEquals("user@gm2dev.com", saved.getEmail());
         assertEquals("hashed", saved.getPasswordHash());
-        assertEquals("interviewer", saved.getRole());
+        assertEquals(Role.interviewer, saved.getRole());
         assertFalse(saved.isEmailVerified());
 
         verify(emailService).sendVerificationEmail(eq("user@gm2dev.com"), anyString());
+
+        // Verify token is stored as SHA-256 hash (not raw UUID)
+        ArgumentCaptor<VerificationToken> tokenCaptor = ArgumentCaptor.forClass(VerificationToken.class);
+        verify(verificationTokenRepository).save(tokenCaptor.capture());
+        VerificationToken savedToken = tokenCaptor.getValue();
+        assertEquals(64, savedToken.getToken().length()); // SHA-256 hex is 64 chars
     }
 
     @Test
-    void register_withNonGm2devEmail_throwsSecurityException() {
+    void register_withLcareraDevEmail_succeeds() {
+        RegisterRequest request = new RegisterRequest("user@lcarera.dev", "Password1");
+
+        Profile mappedProfile = new Profile();
+        mappedProfile.setId(UUID.randomUUID());
+        mappedProfile.setEmail("user@lcarera.dev");
+        mappedProfile.setRole(Role.interviewer);
+        mappedProfile.setEmailVerified(false);
+
+        when(profileRepository.findByEmail("user@lcarera.dev")).thenReturn(Optional.empty());
+        when(profileMapper.toProfileFromRegisterRequest(request)).thenReturn(mappedProfile);
+        when(passwordEncoder.encode("Password1")).thenReturn("hashed");
+        when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(verificationTokenRepository.save(any(VerificationToken.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertDoesNotThrow(() -> service.register(request));
+    }
+
+    @Test
+    void register_withNonAllowedDomainEmail_throwsSecurityException() {
         RegisterRequest request = new RegisterRequest("user@gmail.com", "Password1");
         assertThrows(SecurityException.class, () -> service.register(request));
         verify(profileRepository, never()).save(any());
@@ -112,6 +139,9 @@ class EmailPasswordAuthServiceTest {
 
     @Test
     void verifyEmail_withValidToken_marksProfileAsVerified() {
+        String rawToken = "raw-verification-token";
+        String hashedToken = service.hashToken(rawToken);
+
         Profile profile = new Profile();
         profile.setId(UUID.randomUUID());
         profile.setEmail("user@gm2dev.com");
@@ -120,18 +150,18 @@ class EmailPasswordAuthServiceTest {
         VerificationToken vt = new VerificationToken();
         vt.setId(UUID.randomUUID());
         vt.setProfile(profile);
-        vt.setToken("valid-token");
+        vt.setToken(hashedToken);
         vt.setTokenType(TokenType.EMAIL_VERIFICATION);
         vt.setExpiresAt(Instant.now().plusSeconds(3600));
         vt.setUsed(false);
         vt.setCreatedAt(Instant.now());
 
-        when(verificationTokenRepository.findByTokenAndTokenType("valid-token", TokenType.EMAIL_VERIFICATION))
+        when(verificationTokenRepository.findByTokenAndTokenType(hashedToken, TokenType.EMAIL_VERIFICATION))
                 .thenReturn(Optional.of(vt));
         when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
         when(verificationTokenRepository.save(any(VerificationToken.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service.verifyEmail("valid-token");
+        service.verifyEmail(rawToken);
 
         assertTrue(profile.isEmailVerified());
         assertTrue(vt.isUsed());
@@ -139,34 +169,40 @@ class EmailPasswordAuthServiceTest {
 
     @Test
     void verifyEmail_withExpiredToken_throwsSecurityException() {
+        String rawToken = "expired-token";
+        String hashedToken = service.hashToken(rawToken);
+
         VerificationToken vt = new VerificationToken();
         vt.setId(UUID.randomUUID());
-        vt.setToken("expired-token");
+        vt.setToken(hashedToken);
         vt.setTokenType(TokenType.EMAIL_VERIFICATION);
         vt.setExpiresAt(Instant.now().minusSeconds(3600));
         vt.setUsed(false);
         vt.setCreatedAt(Instant.now().minusSeconds(7200));
 
-        when(verificationTokenRepository.findByTokenAndTokenType("expired-token", TokenType.EMAIL_VERIFICATION))
+        when(verificationTokenRepository.findByTokenAndTokenType(hashedToken, TokenType.EMAIL_VERIFICATION))
                 .thenReturn(Optional.of(vt));
 
-        assertThrows(SecurityException.class, () -> service.verifyEmail("expired-token"));
+        assertThrows(SecurityException.class, () -> service.verifyEmail(rawToken));
     }
 
     @Test
     void verifyEmail_withUsedToken_throwsSecurityException() {
+        String rawToken = "used-token";
+        String hashedToken = service.hashToken(rawToken);
+
         VerificationToken vt = new VerificationToken();
         vt.setId(UUID.randomUUID());
-        vt.setToken("used-token");
+        vt.setToken(hashedToken);
         vt.setTokenType(TokenType.EMAIL_VERIFICATION);
         vt.setExpiresAt(Instant.now().plusSeconds(3600));
         vt.setUsed(true);
         vt.setCreatedAt(Instant.now());
 
-        when(verificationTokenRepository.findByTokenAndTokenType("used-token", TokenType.EMAIL_VERIFICATION))
+        when(verificationTokenRepository.findByTokenAndTokenType(hashedToken, TokenType.EMAIL_VERIFICATION))
                 .thenReturn(Optional.of(vt));
 
-        assertThrows(SecurityException.class, () -> service.verifyEmail("used-token"));
+        assertThrows(SecurityException.class, () -> service.verifyEmail(rawToken));
     }
 
     // --- Login tests ---
@@ -176,7 +212,7 @@ class EmailPasswordAuthServiceTest {
         Profile profile = new Profile();
         profile.setId(UUID.randomUUID());
         profile.setEmail("user@gm2dev.com");
-        profile.setRole("interviewer");
+        profile.setRole(Role.interviewer);
         profile.setPasswordHash("hashed");
         profile.setEmailVerified(true);
 
@@ -244,17 +280,24 @@ class EmailPasswordAuthServiceTest {
     // --- Forgot password tests ---
 
     @Test
-    void forgotPassword_withExistingPasswordUser_sendsResetEmail() {
+    void forgotPassword_withExistingPasswordUser_invalidatesOldTokensAndSendsResetEmail() {
         Profile profile = new Profile();
         profile.setId(UUID.randomUUID());
         profile.setEmail("user@gm2dev.com");
         profile.setPasswordHash("hashed");
 
+        VerificationToken oldToken = new VerificationToken();
+        oldToken.setId(UUID.randomUUID());
+        oldToken.setUsed(false);
+
         when(profileRepository.findByEmail("user@gm2dev.com")).thenReturn(Optional.of(profile));
+        when(verificationTokenRepository.findByProfileAndTokenTypeAndUsedFalse(profile, TokenType.PASSWORD_RESET))
+                .thenReturn(List.of(oldToken));
         when(verificationTokenRepository.save(any(VerificationToken.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service.forgotPassword("user@gm2dev.com");
 
+        assertTrue(oldToken.isUsed());
         verify(emailService).sendPasswordResetEmail(eq("user@gm2dev.com"), anyString());
     }
 
@@ -283,7 +326,10 @@ class EmailPasswordAuthServiceTest {
     // --- Reset password tests ---
 
     @Test
-    void resetPassword_withValidToken_updatesPassword() {
+    void resetPassword_withValidToken_updatesPasswordAndInvalidatesAllResetTokens() {
+        String rawToken = "reset-token-uuid";
+        String hashedToken = service.hashToken(rawToken);
+
         Profile profile = new Profile();
         profile.setId(UUID.randomUUID());
         profile.setEmail("user@gm2dev.com");
@@ -292,31 +338,55 @@ class EmailPasswordAuthServiceTest {
         VerificationToken vt = new VerificationToken();
         vt.setId(UUID.randomUUID());
         vt.setProfile(profile);
-        vt.setToken("reset-token");
+        vt.setToken(hashedToken);
         vt.setTokenType(TokenType.PASSWORD_RESET);
         vt.setExpiresAt(Instant.now().plusSeconds(3600));
         vt.setUsed(false);
         vt.setCreatedAt(Instant.now());
 
-        when(verificationTokenRepository.findByTokenAndTokenType("reset-token", TokenType.PASSWORD_RESET))
+        VerificationToken otherToken = new VerificationToken();
+        otherToken.setId(UUID.randomUUID());
+        otherToken.setUsed(false);
+
+        when(verificationTokenRepository.findByTokenAndTokenType(hashedToken, TokenType.PASSWORD_RESET))
                 .thenReturn(Optional.of(vt));
         when(passwordEncoder.encode("NewPassword1")).thenReturn("new-hash");
         when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(verificationTokenRepository.save(any(VerificationToken.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(verificationTokenRepository.findByProfileAndTokenTypeAndUsedFalse(profile, TokenType.PASSWORD_RESET))
+                .thenReturn(List.of(vt, otherToken));
 
-        ResetPasswordRequest request = new ResetPasswordRequest("reset-token", "NewPassword1");
+        ResetPasswordRequest request = new ResetPasswordRequest(rawToken, "NewPassword1");
         service.resetPassword(request);
 
         assertEquals("new-hash", profile.getPasswordHash());
         assertTrue(vt.isUsed());
+        assertTrue(otherToken.isUsed());
     }
 
     @Test
     void resetPassword_withInvalidToken_throwsSecurityException() {
-        when(verificationTokenRepository.findByTokenAndTokenType("invalid", TokenType.PASSWORD_RESET))
+        String rawToken = "invalid";
+        String hashedToken = service.hashToken(rawToken);
+        when(verificationTokenRepository.findByTokenAndTokenType(hashedToken, TokenType.PASSWORD_RESET))
                 .thenReturn(Optional.empty());
 
-        ResetPasswordRequest request = new ResetPasswordRequest("invalid", "NewPassword1");
+        ResetPasswordRequest request = new ResetPasswordRequest(rawToken, "NewPassword1");
         assertThrows(SecurityException.class, () -> service.resetPassword(request));
+    }
+
+    // --- Token hashing tests ---
+
+    @Test
+    void hashToken_producesConsistentSha256Hash() {
+        String token = "test-token";
+        String hash1 = service.hashToken(token);
+        String hash2 = service.hashToken(token);
+        assertEquals(hash1, hash2);
+        assertEquals(64, hash1.length()); // SHA-256 hex = 64 chars
+    }
+
+    @Test
+    void hashToken_differentTokensProduceDifferentHashes() {
+        assertNotEquals(service.hashToken("token-a"), service.hashToken("token-b"));
     }
 }

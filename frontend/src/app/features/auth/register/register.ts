@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -22,7 +22,7 @@ import { AuthService } from '../../../core/services/auth.service';
       <mat-card class="auth-card">
         <mat-card-header>
           <mat-card-title>Create Account</mat-card-title>
-          <mat-card-subtitle>Register with your &#64;gm2dev.com email</mat-card-subtitle>
+          <mat-card-subtitle>Register with your company email</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
           @if (success()) {
@@ -71,6 +71,7 @@ import { AuthService } from '../../../core/services/auth.service';
     .success-message mat-icon { font-size: 48px; width: 48px; height: 48px; color: #4caf50; }
     .error-message { background: #fdecea; color: #b71c1c; padding: 0.75rem; border-radius: 4px; margin-bottom: 0.5rem; font-size: 0.875rem; }
   `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RegisterComponent {
   private auth = inject(AuthService);
@@ -87,8 +88,8 @@ export class RegisterComponent {
       this.error.set('Passwords do not match');
       return;
     }
-    if (!this.email.endsWith('@gm2dev.com')) {
-      this.error.set('Only @gm2dev.com emails are allowed');
+    if (!this.email.endsWith('@gm2dev.com') && !this.email.endsWith('@lcarera.dev')) {
+      this.error.set('Only @gm2dev.com and @lcarera.dev emails are allowed');
       return;
     }
 

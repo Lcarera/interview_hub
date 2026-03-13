@@ -1,9 +1,8 @@
 package com.gm2dev.interview_hub.controller;
 
-import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.dto.CreateUserRequest;
+import com.gm2dev.interview_hub.dto.ProfileDto;
 import com.gm2dev.interview_hub.dto.UpdateRoleRequest;
-import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.gm2dev.interview_hub.service.AdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,16 +22,15 @@ import java.util.UUID;
 public class AdminController {
 
     private final AdminService adminService;
-    private final ProfileRepository profileRepository;
 
     @GetMapping
-    public ResponseEntity<Page<Profile>> listUsers(Pageable pageable) {
-        return ResponseEntity.ok(profileRepository.findAll(pageable));
+    public ResponseEntity<Page<ProfileDto>> listUsers(Pageable pageable) {
+        return ResponseEntity.ok(adminService.listUsers(pageable));
     }
 
     @PostMapping
-    public ResponseEntity<Profile> createUser(@Valid @RequestBody CreateUserRequest request) {
-        Profile created = adminService.createUser(request);
+    public ResponseEntity<ProfileDto> createUser(@Valid @RequestBody CreateUserRequest request) {
+        ProfileDto created = adminService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 

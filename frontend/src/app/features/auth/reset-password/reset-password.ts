@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -63,6 +63,7 @@ import { AuthService } from '../../../core/services/auth.service';
     .success-message mat-icon { font-size: 48px; width: 48px; height: 48px; color: #4caf50; }
     .error-message { background: #fdecea; color: #b71c1c; padding: 0.75rem; border-radius: 4px; margin-bottom: 0.5rem; font-size: 0.875rem; }
   `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ResetPasswordComponent implements OnInit {
   private auth = inject(AuthService);

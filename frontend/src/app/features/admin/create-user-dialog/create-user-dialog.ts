@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -36,6 +36,7 @@ export interface CreateUserDialogResult {
     </mat-dialog-actions>
   `,
   styles: [`.full-width { width: 100%; }`],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CreateUserDialogComponent {
   private dialogRef = inject(MatDialogRef<CreateUserDialogComponent>);

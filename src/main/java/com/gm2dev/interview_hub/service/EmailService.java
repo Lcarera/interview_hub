@@ -65,7 +65,6 @@ public class EmailService {
             log.debug("Sent email to {} with subject: {}", to, subject);
         } catch (MessagingException e) {
             log.error("Failed to send email to {}", to, e);
-            throw new RuntimeException("Failed to send email", e);
         }
     }
 }

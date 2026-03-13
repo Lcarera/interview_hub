@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
 import com.gm2dev.interview_hub.domain.Candidate;
+import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.mapper.CandidateMapperImpl;
 import com.gm2dev.interview_hub.mapper.InterviewMapperImpl;
@@ -65,7 +66,7 @@ class InterviewControllerTest {
 
     private Interview buildInterview() {
         UUID id = UUID.randomUUID();
-        Profile interviewer = new Profile(UUID.randomUUID(), "test@example.com", "interviewer", null);
+        Profile interviewer = new Profile(UUID.randomUUID(), "test@example.com", Role.interviewer, null);
         interviewer.setGoogleSub("google-sub-123");
         interviewer.setGoogleAccessToken("encrypted-access-token");
         interviewer.setGoogleRefreshToken("encrypted-refresh-token");
@@ -154,7 +155,7 @@ class InterviewControllerTest {
         ShadowingRequest request = new ShadowingRequest();
         request.setId(UUID.randomUUID());
         request.setInterview(interview);
-        request.setShadower(new Profile(UUID.randomUUID(), "shadow@example.com", "interviewer", null));
+        request.setShadower(new Profile(UUID.randomUUID(), "shadow@example.com", Role.interviewer, null));
         request.setStatus(ShadowingRequestStatus.PENDING);
 
         interview.setShadowingRequests(List.of(request));

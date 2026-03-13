@@ -1,17 +1,22 @@
 package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.CreateUserRequest;
+import com.gm2dev.interview_hub.dto.ProfileDto;
 import com.gm2dev.interview_hub.mapper.ProfileMapper;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -19,7 +24,7 @@ import java.util.UUID;
 @Slf4j
 public class AdminService {
 
-    private static final String REQUIRED_DOMAIN = "gm2dev.com";
+    private static final Set<String> ALLOWED_DOMAINS = Set.of("gm2dev.com", "lcarera.dev");
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
 
@@ -28,11 +33,16 @@ public class AdminService {
     private final EmailService emailService;
     private final ProfileMapper profileMapper;
 
+    @Transactional(readOnly = true)
+    public Page<ProfileDto> listUsers(Pageable pageable) {
+        return profileRepository.findAll(pageable).map(profileMapper::toDto);
+    }
+
     @Transactional
-    public Profile createUser(CreateUserRequest request) {
+    public ProfileDto createUser(CreateUserRequest request) {
         String domain = request.email().substring(request.email().indexOf('@') + 1);
-        if (!REQUIRED_DOMAIN.equals(domain)) {
-            throw new SecurityException("Users must have @" + REQUIRED_DOMAIN + " email");
+        if (!ALLOWED_DOMAINS.contains(domain)) {
+            throw new SecurityException("Users must have an allowed email domain");
         }
 
         if (profileRepository.findByEmail(request.email()).isPresent()) {
@@ -48,11 +58,11 @@ public class AdminService {
         emailService.sendTemporaryPasswordEmail(request.email(), temporaryPassword);
 
         log.debug("Admin created user: {}", request.email());
-        return saved;
+        return profileMapper.toDto(saved);
     }
 
     @Transactional
-    public void updateRole(UUID userId, String role) {
+    public void updateRole(UUID userId, Role role) {
         Profile profile = profileRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
         profile.setRole(role);

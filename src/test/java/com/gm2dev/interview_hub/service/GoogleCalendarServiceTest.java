@@ -6,6 +6,7 @@ import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.Event;
@@ -78,7 +79,7 @@ class GoogleCalendarServiceTest {
         Profile profile = new Profile();
         profile.setId(UUID.randomUUID());
         profile.setEmail("interviewer@gm2dev.com");
-        profile.setRole("interviewer");
+        profile.setRole(Role.interviewer);
         profile.setGoogleAccessToken(tokenEncryptionService.encrypt("access-token"));
         profile.setGoogleRefreshToken(tokenEncryptionService.encrypt("refresh-token"));
         profile.setGoogleTokenExpiry(Instant.now().plus(1, ChronoUnit.HOURS));

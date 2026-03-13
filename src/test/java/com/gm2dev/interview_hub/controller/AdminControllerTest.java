@@ -2,9 +2,9 @@ package com.gm2dev.interview_hub.controller;
 
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
-import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.CreateUserRequest;
-import com.gm2dev.interview_hub.repository.ProfileRepository;
+import com.gm2dev.interview_hub.dto.ProfileDto;
 import com.gm2dev.interview_hub.service.AdminService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,9 +40,6 @@ class AdminControllerTest {
     private AdminService adminService;
 
     @MockitoBean
-    private ProfileRepository profileRepository;
-
-    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     @MockitoBean
@@ -50,7 +47,7 @@ class AdminControllerTest {
 
     @Test
     void listUsers_asAdmin_returns200() throws Exception {
-        when(profileRepository.findAll(any(Pageable.class)))
+        when(adminService.listUsers(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(get("/admin/users")
@@ -73,12 +70,9 @@ class AdminControllerTest {
 
     @Test
     void createUser_asAdmin_returns201() throws Exception {
-        Profile profile = new Profile();
-        profile.setId(UUID.randomUUID());
-        profile.setEmail("new@gm2dev.com");
-        profile.setRole("interviewer");
+        ProfileDto dto = new ProfileDto(UUID.randomUUID(), "new@gm2dev.com", Role.interviewer, "new@gm2dev.com");
 
-        when(adminService.createUser(any(CreateUserRequest.class))).thenReturn(profile);
+        when(adminService.createUser(any(CreateUserRequest.class))).thenReturn(dto);
 
         mockMvc.perform(post("/admin/users")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_admin")))
@@ -94,6 +88,15 @@ class AdminControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\": \"new@gm2dev.com\", \"role\": \"interviewer\"}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void createUser_withInvalidRole_returns400() throws Exception {
+        mockMvc.perform(post("/admin/users")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_admin")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\": \"new@gm2dev.com\", \"role\": \"superadmin\"}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

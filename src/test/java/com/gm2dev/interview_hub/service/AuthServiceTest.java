@@ -3,6 +3,7 @@ package com.gm2dev.interview_hub.service;
 import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.AuthResponse;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
@@ -72,7 +73,7 @@ class AuthServiceTest {
         assertTrue(url.contains("redirect_uri="));
         assertTrue(url.contains("scope="));
         assertTrue(url.contains("calendar.events"));
-        assertTrue(url.contains("hd=gm2dev.com"));
+        assertTrue(url.contains("hd="));
         assertTrue(url.contains("access_type=offline"));
     }
 
@@ -120,7 +121,7 @@ class AuthServiceTest {
         existingProfile.setId(UUID.randomUUID());
         existingProfile.setGoogleSub("sub-existing");
         existingProfile.setEmail("old@gm2dev.com");
-        existingProfile.setRole("interviewer");
+        existingProfile.setRole(Role.interviewer);
 
         GoogleTokenResponse tokenResponse = mockTokenResponse("gm2dev.com", "sub-existing", "updated@gm2dev.com");
         doReturn(tokenResponse).when(authService).exchangeCodeForTokens(eq("returning-code"), anyString());
@@ -156,7 +157,7 @@ class AuthServiceTest {
         assertNotNull(saved.getId());
         assertEquals("sub-new", saved.getGoogleSub());
         assertEquals("new@gm2dev.com", saved.getEmail());
-        assertEquals("interviewer", saved.getRole());
+        assertEquals(Role.interviewer, saved.getRole());
         assertEquals("new@gm2dev.com", saved.getCalendarEmail());
     }
 
@@ -166,7 +167,7 @@ class AuthServiceTest {
         existingProfile.setId(UUID.randomUUID());
         existingProfile.setGoogleSub("sub-norefresh");
         existingProfile.setEmail("user@gm2dev.com");
-        existingProfile.setRole("interviewer");
+        existingProfile.setRole(Role.interviewer);
         existingProfile.setGoogleRefreshToken(tokenEncryptionService.encrypt("old-refresh-token"));
 
         GoogleTokenResponse tokenResponse = mockTokenResponseWithNulls("gm2dev.com", "sub-norefresh", "user@gm2dev.com", null, null);

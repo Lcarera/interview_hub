@@ -1,7 +1,8 @@
 package com.gm2dev.interview_hub.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import com.gm2dev.interview_hub.domain.Role;
+import jakarta.validation.constraints.NotNull;
 
 public record UpdateRoleRequest(
-        @NotBlank String role
+        @NotNull Role role
 ) {}

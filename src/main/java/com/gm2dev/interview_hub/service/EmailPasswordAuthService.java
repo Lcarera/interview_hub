@@ -26,15 +26,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @Slf4j
 public class EmailPasswordAuthService {
 
-    private static final String REQUIRED_DOMAIN = "gm2dev.com";
+    private static final Set<String> ALLOWED_DOMAINS = Set.of("gm2dev.com", "lcarera.dev");
 
     private final ProfileRepository profileRepository;
     private final VerificationTokenRepository verificationTokenRepository;
@@ -75,15 +80,21 @@ public class EmailPasswordAuthService {
         profile.setPasswordHash(passwordEncoder.encode(request.password()));
         profileRepository.save(profile);
 
-        String token = createVerificationToken(profile, TokenType.EMAIL_VERIFICATION, 24);
-        emailService.sendVerificationEmail(request.email(), token);
+        String rawToken = UUID.randomUUID().toString();
+        createVerificationToken(profile, TokenType.EMAIL_VERIFICATION, 24, rawToken);
+        emailService.sendVerificationEmail(request.email(), rawToken);
 
         log.debug("Registered new email/password user: {}", request.email());
     }
 
     @Transactional
-    public void verifyEmail(String token) {
-        VerificationToken vt = findValidToken(token, TokenType.EMAIL_VERIFICATION);
+    public void verifyEmail(String rawToken) {
+        String tokenHash = hashToken(rawToken);
+        VerificationToken vt = verificationTokenRepository.findByTokenAndTokenType(tokenHash, TokenType.EMAIL_VERIFICATION)
+                .orElseThrow(() -> new SecurityException("Invalid or expired token"));
+        if (vt.isUsed() || vt.isExpired()) {
+            throw new SecurityException("Invalid or expired token");
+        }
         Profile profile = vt.getProfile();
         profile.setEmailVerified(true);
         profileRepository.save(profile);
@@ -117,49 +128,70 @@ public class EmailPasswordAuthService {
     public void forgotPassword(String email) {
         profileRepository.findByEmail(email).ifPresent(profile -> {
             if (profile.getPasswordHash() != null) {
-                String token = createVerificationToken(profile, TokenType.PASSWORD_RESET, 1);
-                emailService.sendPasswordResetEmail(email, token);
+                invalidateActiveTokens(profile, TokenType.PASSWORD_RESET);
+                String rawToken = UUID.randomUUID().toString();
+                createVerificationToken(profile, TokenType.PASSWORD_RESET, 1, rawToken);
+                emailService.sendPasswordResetEmail(email, rawToken);
             }
         });
     }
 
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        VerificationToken vt = findValidToken(request.token(), TokenType.PASSWORD_RESET);
+        String tokenHash = hashToken(request.token());
+        VerificationToken vt = verificationTokenRepository.findByTokenAndTokenType(tokenHash, TokenType.PASSWORD_RESET)
+                .orElseThrow(() -> new SecurityException("Invalid or expired token"));
+        if (vt.isUsed() || vt.isExpired()) {
+            throw new SecurityException("Invalid or expired token");
+        }
         Profile profile = vt.getProfile();
         profile.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         profileRepository.save(profile);
-        vt.setUsed(true);
-        verificationTokenRepository.save(vt);
+        invalidateActiveTokens(profile, TokenType.PASSWORD_RESET);
         log.debug("Password reset for: {}", profile.getEmail());
     }
 
-    private String createVerificationToken(Profile profile, TokenType type, int expirationHours) {
+    private void createVerificationToken(Profile profile, TokenType type, int expirationHours, String rawToken) {
         VerificationToken vt = new VerificationToken();
         vt.setId(UUID.randomUUID());
         vt.setProfile(profile);
-        vt.setToken(UUID.randomUUID().toString());
+        vt.setToken(hashToken(rawToken));
         vt.setTokenType(type);
         vt.setExpiresAt(Instant.now().plus(expirationHours, ChronoUnit.HOURS));
         vt.setUsed(false);
         vt.setCreatedAt(Instant.now());
         verificationTokenRepository.save(vt);
-        return vt.getToken();
     }
 
-    private VerificationToken findValidToken(String token, TokenType expectedType) {
-        VerificationToken vt = verificationTokenRepository.findByTokenAndTokenType(token, expectedType)
-                .orElseThrow(() -> new SecurityException("Invalid or expired token"));
-        if (vt.isUsed() || vt.isExpired()) {
-            throw new SecurityException("Invalid or expired token");
+    private void invalidateActiveTokens(Profile profile, TokenType tokenType) {
+        List<VerificationToken> activeTokens = verificationTokenRepository
+                .findByProfileAndTokenTypeAndUsedFalse(profile, tokenType);
+        for (VerificationToken token : activeTokens) {
+            token.setUsed(true);
         }
-        return vt;
+        verificationTokenRepository.saveAll(activeTokens);
+    }
+
+    String hashToken(String rawToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
     }
 
     private void validateDomain(String email) {
         String domain = email.substring(email.indexOf('@') + 1);
-        if (!REQUIRED_DOMAIN.equals(domain)) {
-            throw new SecurityException("Registration is restricted to @" + REQUIRED_DOMAIN + " accounts");
+        if (!ALLOWED_DOMAINS.contains(domain)) {
+            throw new SecurityException("Registration is restricted to allowed email domains");
         }
     }
 
@@ -168,7 +200,7 @@ public class EmailPasswordAuthService {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(profile.getId().toString())
                 .claim("email", profile.getEmail())
-                .claim("role", profile.getRole())
+                .claim("role", profile.getRole().name())
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(jwtProperties.getExpirationSeconds()))
                 .build();
