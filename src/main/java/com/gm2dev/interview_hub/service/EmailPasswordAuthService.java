@@ -8,6 +8,7 @@ import com.gm2dev.interview_hub.dto.AuthResponse;
 import com.gm2dev.interview_hub.dto.LoginRequest;
 import com.gm2dev.interview_hub.dto.RegisterRequest;
 import com.gm2dev.interview_hub.dto.ResetPasswordRequest;
+import com.gm2dev.interview_hub.mapper.ProfileMapper;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.gm2dev.interview_hub.repository.VerificationTokenRepository;
 import com.nimbusds.jose.jwk.JWKSet;
@@ -40,18 +41,21 @@ public class EmailPasswordAuthService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final JwtProperties jwtProperties;
+    private final ProfileMapper profileMapper;
     private final JwtEncoder jwtEncoder;
 
     public EmailPasswordAuthService(ProfileRepository profileRepository,
                                      VerificationTokenRepository verificationTokenRepository,
                                      PasswordEncoder passwordEncoder,
                                      EmailService emailService,
-                                     JwtProperties jwtProperties) {
+                                     JwtProperties jwtProperties,
+                                     ProfileMapper profileMapper) {
         this.profileRepository = profileRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.jwtProperties = jwtProperties;
+        this.profileMapper = profileMapper;
 
         byte[] keyBytes = jwtProperties.getSigningSecret().getBytes();
         SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
@@ -67,13 +71,8 @@ public class EmailPasswordAuthService {
             throw new IllegalStateException("An account with this email already exists");
         }
 
-        Profile profile = new Profile();
-        profile.setId(UUID.randomUUID());
-        profile.setEmail(request.email());
-        profile.setCalendarEmail(request.email());
-        profile.setRole("interviewer");
+        Profile profile = profileMapper.toProfileFromRegisterRequest(request);
         profile.setPasswordHash(passwordEncoder.encode(request.password()));
-        profile.setEmailVerified(false);
         profileRepository.save(profile);
 
         String token = createVerificationToken(profile, TokenType.EMAIL_VERIFICATION, 24);

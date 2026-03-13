@@ -2,6 +2,7 @@ package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.dto.CreateUserRequest;
+import com.gm2dev.interview_hub.mapper.ProfileMapper;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,17 +34,29 @@ class AdminServiceTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private ProfileMapper profileMapper;
+
     private AdminService adminService;
 
     @BeforeEach
     void setUp() {
-        adminService = new AdminService(profileRepository, passwordEncoder, emailService);
+        adminService = new AdminService(profileRepository, passwordEncoder, emailService, profileMapper);
     }
 
     @Test
     void createUser_withValidRequest_createsProfileAndSendsEmail() {
         CreateUserRequest request = new CreateUserRequest("new@gm2dev.com", "interviewer");
+        
+        Profile mappedProfile = new Profile();
+        mappedProfile.setId(UUID.randomUUID());
+        mappedProfile.setEmail("new@gm2dev.com");
+        mappedProfile.setCalendarEmail("new@gm2dev.com");
+        mappedProfile.setRole("interviewer");
+        mappedProfile.setEmailVerified(true);
+        
         when(profileRepository.findByEmail("new@gm2dev.com")).thenReturn(Optional.empty());
+        when(profileMapper.toProfileFromCreateUserRequest(request)).thenReturn(mappedProfile);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
         when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
 

@@ -2,6 +2,7 @@ package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.dto.CreateUserRequest;
+import com.gm2dev.interview_hub.mapper.ProfileMapper;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class AdminService {
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final ProfileMapper profileMapper;
 
     @Transactional
     public Profile createUser(CreateUserRequest request) {
@@ -39,13 +41,8 @@ public class AdminService {
 
         String temporaryPassword = generateTemporaryPassword();
 
-        Profile profile = new Profile();
-        profile.setId(UUID.randomUUID());
-        profile.setEmail(request.email());
-        profile.setCalendarEmail(request.email());
-        profile.setRole(request.role());
+        Profile profile = profileMapper.toProfileFromCreateUserRequest(request);
         profile.setPasswordHash(passwordEncoder.encode(temporaryPassword));
-        profile.setEmailVerified(true);
 
         Profile saved = profileRepository.save(profile);
         emailService.sendTemporaryPasswordEmail(request.email(), temporaryPassword);

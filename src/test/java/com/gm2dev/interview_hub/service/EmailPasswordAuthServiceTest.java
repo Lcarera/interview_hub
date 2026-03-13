@@ -8,6 +8,7 @@ import com.gm2dev.interview_hub.dto.AuthResponse;
 import com.gm2dev.interview_hub.dto.LoginRequest;
 import com.gm2dev.interview_hub.dto.RegisterRequest;
 import com.gm2dev.interview_hub.dto.ResetPasswordRequest;
+import com.gm2dev.interview_hub.mapper.ProfileMapper;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.gm2dev.interview_hub.repository.VerificationTokenRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +46,9 @@ class EmailPasswordAuthServiceTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private ProfileMapper profileMapper;
+
     private EmailPasswordAuthService service;
 
     @BeforeEach
@@ -55,7 +59,7 @@ class EmailPasswordAuthServiceTest {
 
         service = new EmailPasswordAuthService(
                 profileRepository, verificationTokenRepository,
-                passwordEncoder, emailService, jwtProps);
+                passwordEncoder, emailService, jwtProps, profileMapper);
     }
 
     // --- Register tests ---
@@ -63,7 +67,16 @@ class EmailPasswordAuthServiceTest {
     @Test
     void register_withValidGm2devEmail_createsProfileAndSendsVerification() {
         RegisterRequest request = new RegisterRequest("user@gm2dev.com", "Password1");
+        
+        Profile mappedProfile = new Profile();
+        mappedProfile.setId(UUID.randomUUID());
+        mappedProfile.setEmail("user@gm2dev.com");
+        mappedProfile.setCalendarEmail("user@gm2dev.com");
+        mappedProfile.setRole("interviewer");
+        mappedProfile.setEmailVerified(false);
+        
         when(profileRepository.findByEmail("user@gm2dev.com")).thenReturn(Optional.empty());
+        when(profileMapper.toProfileFromRegisterRequest(request)).thenReturn(mappedProfile);
         when(passwordEncoder.encode("Password1")).thenReturn("hashed");
         when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
         when(verificationTokenRepository.save(any(VerificationToken.class))).thenAnswer(inv -> inv.getArgument(0));
