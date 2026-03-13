@@ -48,6 +48,8 @@ app:
   token-encryption-key: ${TOKEN_ENCRYPTION_KEY}
   mail:
     from: ${MAIL_FROM:noreply@gm2dev.com}
+  google-service-account:
+    key-json: ${GOOGLE_SERVICE_ACCOUNT_KEY:}
 
 logging:
   level:

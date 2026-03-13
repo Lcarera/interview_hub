@@ -1,6 +1,7 @@
 package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
+import com.gm2dev.interview_hub.config.GoogleServiceAccountProperties;
 import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
@@ -66,8 +67,11 @@ class GoogleCalendarServiceTest {
         googleProps.setClientId("test-client-id");
         googleProps.setClientSecret("test-client-secret");
 
+        GoogleServiceAccountProperties serviceAccountProps = new GoogleServiceAccountProperties();
+        serviceAccountProps.setKeyJson("");
+
         googleCalendarService = spy(new GoogleCalendarService(
-                tokenEncryptionService, profileRepository, googleProps));
+                tokenEncryptionService, profileRepository, googleProps, serviceAccountProps));
     }
 
     private Profile buildProfile() {
