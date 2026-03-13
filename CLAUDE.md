@@ -173,9 +173,11 @@ In production the frontend uses same-origin requests (empty `apiUrl`), so all AP
 Two distinct test styles are used — never mix them:
 
 **Controller Tests (`@WebMvcTest`):**
+- Import path: `org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest` (Spring Boot 4.x — NOT the older `org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest`)
 - Annotated `@WebMvcTest(XController.class)` + `@Import(SecurityConfig.class)` + `@ActiveProfiles("test")`
 - Use `@MockitoBean` (Spring Boot 3.4+ API) for the service layer, `JwtDecoder`, and `JwtProperties`
 - Authenticate test requests using `.with(jwt())` from `spring-security-test`
+- **Gotcha:** For role-based access (`@PreAuthorize("hasRole('admin')")`), use `.with(jwt().authorities(new SimpleGrantedAuthority("ROLE_admin")))` — the `jwt()` helper does NOT use the custom `JwtAuthenticationConverter`, so `.jwt(j -> j.claim("role", "admin"))` won't work
 
 **Service Tests (`@SpringBootTest`):**
 - `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback` — full Spring context with H2
@@ -185,7 +187,7 @@ Two distinct test styles are used — never mix them:
 
 **Frontend Tests:** Vitest with jsdom environment. Run with `bun run test` from `frontend/`.
 
-**Coverage:** JaCoCo enforces 80% branch coverage. `InterviewHubApplication` and `GoogleCalendarService` are excluded from coverage checks.
+**Coverage:** JaCoCo enforces 95% branch coverage. `InterviewHubApplication`, `GoogleCalendarService`, `OpenApiConfig`, and `*MapperImpl` are excluded from coverage checks.
 
 ## Environment Variables
 
