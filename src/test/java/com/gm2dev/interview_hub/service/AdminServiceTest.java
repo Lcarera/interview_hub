@@ -5,7 +5,9 @@ import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.CreateUserRequest;
 import com.gm2dev.interview_hub.dto.ProfileDto;
 import com.gm2dev.interview_hub.mapper.ProfileMapper;
+import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
+import com.gm2dev.interview_hub.repository.ShadowingRequestRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,11 +46,17 @@ class AdminServiceTest {
     @Mock
     private ProfileMapper profileMapper;
 
+    @Mock
+    private InterviewRepository interviewRepository;
+
+    @Mock
+    private ShadowingRequestRepository shadowingRequestRepository;
+
     private AdminService adminService;
 
     @BeforeEach
     void setUp() {
-        adminService = new AdminService(profileRepository, passwordEncoder, emailService, profileMapper);
+        adminService = new AdminService(profileRepository, passwordEncoder, emailService, profileMapper, interviewRepository, shadowingRequestRepository);
     }
 
     @Test
@@ -185,8 +193,41 @@ class AdminServiceTest {
     void deleteUser_withValidId_deletesProfile() {
         UUID id = UUID.randomUUID();
         when(profileRepository.existsById(id)).thenReturn(true);
+        when(interviewRepository.existsByInterviewerId(id)).thenReturn(false);
+        when(interviewRepository.existsByTalentAcquisitionId(id)).thenReturn(false);
+        when(shadowingRequestRepository.existsByShadowerId(id)).thenReturn(false);
         adminService.deleteUser(id);
         verify(profileRepository).deleteById(id);
+    }
+
+    @Test
+    void deleteUser_withExistingInterviewsAsInterviewer_throwsIllegalStateException() {
+        UUID id = UUID.randomUUID();
+        when(profileRepository.existsById(id)).thenReturn(true);
+        when(interviewRepository.existsByInterviewerId(id)).thenReturn(true);
+        assertThrows(IllegalStateException.class, () -> adminService.deleteUser(id));
+        verify(profileRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteUser_withExistingInterviewsAsTalentAcquisition_throwsIllegalStateException() {
+        UUID id = UUID.randomUUID();
+        when(profileRepository.existsById(id)).thenReturn(true);
+        when(interviewRepository.existsByInterviewerId(id)).thenReturn(false);
+        when(interviewRepository.existsByTalentAcquisitionId(id)).thenReturn(true);
+        assertThrows(IllegalStateException.class, () -> adminService.deleteUser(id));
+        verify(profileRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteUser_withExistingShadowingRequests_throwsIllegalStateException() {
+        UUID id = UUID.randomUUID();
+        when(profileRepository.existsById(id)).thenReturn(true);
+        when(interviewRepository.existsByInterviewerId(id)).thenReturn(false);
+        when(interviewRepository.existsByTalentAcquisitionId(id)).thenReturn(false);
+        when(shadowingRequestRepository.existsByShadowerId(id)).thenReturn(true);
+        assertThrows(IllegalStateException.class, () -> adminService.deleteUser(id));
+        verify(profileRepository, never()).deleteById(any());
     }
 
     @Test

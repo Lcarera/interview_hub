@@ -5,7 +5,9 @@ import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.CreateUserRequest;
 import com.gm2dev.interview_hub.dto.ProfileDto;
 import com.gm2dev.interview_hub.mapper.ProfileMapper;
+import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
+import com.gm2dev.interview_hub.repository.ShadowingRequestRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,8 @@ public class AdminService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final ProfileMapper profileMapper;
+    private final InterviewRepository interviewRepository;
+    private final ShadowingRequestRepository shadowingRequestRepository;
 
     @Transactional(readOnly = true)
     public Page<ProfileDto> listUsers(Pageable pageable) {
@@ -76,6 +80,13 @@ public class AdminService {
     public void deleteUser(UUID userId) {
         if (!profileRepository.existsById(userId)) {
             throw new EntityNotFoundException("User not found: " + userId);
+        }
+        if (interviewRepository.existsByInterviewerId(userId)
+                || interviewRepository.existsByTalentAcquisitionId(userId)) {
+            throw new IllegalStateException("Cannot delete user with existing interviews");
+        }
+        if (shadowingRequestRepository.existsByShadowerId(userId)) {
+            throw new IllegalStateException("Cannot delete user with existing shadowing requests");
         }
         profileRepository.deleteById(userId);
         log.debug("Deleted user: {}", userId);
