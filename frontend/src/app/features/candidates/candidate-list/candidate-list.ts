@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -22,6 +22,7 @@ import { CandidateFormDialogComponent } from '../candidate-form-dialog/candidate
   ],
   templateUrl: './candidate-list.html',
   styleUrl: './candidate-list.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CandidateListComponent implements OnInit {
   private readonly candidateService = inject(CandidateService);

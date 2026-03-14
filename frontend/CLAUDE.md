@@ -126,7 +126,7 @@ All routes use lazy loading (`loadComponent`):
 ## Architectural Patterns
 
 - **Standalone components** — no NgModules, all components are `standalone: true`
-- **Default change detection** — no component uses `ChangeDetectionStrategy.OnPush`; all use Angular's default strategy
+- **OnPush change detection** — all components use `ChangeDetectionStrategy.OnPush`
 - **Functional DI** — use `inject()` instead of constructor injection
 - **Functional guards/interceptors** — `CanActivateFn` and `HttpInterceptorFn`
 - **Signals for state** — `signal()` for reactive local state (e.g. `AuthService.email`)
@@ -171,4 +171,5 @@ The nginx config proxies API routes to `http://app:8080` (the backend Docker ser
 - **Test files:** `**/*.spec.ts` (co-located with source)
 - **Config:** `tsconfig.spec.json` extends base tsconfig, adds vitest globals
 - **Pattern:** `TestBed.configureTestingModule()` with Angular testing utilities
+- **Important:** Always run tests via `bun run test` (which uses `ng test`), NOT `npx vitest run` directly — vitest globals are only configured through the Angular test runner
 - Current tests: root component instantiation and router outlet presence

@@ -28,6 +28,7 @@ This starts two services: `app` (Spring Boot on port 8080) and `frontend` (Angul
 ```bash
 ./gradlew test
 ```
+If test results seem stale or inconsistent, use `./gradlew clean test --no-build-cache`.
 
 **Run a single test class:**
 ```bash
@@ -64,7 +65,7 @@ All under `src/main/java/com/gm2dev/interview_hub/`:
 - `dto/` - Data transfer objects (AuthResponse, CandidateDto, CandidateRequest, CreateInterviewRequest, UpdateInterviewRequest, InterviewDto, ProfileDto, RejectShadowingRequest, etc.)
 - `mapper/` - MapStruct mappers (CandidateMapper, InterviewMapper, ProfileMapper, ShadowingRequestMapper)
 - `controller/` - REST controllers (CandidateController, InterviewController, ShadowingRequestController, AuthController, GlobalExceptionHandler)
-- `config/` - Spring configuration (SecurityConfig, GoogleOAuthProperties, JwtProperties)
+- `config/` - Spring configuration (SecurityConfig, GoogleOAuthProperties, JwtProperties, AllowedDomains)
 
 ### Frontend Structure
 
@@ -112,7 +113,7 @@ The application models a four-entity system:
 **Authentication:**
 - Login flow: `GET /auth/google` → Google consent → `GET /auth/google/callback` → redirects to frontend with token in URL hash fragment
 - `POST /auth/token` is a Postman-compatible endpoint: accepts `code` + `redirect_uri` form params and returns `{access_token, token_type, expires_in}`
-- Only `@gm2dev.com` Google Workspace accounts are allowed — validated via `hd` claim both as OAuth hint and post-exchange assertion
+- `@gm2dev.com` and `@lcarera.dev` accounts are allowed — configured in `AllowedDomains.ALLOWED_DOMAINS` (single source of truth used by AuthService, AdminService, EmailPasswordAuthService)
 - App issues its own HMAC-SHA256 JWTs (1-hour expiry); the `NimbusJwtEncoder` is constructed inside `AuthService`, not a Spring bean
 - Google OAuth tokens (access + refresh) are AES-encrypted at rest using `TOKEN_ENCRYPTION_KEY`; the salt is derived deterministically from the key's `hashCode()` so decryption survives restarts
 - Scopes requested: openid, email, profile, calendar.events
@@ -148,7 +149,8 @@ The application models a four-entity system:
 - `GlobalExceptionHandler` (`@RestControllerAdvice`) maps `EntityNotFoundException` → 404, `IllegalStateException` → 409 Conflict
 
 **Role Assignment:**
-- New profiles created on first OAuth login or email/password registration default to `role = "interviewer"`.
+- `Role` is an enum (`Role.interviewer`, `Role.admin`) with `@Enumerated(EnumType.STRING)` on `Profile`. Never use raw strings for roles.
+- New profiles created on first OAuth login or email/password registration default to `Role.interviewer`.
 - `luciano.carera@gm2dev.com` is the initial admin user (seeded via migration `006_seed_admin_user.sql`).
 - Admins can promote/demote users via `PUT /admin/users/{id}/role`.
 

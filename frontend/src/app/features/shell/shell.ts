@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
@@ -101,6 +101,7 @@ import { AuthService } from '../../core/services/auth.service';
       color: white !important;
     }
   `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ShellComponent {
   private readonly authService = inject(AuthService);
