@@ -105,7 +105,7 @@ export class RegisterComponent {
         this.error.set(err.status === 409
           ? 'An account with this email already exists'
           : err.status === 403
-            ? 'Registration is restricted to @gm2dev.com accounts'
+            ? 'Registration is restricted to allowed email domains'
             : 'An error occurred. Please try again.');
       },
     });
