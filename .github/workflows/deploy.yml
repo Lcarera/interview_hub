@@ -25,17 +25,20 @@ jobs:
       frontend: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.frontend }}
       infra: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.infra }}
       migrations: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.migrations }}
+      base_sha: ${{ steps.base.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Determine comparison base
         id: base
+        env:
+          EVENT_BEFORE: ${{ github.event.before }}
         run: |
-          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+          if [ "$EVENT_BEFORE" = "0000000000000000000000000000000000000000" ]; then
             echo "sha=$(git rev-parse HEAD~1)" >> "$GITHUB_OUTPUT"
           else
-            echo "sha=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+            echo "sha=$EVENT_BEFORE" >> "$GITHUB_OUTPUT"
           fi
       - uses: dorny/paths-filter@v3
         id: filter
@@ -82,16 +85,18 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
 
+      - name: Install PostgreSQL client
+        if: needs.changes.outputs.migrations == 'true'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+
       - name: Run Supabase migrations
         if: needs.changes.outputs.migrations == 'true'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BASE_SHA: ${{ needs.changes.outputs.base_sha }}
+          CURRENT_SHA: ${{ github.sha }}
         run: |
-          BEFORE=${{ github.event.before }}
-          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-            BEFORE=$(git rev-parse HEAD~1)
-          fi
-          NEW_FILES=$(git diff --name-only --diff-filter=A "$BEFORE" ${{ github.sha }} -- 'supabase/migrations/*.sql' | sort)
+          NEW_FILES=$(git diff --name-only --diff-filter=A "$BASE_SHA" "$CURRENT_SHA" -- 'supabase/migrations/*.sql' | sort)
           if [ -z "$NEW_FILES" ]; then
             echo "No new migration files detected, skipping."
             exit 0
