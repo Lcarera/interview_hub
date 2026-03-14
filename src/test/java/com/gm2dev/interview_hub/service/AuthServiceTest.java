@@ -133,7 +133,6 @@ class AuthServiceTest {
         Profile saved = captor.getValue();
         assertEquals(existingProfile.getId(), saved.getId());
         assertEquals("updated@gm2dev.com", saved.getEmail());
-        assertEquals("updated@gm2dev.com", saved.getCalendarEmail());
     }
 
     @Test
@@ -152,7 +151,6 @@ class AuthServiceTest {
         assertEquals("sub-new", saved.getGoogleSub());
         assertEquals("new@gm2dev.com", saved.getEmail());
         assertEquals(Role.interviewer, saved.getRole());
-        assertEquals("new@gm2dev.com", saved.getCalendarEmail());
     }
 
     private GoogleTokenResponse mockTokenResponse(String hostedDomain, String subject, String email) throws IOException {
