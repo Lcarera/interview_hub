@@ -50,6 +50,7 @@ app:
     from: ${MAIL_FROM:noreply@lcarera.dev}
   google-service-account:
     key-json: ${GOOGLE_SERVICE_ACCOUNT_KEY:}
+    calendar-id: ${GOOGLE_CALENDAR_ID:primary}
 
 management:
   health:

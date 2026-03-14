@@ -30,6 +30,7 @@ app:
     from: test@gm2dev.com
   google-service-account:
     key-json: ""
+    calendar-id: primary
 
 logging:
   level:
