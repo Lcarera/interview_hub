@@ -125,6 +125,27 @@ class AdminServiceTest {
     }
 
     @Test
+    void createUser_whenTemporaryPasswordEmailFails_throwsRuntimeException() {
+        CreateUserRequest request = new CreateUserRequest("new@gm2dev.com", Role.interviewer);
+
+        Profile mappedProfile = new Profile();
+        mappedProfile.setId(UUID.randomUUID());
+        mappedProfile.setEmail("new@gm2dev.com");
+        mappedProfile.setCalendarEmail("new@gm2dev.com");
+        mappedProfile.setRole(Role.interviewer);
+        mappedProfile.setEmailVerified(true);
+
+        when(profileRepository.findByEmail("new@gm2dev.com")).thenReturn(Optional.empty());
+        when(profileMapper.toProfileFromCreateUserRequest(request)).thenReturn(mappedProfile);
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+        when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("Email delivery failed"))
+                .when(emailService).sendTemporaryPasswordEmail(anyString(), anyString());
+
+        assertThrows(RuntimeException.class, () -> adminService.createUser(request));
+    }
+
+    @Test
     void createUser_withExistingEmail_throwsIllegalStateException() {
         CreateUserRequest request = new CreateUserRequest("existing@gm2dev.com", Role.interviewer);
         when(profileRepository.findByEmail("existing@gm2dev.com")).thenReturn(Optional.of(new Profile()));

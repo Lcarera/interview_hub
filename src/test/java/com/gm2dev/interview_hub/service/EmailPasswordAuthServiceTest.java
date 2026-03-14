@@ -448,6 +448,28 @@ class EmailPasswordAuthServiceTest {
         assertThrows(SecurityException.class, () -> service.resetPassword(request));
     }
 
+    @Test
+    void register_whenVerificationEmailFails_throwsRuntimeException() {
+        RegisterRequest request = new RegisterRequest("user@gm2dev.com", "Password1");
+
+        Profile mappedProfile = new Profile();
+        mappedProfile.setId(UUID.randomUUID());
+        mappedProfile.setEmail("user@gm2dev.com");
+        mappedProfile.setCalendarEmail("user@gm2dev.com");
+        mappedProfile.setRole(Role.interviewer);
+        mappedProfile.setEmailVerified(false);
+
+        when(profileRepository.findByEmail("user@gm2dev.com")).thenReturn(Optional.empty());
+        when(profileMapper.toProfileFromRegisterRequest(request)).thenReturn(mappedProfile);
+        when(passwordEncoder.encode("Password1")).thenReturn("hashed");
+        when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(verificationTokenRepository.save(any(VerificationToken.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("Email delivery failed"))
+                .when(emailService).sendVerificationEmail(anyString(), anyString());
+
+        assertThrows(RuntimeException.class, () -> service.register(request));
+    }
+
     // --- Token hashing tests ---
 
     @Test
