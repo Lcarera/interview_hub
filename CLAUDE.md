@@ -214,6 +214,7 @@ Required for runtime:
 
 Required for CI/CD (GitHub Actions secrets):
 - `SUPABASE_DB_URL` - PostgreSQL connection string for running migrations in the deploy pipeline (format: `postgresql://user:pass@host:port/dbname`)
+- `GOOGLE_SERVICE_ACCOUNT_KEY` - Service account JSON key (same value as runtime, needed for calendar integration in deployed environments)
 
 ## Dependencies
 
