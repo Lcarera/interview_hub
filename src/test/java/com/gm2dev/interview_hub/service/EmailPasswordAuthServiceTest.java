@@ -277,6 +277,69 @@ class EmailPasswordAuthServiceTest {
         assertThrows(SecurityException.class, () -> service.login(request));
     }
 
+    // --- Resend verification tests ---
+
+    @Test
+    void resendVerification_withUnverifiedPasswordUser_invalidatesOldTokensAndSendsNewEmail() {
+        Profile profile = new Profile();
+        profile.setId(UUID.randomUUID());
+        profile.setEmail("user@gm2dev.com");
+        profile.setPasswordHash("hashed");
+        profile.setEmailVerified(false);
+
+        VerificationToken oldToken = new VerificationToken();
+        oldToken.setId(UUID.randomUUID());
+        oldToken.setUsed(false);
+
+        when(profileRepository.findByEmail("user@gm2dev.com")).thenReturn(Optional.of(profile));
+        when(verificationTokenRepository.findByProfileAndTokenTypeAndUsedFalse(profile, TokenType.EMAIL_VERIFICATION))
+                .thenReturn(List.of(oldToken));
+        when(verificationTokenRepository.save(any(VerificationToken.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.resendVerification("user@gm2dev.com");
+
+        assertTrue(oldToken.isUsed());
+        verify(emailService).sendVerificationEmail(eq("user@gm2dev.com"), anyString());
+    }
+
+    @Test
+    void resendVerification_withAlreadyVerifiedUser_doesNotSendEmail() {
+        Profile profile = new Profile();
+        profile.setId(UUID.randomUUID());
+        profile.setEmail("user@gm2dev.com");
+        profile.setPasswordHash("hashed");
+        profile.setEmailVerified(true);
+
+        when(profileRepository.findByEmail("user@gm2dev.com")).thenReturn(Optional.of(profile));
+
+        service.resendVerification("user@gm2dev.com");
+
+        verify(emailService, never()).sendVerificationEmail(anyString(), anyString());
+    }
+
+    @Test
+    void resendVerification_withNonexistentEmail_doesNotThrow() {
+        when(profileRepository.findByEmail("nobody@gm2dev.com")).thenReturn(Optional.empty());
+
+        assertDoesNotThrow(() -> service.resendVerification("nobody@gm2dev.com"));
+        verify(emailService, never()).sendVerificationEmail(anyString(), anyString());
+    }
+
+    @Test
+    void resendVerification_withGoogleOnlyAccount_doesNotSendEmail() {
+        Profile profile = new Profile();
+        profile.setId(UUID.randomUUID());
+        profile.setEmail("user@gm2dev.com");
+        profile.setPasswordHash(null);
+        profile.setEmailVerified(false);
+
+        when(profileRepository.findByEmail("user@gm2dev.com")).thenReturn(Optional.of(profile));
+
+        service.resendVerification("user@gm2dev.com");
+
+        verify(emailService, never()).sendVerificationEmail(anyString(), anyString());
+    }
+
     // --- Forgot password tests ---
 
     @Test

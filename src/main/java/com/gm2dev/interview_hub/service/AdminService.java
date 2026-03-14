@@ -16,17 +16,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
-import java.util.Set;
 import java.util.UUID;
+
+import static com.gm2dev.interview_hub.config.AllowedDomains.ALLOWED_DOMAINS;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AdminService {
-
-    private static final Set<String> ALLOWED_DOMAINS = Set.of("gm2dev.com", "lcarera.dev");
     private static final SecureRandom RANDOM = new SecureRandom();
-    private static final String CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    private static final String UPPER = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    private static final String LOWER = "abcdefghjkmnpqrstuvwxyz";
+    private static final String DIGITS = "23456789";
+    private static final String CHARS = UPPER + LOWER + DIGITS;
 
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
@@ -81,9 +83,9 @@ public class AdminService {
 
     private String generateTemporaryPassword() {
         StringBuilder sb = new StringBuilder(12);
-        sb.append(CHARS.charAt(RANDOM.nextInt(24)));       // uppercase
-        sb.append(CHARS.charAt(24 + RANDOM.nextInt(24)));  // lowercase
-        sb.append(CHARS.charAt(48 + RANDOM.nextInt(8)));   // digit
+        sb.append(UPPER.charAt(RANDOM.nextInt(UPPER.length())));
+        sb.append(LOWER.charAt(RANDOM.nextInt(LOWER.length())));
+        sb.append(DIGITS.charAt(RANDOM.nextInt(DIGITS.length())));
         for (int i = 3; i < 12; i++) {
             sb.append(CHARS.charAt(RANDOM.nextInt(CHARS.length())));
         }

@@ -49,6 +49,10 @@ export class AuthService {
     return this.http.get<void>(`${environment.apiUrl}/auth/verify`, { params: { token } });
   }
 
+  resendVerification(email: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/resend-verification`, { email });
+  }
+
   handleCallback(token: string, email: string, expiresIn: number): void {
     const expiresAt = Date.now() + expiresIn * 1000;
     localStorage.setItem(TOKEN_KEY, token);

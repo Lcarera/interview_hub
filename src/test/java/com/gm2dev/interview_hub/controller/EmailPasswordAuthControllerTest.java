@@ -119,6 +119,16 @@ class EmailPasswordAuthControllerTest {
     }
 
     @Test
+    void resendVerification_returns200Always() throws Exception {
+        mockMvc.perform(post("/auth/resend-verification")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\": \"user@gm2dev.com\"}"))
+                .andExpect(status().isOk());
+
+        verify(authService).resendVerification("user@gm2dev.com");
+    }
+
+    @Test
     void forgotPassword_returns200Always() throws Exception {
         mockMvc.perform(post("/auth/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)

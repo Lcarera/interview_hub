@@ -29,8 +29,9 @@ import com.nimbusds.jose.jwk.JWKSet;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Set;
 import java.util.UUID;
+
+import static com.gm2dev.interview_hub.config.AllowedDomains.ALLOWED_DOMAINS;
 
 @Service
 @Slf4j
@@ -38,7 +39,6 @@ public class AuthService {
 
     private static final String GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
     private static final String GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com";
-    private static final Set<String> ALLOWED_DOMAINS = Set.of("gm2dev.com", "lcarera.dev");
     private static final String SCOPES = "openid email profile https://www.googleapis.com/auth/calendar.events";
 
     private final GoogleOAuthProperties googleProperties;

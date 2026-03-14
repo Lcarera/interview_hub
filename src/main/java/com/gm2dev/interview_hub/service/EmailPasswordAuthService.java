@@ -32,14 +32,13 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
+
+import static com.gm2dev.interview_hub.config.AllowedDomains.ALLOWED_DOMAINS;
 
 @Service
 @Slf4j
 public class EmailPasswordAuthService {
-
-    private static final Set<String> ALLOWED_DOMAINS = Set.of("gm2dev.com", "lcarera.dev");
 
     private final ProfileRepository profileRepository;
     private final VerificationTokenRepository verificationTokenRepository;
@@ -122,6 +121,18 @@ public class EmailPasswordAuthService {
 
         String jwt = issueJwt(profile);
         return new AuthResponse(jwt, jwtProperties.getExpirationSeconds(), profile.getEmail());
+    }
+
+    @Transactional
+    public void resendVerification(String email) {
+        profileRepository.findByEmail(email).ifPresent(profile -> {
+            if (profile.getPasswordHash() != null && !profile.isEmailVerified()) {
+                invalidateActiveTokens(profile, TokenType.EMAIL_VERIFICATION);
+                String rawToken = UUID.randomUUID().toString();
+                createVerificationToken(profile, TokenType.EMAIL_VERIFICATION, 24, rawToken);
+                emailService.sendVerificationEmail(email, rawToken);
+            }
+        });
     }
 
     @Transactional
