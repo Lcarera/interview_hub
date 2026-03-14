@@ -11,9 +11,6 @@ import com.gm2dev.interview_hub.dto.ResetPasswordRequest;
 import com.gm2dev.interview_hub.mapper.ProfileMapper;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.gm2dev.interview_hub.repository.VerificationTokenRepository;
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.OctetSequenceKey;
-import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -21,11 +18,8 @@ import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -53,18 +47,15 @@ public class EmailPasswordAuthService {
                                      PasswordEncoder passwordEncoder,
                                      EmailService emailService,
                                      JwtProperties jwtProperties,
-                                     ProfileMapper profileMapper) {
+                                     ProfileMapper profileMapper,
+                                     JwtEncoder jwtEncoder) {
         this.profileRepository = profileRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.jwtProperties = jwtProperties;
         this.profileMapper = profileMapper;
-
-        byte[] keyBytes = jwtProperties.getSigningSecret().getBytes();
-        SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
-        OctetSequenceKey jwk = new OctetSequenceKey.Builder(secretKey).build();
-        this.jwtEncoder = new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(jwk)));
+        this.jwtEncoder = jwtEncoder;
     }
 
     @Transactional

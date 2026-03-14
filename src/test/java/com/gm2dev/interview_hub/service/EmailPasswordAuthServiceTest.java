@@ -19,6 +19,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import com.nimbusds.jose.jwk.OctetSequenceKey;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.nimbusds.jose.jwk.JWKSet;
+import javax.crypto.spec.SecretKeySpec;
 
 import java.time.Instant;
 import java.util.List;
@@ -59,9 +65,14 @@ class EmailPasswordAuthServiceTest {
         jwtProps.setSigningSecret(SIGNING_SECRET);
         jwtProps.setExpirationSeconds(3600);
 
+        byte[] keyBytes = SIGNING_SECRET.getBytes();
+        SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
+        OctetSequenceKey jwk = new OctetSequenceKey.Builder(secretKey).build();
+        JwtEncoder jwtEncoder = new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(jwk)));
+
         service = new EmailPasswordAuthService(
                 profileRepository, verificationTokenRepository,
-                passwordEncoder, emailService, jwtProps, profileMapper);
+                passwordEncoder, emailService, jwtProps, profileMapper, jwtEncoder);
     }
 
     // --- Register tests ---
