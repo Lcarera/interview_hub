@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -23,6 +23,7 @@ export interface CandidateFormDialogData {
   ],
   templateUrl: './candidate-form-dialog.html',
   styleUrl: './candidate-form-dialog.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CandidateFormDialogComponent {
   private readonly fb = inject(FormBuilder);
@@ -40,11 +41,11 @@ export class CandidateFormDialogComponent {
     feedbackLink: [this.data?.candidate?.feedbackLink ?? ''],
   });
 
-  submitting = false;
+  readonly submitting = signal(false);
 
   save(): void {
-    if (this.form.invalid || this.submitting) return;
-    this.submitting = true;
+    if (this.form.invalid || this.submitting()) return;
+    this.submitting.set(true);
 
     const v = this.form.getRawValue();
     const body = {
@@ -61,7 +62,7 @@ export class CandidateFormDialogComponent {
 
     request$.subscribe({
       next: (result) => this.dialogRef.close(result),
-      error: () => (this.submitting = false),
+      error: () => this.submitting.set(false),
     });
   }
 }

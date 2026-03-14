@@ -1,10 +1,9 @@
 package com.gm2dev.interview_hub.service;
 
-import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
+import com.gm2dev.interview_hub.config.GoogleServiceAccountProperties;
 import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.Profile;
-import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
@@ -16,33 +15,25 @@ import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventAttendee;
 import com.google.api.services.calendar.model.EventDateTime;
 import com.google.auth.http.HttpCredentialsAdapter;
-import com.google.auth.oauth2.AccessToken;
-import com.google.auth.oauth2.UserCredentials;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Service
 @Slf4j
 public class GoogleCalendarService {
 
-    private final TokenEncryptionService tokenEncryptionService;
-    private final ProfileRepository profileRepository;
-    private final GoogleOAuthProperties googleProperties;
+    private final GoogleServiceAccountProperties serviceAccountProperties;
 
-    public GoogleCalendarService(TokenEncryptionService tokenEncryptionService,
-                                  ProfileRepository profileRepository,
-                                  GoogleOAuthProperties googleProperties) {
-        this.tokenEncryptionService = tokenEncryptionService;
-        this.profileRepository = profileRepository;
-        this.googleProperties = googleProperties;
+    public GoogleCalendarService(GoogleServiceAccountProperties serviceAccountProperties) {
+        this.serviceAccountProperties = serviceAccountProperties;
     }
 
     public String createEvent(Profile interviewer, Interview interview) throws IOException {
@@ -98,31 +89,23 @@ public class GoogleCalendarService {
     }
 
     Calendar buildCalendarClient(Profile interviewer) throws IOException {
-        String accessToken = tokenEncryptionService.decrypt(interviewer.getGoogleAccessToken());
-        String refreshToken = tokenEncryptionService.decrypt(interviewer.getGoogleRefreshToken());
-
-        UserCredentials credentials = UserCredentials.newBuilder()
-                .setClientId(googleProperties.getClientId())
-                .setClientSecret(googleProperties.getClientSecret())
-                .setRefreshToken(refreshToken)
-                .setAccessToken(new AccessToken(accessToken, Date.from(interviewer.getGoogleTokenExpiry())))
-                .build();
-
-        // Refresh token if expired
-        if (interviewer.getGoogleTokenExpiry() != null &&
-                interviewer.getGoogleTokenExpiry().isBefore(java.time.Instant.now())) {
-            credentials.refresh();
-            AccessToken newToken = credentials.getAccessToken();
-            interviewer.setGoogleAccessToken(tokenEncryptionService.encrypt(newToken.getTokenValue()));
-            interviewer.setGoogleTokenExpiry(newToken.getExpirationTime().toInstant());
-            profileRepository.save(interviewer);
-            log.debug("Refreshed Google access token for profile: {}", interviewer.getId());
+        if (serviceAccountProperties.getKeyJson() == null || serviceAccountProperties.getKeyJson().isBlank()) {
+            throw new IOException("Google service account key not configured");
         }
+
+        GoogleCredentials credentials = ServiceAccountCredentials
+                .fromStream(new java.io.ByteArrayInputStream(serviceAccountProperties.getKeyJson().getBytes()))
+                .createScoped(java.util.List.of("https://www.googleapis.com/auth/calendar"))
+                .createDelegated(interviewer.getCalendarEmail() != null
+                        ? interviewer.getCalendarEmail()
+                        : interviewer.getEmail());
+
+        credentials.refreshIfExpired();
 
         HttpTransport transport;
         try {
             transport = GoogleNetHttpTransport.newTrustedTransport();
-        } catch (GeneralSecurityException e) {
+        } catch (java.security.GeneralSecurityException e) {
             throw new IOException("Failed to create HTTP transport", e);
         }
 

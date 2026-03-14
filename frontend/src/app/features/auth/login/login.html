@@ -14,7 +14,38 @@
         <mat-card-subtitle>Sign in with your @gm2dev.com account</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
-        <button mat-flat-button class="google-btn" (click)="login()">
+        @if (error()) {
+          <div class="error-message">{{ error() }}</div>
+        }
+
+        <form (ngSubmit)="loginWithEmail()" class="email-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Email</mat-label>
+            <input matInput type="email" [(ngModel)]="email" name="email" required />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Password</mat-label>
+            <input matInput type="password" [(ngModel)]="password" name="password" required />
+          </mat-form-field>
+
+          <button mat-flat-button class="login-btn full-width" type="submit" [disabled]="loading()">
+            @if (loading()) {
+              <mat-spinner diameter="20" />
+            } @else {
+              Sign in
+            }
+          </button>
+        </form>
+
+        <div class="form-links">
+          <a routerLink="/auth/forgot-password">Forgot password?</a>
+          <a routerLink="/register">Create account</a>
+        </div>
+
+        <mat-divider />
+
+        <button mat-stroked-button class="google-btn full-width" (click)="loginWithGoogle()">
           <mat-icon>login</mat-icon>
           Sign in with Google
         </button>

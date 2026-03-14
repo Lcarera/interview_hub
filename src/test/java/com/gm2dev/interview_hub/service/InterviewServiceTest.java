@@ -4,6 +4,7 @@ import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.CreateInterviewRequest;
 import com.gm2dev.interview_hub.dto.UpdateInterviewRequest;
 import com.gm2dev.interview_hub.repository.CandidateRepository;
@@ -58,7 +59,7 @@ class InterviewServiceTest {
     @Test
     void createInterview_withExistingInterviewer_savesInterview() {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "test@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "test@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         Candidate candidate = createTestCandidate();
@@ -112,7 +113,7 @@ class InterviewServiceTest {
     @Test
     void findAll_returnsAllInterviews() {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "all@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "all@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         Candidate candidate = createTestCandidate();
@@ -130,7 +131,7 @@ class InterviewServiceTest {
     @Test
     void findById_returnsInterview() {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "find@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "find@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         Candidate candidate = createTestCandidate();
@@ -155,7 +156,7 @@ class InterviewServiceTest {
     @Test
     void updateInterview_updatesFields() {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "update@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "update@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         Candidate candidate = createTestCandidate();
@@ -202,7 +203,7 @@ class InterviewServiceTest {
     @Test
     void deleteInterview_removesInterview() {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "delete@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "delete@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         Candidate candidate = createTestCandidate();
@@ -227,7 +228,7 @@ class InterviewServiceTest {
     @Test
     void createInterview_calendarSuccess_setsGoogleEventId() throws Exception {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "cal@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "cal@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         Candidate candidate = createTestCandidate();
@@ -247,7 +248,7 @@ class InterviewServiceTest {
     @Test
     void createInterview_calendarFailure_stillCreatesInterview() throws Exception {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "calfail@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "calfail@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         Candidate candidate = createTestCandidate();
@@ -268,7 +269,7 @@ class InterviewServiceTest {
     @Test
     void updateInterview_withGoogleEventId_callsCalendarUpdate() throws Exception {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "upd-cal@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "upd-cal@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         Candidate candidate = createTestCandidate();
@@ -294,7 +295,7 @@ class InterviewServiceTest {
     @Test
     void deleteInterview_withGoogleEventId_callsCalendarDelete() throws Exception {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "del-cal@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "del-cal@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         Candidate candidate = createTestCandidate();
@@ -316,7 +317,7 @@ class InterviewServiceTest {
     @Test
     void updateInterview_byNonOwner_throwsAccessDeniedException() {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "owner-upd@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "owner-upd@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         Candidate candidate = createTestCandidate();
@@ -338,7 +339,7 @@ class InterviewServiceTest {
     @Test
     void deleteInterview_byNonOwner_throwsAccessDeniedException() {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "owner-del@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "owner-del@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         Candidate candidate = createTestCandidate();
@@ -358,11 +359,11 @@ class InterviewServiceTest {
     @Test
     void updateInterview_withTalentAcquisition_setsRelation() {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "upd-ta@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "upd-ta@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         UUID taId = UUID.randomUUID();
-        Profile ta = new Profile(taId, "upd-ta-role@example.com", "interviewer", null);
+        Profile ta = new Profile(taId, "upd-ta-role@example.com", Role.interviewer, null);
         profileRepository.save(ta);
 
         Candidate candidate = createTestCandidate();
@@ -388,11 +389,11 @@ class InterviewServiceTest {
     @Test
     void createInterview_withTalentAcquisition_setsRelation() {
         UUID profileId = UUID.randomUUID();
-        Profile interviewer = new Profile(profileId, "ta-test@example.com", "interviewer", null);
+        Profile interviewer = new Profile(profileId, "ta-test@example.com", Role.interviewer, null);
         profileRepository.save(interviewer);
 
         UUID taId = UUID.randomUUID();
-        Profile ta = new Profile(taId, "ta@example.com", "interviewer", null);
+        Profile ta = new Profile(taId, "ta@example.com", Role.interviewer, null);
         profileRepository.save(ta);
 
         Candidate candidate = createTestCandidate();

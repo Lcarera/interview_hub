@@ -121,7 +121,7 @@ describe('InterviewFormDialogComponent', () => {
 
       // No interview create call should have been made
       httpTesting.expectNone(r => r.url.includes('/api/interviews'));
-      expect(fixture.componentInstance.submitting).toBe(false);
+      expect(fixture.componentInstance.submitting()).toBe(false);
     });
   });
 

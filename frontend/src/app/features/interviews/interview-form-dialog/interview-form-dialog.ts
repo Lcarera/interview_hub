@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -30,6 +30,7 @@ export interface InterviewFormDialogData {
   ],
   templateUrl: './interview-form-dialog.html',
   styleUrl: './interview-form-dialog.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InterviewFormDialogComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -60,7 +61,7 @@ export class InterviewFormDialogComponent implements OnInit {
     duration: [this.deriveDuration(this.data?.interview), Validators.required],
   });
 
-  submitting = false;
+  readonly submitting = signal(false);
 
   ngOnInit(): void {
     this.loadDropdownData();
@@ -79,8 +80,8 @@ export class InterviewFormDialogComponent implements OnInit {
   }
 
   save(): void {
-    if (this.form.invalid || this.submitting) return;
-    this.submitting = true;
+    if (this.form.invalid || this.submitting()) return;
+    this.submitting.set(true);
 
     const v = this.form.getRawValue();
     const start = new Date(v.startTime);
@@ -96,12 +97,12 @@ export class InterviewFormDialogComponent implements OnInit {
         status: this.data!.interview!.status,
       }).subscribe({
         next: (updated) => this.dialogRef.close(updated),
-        error: () => this.submitting = false,
+        error: () => this.submitting.set(false),
       });
     } else {
       const profileId = this.authService.profileId();
       if (!profileId) {
-        this.submitting = false;
+        this.submitting.set(false);
         return;
       }
       this.interviewService.create({
@@ -113,7 +114,7 @@ export class InterviewFormDialogComponent implements OnInit {
         endTime: end.toISOString(),
       }).subscribe({
         next: (created) => this.dialogRef.close(created),
-        error: () => this.submitting = false,
+        error: () => this.submitting.set(false),
       });
     }
   }

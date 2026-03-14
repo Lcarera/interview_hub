@@ -3,6 +3,7 @@ package com.gm2dev.interview_hub.service;
 import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.AuthResponse;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
@@ -30,29 +31,27 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.UUID;
 
+import static com.gm2dev.interview_hub.config.AllowedDomains.ALLOWED_DOMAINS;
+
 @Service
 @Slf4j
 public class AuthService {
 
     private static final String GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
     private static final String GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com";
-    private static final String REQUIRED_DOMAIN = "gm2dev.com";
-    private static final String SCOPES = "openid email profile https://www.googleapis.com/auth/calendar.events";
+    private static final String SCOPES = "openid email profile";
 
     private final GoogleOAuthProperties googleProperties;
     private final JwtProperties jwtProperties;
     private final ProfileRepository profileRepository;
-    private final TokenEncryptionService tokenEncryptionService;
     private final JwtEncoder jwtEncoder;
 
     public AuthService(GoogleOAuthProperties googleProperties,
                        JwtProperties jwtProperties,
-                       ProfileRepository profileRepository,
-                       TokenEncryptionService tokenEncryptionService) {
+                       ProfileRepository profileRepository) {
         this.googleProperties = googleProperties;
         this.jwtProperties = jwtProperties;
         this.profileRepository = profileRepository;
-        this.tokenEncryptionService = tokenEncryptionService;
 
         byte[] keyBytes = jwtProperties.getSigningSecret().getBytes();
         SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
@@ -66,9 +65,7 @@ public class AuthService {
                 .queryParam("redirect_uri", googleProperties.getRedirectUri())
                 .queryParam("response_type", "code")
                 .queryParam("scope", SCOPES)
-                .queryParam("access_type", "offline")
-                .queryParam("prompt", "consent")
-                .queryParam("hd", REQUIRED_DOMAIN)
+                .queryParam("hd", "*")
                 .build()
                 .toUriString();
     }
@@ -86,8 +83,8 @@ public class AuthService {
         GoogleIdToken.Payload payload = idToken.getPayload();
 
         String hostedDomain = payload.getHostedDomain();
-        if (!REQUIRED_DOMAIN.equals(hostedDomain)) {
-            throw new SecurityException("Access restricted to @" + REQUIRED_DOMAIN + " accounts");
+        if (hostedDomain == null || !ALLOWED_DOMAINS.contains(hostedDomain)) {
+            throw new SecurityException("Access restricted to allowed domain accounts");
         }
 
         String googleSub = payload.getSubject();
@@ -99,20 +96,12 @@ public class AuthService {
                     newProfile.setId(UUID.randomUUID());
                     newProfile.setGoogleSub(googleSub);
                     newProfile.setEmail(email);
-                    newProfile.setRole("interviewer");
+                    newProfile.setRole(Role.interviewer);
                     return newProfile;
                 });
 
         profile.setEmail(email);
         profile.setCalendarEmail(email);
-        profile.setGoogleAccessToken(tokenEncryptionService.encrypt(tokenResponse.getAccessToken()));
-        if (tokenResponse.getRefreshToken() != null) {
-            profile.setGoogleRefreshToken(tokenEncryptionService.encrypt(tokenResponse.getRefreshToken()));
-        }
-        Long expiresInSeconds = tokenResponse.getExpiresInSeconds();
-        if (expiresInSeconds != null) {
-            profile.setGoogleTokenExpiry(Instant.now().plusSeconds(expiresInSeconds));
-        }
 
         profileRepository.save(profile);
 
@@ -137,7 +126,7 @@ public class AuthService {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(profile.getId().toString())
                 .claim("email", profile.getEmail())
-                .claim("role", profile.getRole())
+                .claim("role", profile.getRole().name())
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(jwtProperties.getExpirationSeconds()))
                 .build();

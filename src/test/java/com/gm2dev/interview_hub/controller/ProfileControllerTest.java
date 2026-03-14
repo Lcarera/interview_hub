@@ -3,6 +3,7 @@ package com.gm2dev.interview_hub.controller;
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.mapper.ProfileMapperImpl;
 import com.gm2dev.interview_hub.service.ProfileService;
 
@@ -42,7 +43,7 @@ class ProfileControllerTest {
     private JwtProperties jwtProperties;
 
     private Profile buildProfile(UUID id) {
-        return new Profile(id, "test@gm2dev.com", "interviewer", "test@gm2dev.com");
+        return new Profile(id, "test@gm2dev.com", Role.interviewer, "test@gm2dev.com");
     }
 
     @Test
@@ -74,8 +75,8 @@ class ProfileControllerTest {
 
     @Test
     void listProfiles_returns200WithList() throws Exception {
-        Profile p1 = new Profile(UUID.randomUUID(), "a@gm2dev.com", "interviewer", null);
-        Profile p2 = new Profile(UUID.randomUUID(), "b@gm2dev.com", "interviewer", null);
+        Profile p1 = new Profile(UUID.randomUUID(), "a@gm2dev.com", Role.interviewer, null);
+        Profile p2 = new Profile(UUID.randomUUID(), "b@gm2dev.com", Role.interviewer, null);
         when(profileService.findAll()).thenReturn(List.of(p1, p2));
 
         mockMvc.perform(get("/api/profiles")

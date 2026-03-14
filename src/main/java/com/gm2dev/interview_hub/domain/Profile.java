@@ -3,6 +3,8 @@ package com.gm2dev.interview_hub.domain;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
@@ -23,7 +25,8 @@ public class Profile {
     @Column(nullable = false)
     private String email;
 
-    private String role;
+    @Enumerated(EnumType.STRING)
+    private Role role;
 
     @Column(name = "calendar_email")
     private String calendarEmail;
@@ -44,7 +47,14 @@ public class Profile {
     @Column(name = "google_token_expiry")
     private Instant googleTokenExpiry;
 
-    public Profile(UUID id, String email, String role, String calendarEmail) {
+    @JsonIgnore
+    @Column(name = "password_hash")
+    private String passwordHash;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
+
+    public Profile(UUID id, String email, Role role, String calendarEmail) {
         this.id = id;
         this.email = email;
         this.role = role;

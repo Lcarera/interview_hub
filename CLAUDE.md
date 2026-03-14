@@ -28,6 +28,7 @@ This starts two services: `app` (Spring Boot on port 8080) and `frontend` (Angul
 ```bash
 ./gradlew test
 ```
+If test results seem stale or inconsistent, use `./gradlew clean test --no-build-cache`.
 
 **Run a single test class:**
 ```bash
@@ -64,7 +65,7 @@ All under `src/main/java/com/gm2dev/interview_hub/`:
 - `dto/` - Data transfer objects (AuthResponse, CandidateDto, CandidateRequest, CreateInterviewRequest, UpdateInterviewRequest, InterviewDto, ProfileDto, RejectShadowingRequest, etc.)
 - `mapper/` - MapStruct mappers (CandidateMapper, InterviewMapper, ProfileMapper, ShadowingRequestMapper)
 - `controller/` - REST controllers (CandidateController, InterviewController, ShadowingRequestController, AuthController, GlobalExceptionHandler)
-- `config/` - Spring configuration (SecurityConfig, GoogleOAuthProperties, JwtProperties)
+- `config/` - Spring configuration (SecurityConfig, GoogleOAuthProperties, JwtProperties, AllowedDomains)
 
 ### Frontend Structure
 
@@ -112,11 +113,17 @@ The application models a four-entity system:
 **Authentication:**
 - Login flow: `GET /auth/google` → Google consent → `GET /auth/google/callback` → redirects to frontend with token in URL hash fragment
 - `POST /auth/token` is a Postman-compatible endpoint: accepts `code` + `redirect_uri` form params and returns `{access_token, token_type, expires_in}`
-- Only `@gm2dev.com` Google Workspace accounts are allowed — validated via `hd` claim both as OAuth hint and post-exchange assertion
+- `@gm2dev.com` and `@lcarera.dev` accounts are allowed — configured in `AllowedDomains.ALLOWED_DOMAINS` (single source of truth used by AuthService, AdminService, EmailPasswordAuthService)
 - App issues its own HMAC-SHA256 JWTs (1-hour expiry); the `NimbusJwtEncoder` is constructed inside `AuthService`, not a Spring bean
 - Google OAuth tokens (access + refresh) are AES-encrypted at rest using `TOKEN_ENCRYPTION_KEY`; the salt is derived deterministically from the key's `hashCode()` so decryption survives restarts
 - Scopes requested: openid, email, profile, calendar.events
 - Frontend stores token, email, and expiry in localStorage (keys: `ih_token`, `ih_email`, `ih_expires_at`)
+
+**Email/Password Authentication:**
+- Additional endpoints: `POST /auth/register`, `GET /auth/verify`, `POST /auth/login`, `POST /auth/forgot-password`, `POST /auth/reset-password`
+- Email/password users get profiles with `google_sub=null` and a BCrypt-hashed password
+- Email verification is required before login — a verification token is sent via email on registration
+- Password reset uses a similar token-based flow with expiring links
 
 **Database:**
 - PostgreSQL (Supabase-hosted)
@@ -127,7 +134,8 @@ The application models a four-entity system:
 - OAuth2 Resource Server with HMAC-SHA256 JWT validation (app-issued tokens)
 - Custom JWT converter extracts "role" claim and prefixes with "ROLE_"
 - Stateless sessions (no server-side session management)
-- Public endpoints: `/actuator/health`, `/auth/google`, `/auth/google/callback`, `/auth/token`
+- Public endpoints: `/actuator/health`, `/auth/**`
+- `/admin/**` endpoints require `ROLE_admin`
 - All other endpoints require `Authorization: Bearer <token>`
 
 **Google Calendar Integration:**
@@ -141,7 +149,10 @@ The application models a four-entity system:
 - `GlobalExceptionHandler` (`@RestControllerAdvice`) maps `EntityNotFoundException` → 404, `IllegalStateException` → 409 Conflict
 
 **Role Assignment:**
-- New profiles created on first OAuth login default to `role = "interviewer"`. There is no admin role assignment flow.
+- `Role` is an enum (`Role.interviewer`, `Role.admin`) with `@Enumerated(EnumType.STRING)` on `Profile`. Never use raw strings for roles.
+- New profiles created on first OAuth login or email/password registration default to `Role.interviewer`.
+- `luciano.carera@gm2dev.com` is the initial admin user (seeded via migration `006_seed_admin_user.sql`).
+- Admins can promote/demote users via `PUT /admin/users/{id}/role`.
 
 **Logging:**
 - DEBUG level enabled for application code and Spring Security
@@ -154,7 +165,7 @@ The application models a four-entity system:
 - `frontend` — Angular app built via multi-stage Dockerfile (Bun 1.2 → nginx 1.27) on port 80
 
 **Nginx** (`frontend/nginx.conf`) acts as reverse proxy:
-- Routes `/api/*`, `/auth/google`, `/auth/token`, `/actuator` → `http://app:8080`
+- Routes `/api/*`, `/auth/*`, `/admin/*`, `/actuator` → `http://app:8080`
 - All other paths → Angular SPA (`try_files $uri $uri/ /index.html`)
 
 In production the frontend uses same-origin requests (empty `apiUrl`), so all API calls go through nginx. In dev mode (`bun run start`), the frontend calls `http://localhost:8080` directly.
@@ -164,9 +175,11 @@ In production the frontend uses same-origin requests (empty `apiUrl`), so all AP
 Two distinct test styles are used — never mix them:
 
 **Controller Tests (`@WebMvcTest`):**
+- Import path: `org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest` (Spring Boot 4.x — NOT the older `org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest`)
 - Annotated `@WebMvcTest(XController.class)` + `@Import(SecurityConfig.class)` + `@ActiveProfiles("test")`
 - Use `@MockitoBean` (Spring Boot 3.4+ API) for the service layer, `JwtDecoder`, and `JwtProperties`
 - Authenticate test requests using `.with(jwt())` from `spring-security-test`
+- **Gotcha:** For role-based access (`@PreAuthorize("hasRole('admin')")`), use `.with(jwt().authorities(new SimpleGrantedAuthority("ROLE_admin")))` — the `jwt()` helper does NOT use the custom `JwtAuthenticationConverter`, so `.jwt(j -> j.claim("role", "admin"))` won't work
 
 **Service Tests (`@SpringBootTest`):**
 - `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback` — full Spring context with H2
@@ -176,7 +189,7 @@ Two distinct test styles are used — never mix them:
 
 **Frontend Tests:** Vitest with jsdom environment. Run with `bun run test` from `frontend/`.
 
-**Coverage:** JaCoCo enforces 80% branch coverage. `InterviewHubApplication` and `GoogleCalendarService` are excluded from coverage checks.
+**Coverage:** JaCoCo enforces 95% branch coverage. `InterviewHubApplication`, `GoogleCalendarService`, `OpenApiConfig`, and `*MapperImpl` are excluded from coverage checks.
 
 ## Environment Variables
 
@@ -190,6 +203,12 @@ Required for runtime:
 - `TOKEN_ENCRYPTION_KEY` - AES key for encrypting Google OAuth tokens at rest
 - `APP_BASE_URL` - Application base URL (default: http://localhost:8080)
 - `FRONTEND_URL` - Frontend URL for OAuth callback redirects (default in compose: http://localhost)
+- `MAIL_HOST` - SMTP server host
+- `MAIL_PORT` - SMTP server port
+- `MAIL_USERNAME` - SMTP username
+- `MAIL_PASSWORD` - SMTP password
+- `MAIL_FROM` - From email address (default: noreply@gm2dev.com)
+- `GOOGLE_SERVICE_ACCOUNT_KEY` - Service account JSON key for calendar domain-wide delegation
 
 ## Dependencies
 
@@ -220,6 +239,8 @@ The application uses `hibernate.ddl-auto: validate`, meaning Hibernate will NOT 
 2. `002_add_reason_to_shadowing_requests.sql` — adds `reason` TEXT column
 3. `003_add_google_oauth_columns.sql` — adds google_sub, encrypted token columns, token expiry
 4. `004_create_candidates_table.sql` — creates candidates table, adds candidate_id and talent_acquisition_id FKs to interviews, drops candidate_info JSONB column
+5. `005_add_email_password_auth.sql` — adds password_hash, email_verified to profiles; creates verification_tokens table
+6. `006_seed_admin_user.sql` — promotes luciano.carera@gm2dev.com to admin role
 
 Tests use H2 with `ddl-auto: create-drop`.
 

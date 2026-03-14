@@ -4,6 +4,7 @@ import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.CandidateRequest;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
@@ -128,7 +129,7 @@ class CandidateServiceTest {
                 new CandidateRequest("Jane Doe", "jane@example.com", null, null, null)
         );
 
-        Profile interviewer = new Profile(UUID.randomUUID(), "interviewer@gm2dev.com", "interviewer", null);
+        Profile interviewer = new Profile(UUID.randomUUID(), "interviewer@gm2dev.com", Role.interviewer, null);
         profileRepository.save(interviewer);
         entityManager.flush();
 

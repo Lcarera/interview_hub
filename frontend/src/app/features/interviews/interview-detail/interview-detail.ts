@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -32,6 +32,7 @@ import { RejectDialogComponent } from '../../shadowing/reject-dialog/reject-dial
   ],
   templateUrl: './interview-detail.html',
   styleUrl: './interview-detail.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InterviewDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
