@@ -35,7 +35,7 @@ jobs:
         env:
           EVENT_BEFORE: ${{ github.event.before }}
         run: |
-          if [ "$EVENT_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+          if [ -z "$EVENT_BEFORE" ] || [ "$EVENT_BEFORE" = "0000000000000000000000000000000000000000" ]; then
             echo "sha=$(git rev-parse HEAD~1)" >> "$GITHUB_OUTPUT"
           else
             echo "sha=$EVENT_BEFORE" >> "$GITHUB_OUTPUT"
@@ -96,6 +96,14 @@ jobs:
           BASE_SHA: ${{ needs.changes.outputs.base_sha }}
           CURRENT_SHA: ${{ github.sha }}
         run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set"
+            exit 1
+          fi
+          if [ -z "$BASE_SHA" ]; then
+            echo "No base SHA available; skipping migration detection."
+            exit 0
+          fi
           NEW_FILES=$(git diff --name-only --diff-filter=A "$BASE_SHA" "$CURRENT_SHA" -- 'supabase/migrations/*.sql' | sort)
           if [ -z "$NEW_FILES" ]; then
             echo "No new migration files detected, skipping."
