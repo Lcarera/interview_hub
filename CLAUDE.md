@@ -207,7 +207,7 @@ Required for runtime:
 - `MAIL_PORT` - SMTP server port
 - `MAIL_USERNAME` - SMTP username
 - `MAIL_PASSWORD` - SMTP password
-- `MAIL_FROM` - From email address (default: noreply@gm2dev.com)
+- `MAIL_FROM` - From email address (default: noreply@lcarera.dev)
 - `GOOGLE_SERVICE_ACCOUNT_KEY` - Service account JSON key for calendar domain-wide delegation
 
 ## Dependencies
