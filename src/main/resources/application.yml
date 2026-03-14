@@ -51,6 +51,11 @@ app:
   google-service-account:
     key-json: ${GOOGLE_SERVICE_ACCOUNT_KEY:}
 
+management:
+  health:
+    mail:
+      enabled: false
+
 logging:
   level:
     com.gm2dev.interview_hub: DEBUG
