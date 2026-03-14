@@ -82,13 +82,20 @@ public class AdminService {
     }
 
     private String generateTemporaryPassword() {
-        StringBuilder sb = new StringBuilder(12);
-        sb.append(UPPER.charAt(RANDOM.nextInt(UPPER.length())));
-        sb.append(LOWER.charAt(RANDOM.nextInt(LOWER.length())));
-        sb.append(DIGITS.charAt(RANDOM.nextInt(DIGITS.length())));
+        char[] password = new char[12];
+        password[0] = UPPER.charAt(RANDOM.nextInt(UPPER.length()));
+        password[1] = LOWER.charAt(RANDOM.nextInt(LOWER.length()));
+        password[2] = DIGITS.charAt(RANDOM.nextInt(DIGITS.length()));
         for (int i = 3; i < 12; i++) {
-            sb.append(CHARS.charAt(RANDOM.nextInt(CHARS.length())));
+            password[i] = CHARS.charAt(RANDOM.nextInt(CHARS.length()));
         }
-        return sb.toString();
+        // Fisher-Yates shuffle to remove predictable [A-Z][a-z][0-9] prefix
+        for (int i = password.length - 1; i > 0; i--) {
+            int j = RANDOM.nextInt(i + 1);
+            char temp = password[i];
+            password[i] = password[j];
+            password[j] = temp;
+        }
+        return new String(password);
     }
 }

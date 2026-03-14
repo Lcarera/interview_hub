@@ -195,4 +195,39 @@ class AdminServiceTest {
         when(profileRepository.existsById(id)).thenReturn(false);
         assertThrows(EntityNotFoundException.class, () -> adminService.deleteUser(id));
     }
+
+    @Test
+    void createUser_generatedPasswordIsShuffled() {
+        CreateUserRequest request = new CreateUserRequest("new@gm2dev.com", Role.interviewer);
+
+        Profile mappedProfile = new Profile();
+        mappedProfile.setId(UUID.randomUUID());
+        mappedProfile.setEmail("new@gm2dev.com");
+        mappedProfile.setCalendarEmail("new@gm2dev.com");
+        mappedProfile.setRole(Role.interviewer);
+        mappedProfile.setEmailVerified(true);
+
+        ProfileDto dto = new ProfileDto(mappedProfile.getId(), "new@gm2dev.com", Role.interviewer, "new@gm2dev.com");
+
+        when(profileRepository.findByEmail("new@gm2dev.com")).thenReturn(Optional.empty());
+        when(profileMapper.toProfileFromCreateUserRequest(request)).thenReturn(mappedProfile);
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+        when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(profileMapper.toDto(any(Profile.class))).thenReturn(dto);
+
+        for (int i = 0; i < 20; i++) {
+            adminService.createUser(request);
+        }
+
+        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
+        verify(emailService, times(20)).sendTemporaryPasswordEmail(eq("new@gm2dev.com"), passwordCaptor.capture());
+        List<String> passwords = passwordCaptor.getAllValues();
+
+        boolean allMatchUnshuffledPattern = passwords.stream()
+                .allMatch(p -> Character.isUpperCase(p.charAt(0))
+                        && Character.isLowerCase(p.charAt(1))
+                        && Character.isDigit(p.charAt(2)));
+        assertFalse(allMatchUnshuffledPattern,
+                "Generated passwords should be shuffled — not always start with [A-Z][a-z][0-9]");
+    }
 }
