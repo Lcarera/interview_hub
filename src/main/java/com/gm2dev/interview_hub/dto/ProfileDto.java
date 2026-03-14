@@ -16,7 +16,4 @@ public class ProfileDto {
 
     @Schema(description = "User role", example = "interviewer")
     Role role;
-
-    @Schema(description = "Google Calendar email (may differ from login email)")
-    String calendarEmail;
 }

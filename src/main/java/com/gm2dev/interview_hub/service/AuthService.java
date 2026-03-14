@@ -101,7 +101,6 @@ public class AuthService {
                 });
 
         profile.setEmail(email);
-        profile.setCalendarEmail(email);
 
         profileRepository.save(profile);
 

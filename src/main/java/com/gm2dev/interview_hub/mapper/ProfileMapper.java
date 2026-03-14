@@ -16,25 +16,17 @@ public interface ProfileMapper {
 
     @Mapping(target = "id", expression = "java(UUID.randomUUID())")
     @Mapping(target = "email", source = "email")
-    @Mapping(target = "calendarEmail", source = "email")
     @Mapping(target = "role", source = "role")
     @Mapping(target = "emailVerified", constant = "true")
     @Mapping(target = "passwordHash", ignore = true)
     @Mapping(target = "googleSub", ignore = true)
-    @Mapping(target = "googleAccessToken", ignore = true)
-    @Mapping(target = "googleRefreshToken", ignore = true)
-    @Mapping(target = "googleTokenExpiry", ignore = true)
     Profile toProfileFromCreateUserRequest(CreateUserRequest request);
 
     @Mapping(target = "id", expression = "java(UUID.randomUUID())")
     @Mapping(target = "email", source = "email")
-    @Mapping(target = "calendarEmail", source = "email")
     @Mapping(target = "role", expression = "java(Role.interviewer)")
     @Mapping(target = "emailVerified", constant = "false")
     @Mapping(target = "passwordHash", ignore = true)
     @Mapping(target = "googleSub", ignore = true)
-    @Mapping(target = "googleAccessToken", ignore = true)
-    @Mapping(target = "googleRefreshToken", ignore = true)
-    @Mapping(target = "googleTokenExpiry", ignore = true)
     Profile toProfileFromRegisterRequest(RegisterRequest request);
 }

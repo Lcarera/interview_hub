@@ -25,7 +25,6 @@ app:
   jwt:
     signing-secret: test-signing-secret-that-is-at-least-32-bytes-long
     expiration-seconds: 3600
-  token-encryption-key: test-encryption-key-32chars-long!
   mail:
     from: test@gm2dev.com
   google-service-account:
