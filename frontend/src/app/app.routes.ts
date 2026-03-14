@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { adminGuard } from './core/guards/admin.guard';
 
 export const routes: Routes = [
   {
@@ -7,8 +8,24 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login/login').then(m => m.LoginComponent),
   },
   {
+    path: 'register',
+    loadComponent: () => import('./features/auth/register/register').then(m => m.RegisterComponent),
+  },
+  {
     path: 'auth/callback',
     loadComponent: () => import('./features/auth/callback/auth-callback').then(m => m.AuthCallbackComponent),
+  },
+  {
+    path: 'auth/verify',
+    loadComponent: () => import('./features/auth/verify/verify').then(m => m.VerifyComponent),
+  },
+  {
+    path: 'auth/forgot-password',
+    loadComponent: () => import('./features/auth/forgot-password/forgot-password').then(m => m.ForgotPasswordComponent),
+  },
+  {
+    path: 'auth/reset-password',
+    loadComponent: () => import('./features/auth/reset-password/reset-password').then(m => m.ResetPasswordComponent),
   },
   {
     path: '',
@@ -30,6 +47,11 @@ export const routes: Routes = [
       {
         path: 'candidates',
         loadComponent: () => import('./features/candidates/candidate-list/candidate-list').then(m => m.CandidateListComponent),
+      },
+      {
+        path: 'admin/users',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/admin/user-management/user-management').then(m => m.UserManagementComponent),
       },
     ],
   },

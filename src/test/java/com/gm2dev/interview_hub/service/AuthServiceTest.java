@@ -3,6 +3,7 @@ package com.gm2dev.interview_hub.service;
 import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.AuthResponse;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
@@ -34,12 +35,10 @@ import static org.mockito.Mockito.lenient;
 class AuthServiceTest {
 
     private static final String SIGNING_SECRET = "test-signing-secret-that-is-at-least-32-bytes-long";
-    private static final String ENCRYPTION_KEY = "test-encryption-key-32chars-long!";
 
     @Mock
     private ProfileRepository profileRepository;
 
-    private TokenEncryptionService tokenEncryptionService;
     private AuthService authService;
     private JwtDecoder jwtDecoder;
 
@@ -54,9 +53,7 @@ class AuthServiceTest {
         jwtProps.setSigningSecret(SIGNING_SECRET);
         jwtProps.setExpirationSeconds(3600);
 
-        tokenEncryptionService = new TokenEncryptionService(ENCRYPTION_KEY);
-
-        authService = spy(new AuthService(googleProps, jwtProps, profileRepository, tokenEncryptionService));
+        authService = spy(new AuthService(googleProps, jwtProps, profileRepository));
 
         byte[] keyBytes = SIGNING_SECRET.getBytes();
         SecretKeySpec key = new SecretKeySpec(keyBytes, "HmacSHA256");
@@ -71,9 +68,9 @@ class AuthServiceTest {
         assertTrue(url.contains("client_id=test-client-id"));
         assertTrue(url.contains("redirect_uri="));
         assertTrue(url.contains("scope="));
-        assertTrue(url.contains("calendar.events"));
-        assertTrue(url.contains("hd=gm2dev.com"));
-        assertTrue(url.contains("access_type=offline"));
+        assertFalse(url.contains("calendar.events"));
+        assertTrue(url.contains("hd="));
+        assertFalse(url.contains("access_type=offline"));
     }
 
     @Test
@@ -120,7 +117,7 @@ class AuthServiceTest {
         existingProfile.setId(UUID.randomUUID());
         existingProfile.setGoogleSub("sub-existing");
         existingProfile.setEmail("old@gm2dev.com");
-        existingProfile.setRole("interviewer");
+        existingProfile.setRole(Role.interviewer);
 
         GoogleTokenResponse tokenResponse = mockTokenResponse("gm2dev.com", "sub-existing", "updated@gm2dev.com");
         doReturn(tokenResponse).when(authService).exchangeCodeForTokens(eq("returning-code"), anyString());
@@ -137,8 +134,6 @@ class AuthServiceTest {
         assertEquals(existingProfile.getId(), saved.getId());
         assertEquals("updated@gm2dev.com", saved.getEmail());
         assertEquals("updated@gm2dev.com", saved.getCalendarEmail());
-        assertNotNull(saved.getGoogleAccessToken());
-        assertNotNull(saved.getGoogleRefreshToken());
     }
 
     @Test
@@ -156,53 +151,8 @@ class AuthServiceTest {
         assertNotNull(saved.getId());
         assertEquals("sub-new", saved.getGoogleSub());
         assertEquals("new@gm2dev.com", saved.getEmail());
-        assertEquals("interviewer", saved.getRole());
+        assertEquals(Role.interviewer, saved.getRole());
         assertEquals("new@gm2dev.com", saved.getCalendarEmail());
-    }
-
-    @Test
-    void handleCallback_withNullRefreshToken_doesNotOverwriteExistingRefreshToken() throws Exception {
-        Profile existingProfile = new Profile();
-        existingProfile.setId(UUID.randomUUID());
-        existingProfile.setGoogleSub("sub-norefresh");
-        existingProfile.setEmail("user@gm2dev.com");
-        existingProfile.setRole("interviewer");
-        existingProfile.setGoogleRefreshToken(tokenEncryptionService.encrypt("old-refresh-token"));
-
-        GoogleTokenResponse tokenResponse = mockTokenResponseWithNulls("gm2dev.com", "sub-norefresh", "user@gm2dev.com", null, null);
-        doReturn(tokenResponse).when(authService).exchangeCodeForTokens(eq("no-refresh-code"), anyString());
-        when(profileRepository.findByGoogleSub("sub-norefresh")).thenReturn(Optional.of(existingProfile));
-        when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        authService.handleCallback("no-refresh-code");
-
-        ArgumentCaptor<Profile> captor = ArgumentCaptor.forClass(Profile.class);
-        verify(profileRepository).save(captor.capture());
-        Profile saved = captor.getValue();
-        // Refresh token should not be overwritten when null
-        assertEquals("old-refresh-token", tokenEncryptionService.decrypt(saved.getGoogleRefreshToken()));
-    }
-
-    @Test
-    void handleCallback_tokensAreEncrypted() throws Exception {
-        GoogleTokenResponse tokenResponse = mockTokenResponse("gm2dev.com", "sub-enc", "enc@gm2dev.com");
-        doReturn(tokenResponse).when(authService).exchangeCodeForTokens(eq("enc-code"), anyString());
-        when(profileRepository.findByGoogleSub("sub-enc")).thenReturn(Optional.empty());
-        when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        authService.handleCallback("enc-code");
-
-        ArgumentCaptor<Profile> captor = ArgumentCaptor.forClass(Profile.class);
-        verify(profileRepository).save(captor.capture());
-        Profile saved = captor.getValue();
-
-        // Tokens should be encrypted (not stored as plain text)
-        assertNotEquals("mock-access-token", saved.getGoogleAccessToken());
-        assertNotEquals("mock-refresh-token", saved.getGoogleRefreshToken());
-
-        // But should be decryptable back to original values
-        assertEquals("mock-access-token", tokenEncryptionService.decrypt(saved.getGoogleAccessToken()));
-        assertEquals("mock-refresh-token", tokenEncryptionService.decrypt(saved.getGoogleRefreshToken()));
     }
 
     private GoogleTokenResponse mockTokenResponse(String hostedDomain, String subject, String email) throws IOException {
@@ -223,22 +173,4 @@ class AuthServiceTest {
         return tokenResponse;
     }
 
-    private GoogleTokenResponse mockTokenResponseWithNulls(String hostedDomain, String subject, String email,
-                                                            String refreshToken, Long expiresInSeconds) throws IOException {
-        GoogleIdToken.Payload payload = new GoogleIdToken.Payload();
-        payload.setHostedDomain(hostedDomain);
-        payload.setSubject(subject);
-        payload.setEmail(email);
-
-        GoogleIdToken idToken = mock(GoogleIdToken.class);
-        when(idToken.getPayload()).thenReturn(payload);
-
-        GoogleTokenResponse tokenResponse = mock(GoogleTokenResponse.class);
-        when(tokenResponse.parseIdToken()).thenReturn(idToken);
-        lenient().when(tokenResponse.getAccessToken()).thenReturn("mock-access-token");
-        lenient().when(tokenResponse.getRefreshToken()).thenReturn(refreshToken);
-        lenient().when(tokenResponse.getExpiresInSeconds()).thenReturn(expiresInSeconds);
-
-        return tokenResponse;
-    }
 }

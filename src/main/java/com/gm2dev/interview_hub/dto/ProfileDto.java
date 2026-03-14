@@ -1,5 +1,6 @@
 package com.gm2dev.interview_hub.dto;
 
+import com.gm2dev.interview_hub.domain.Role;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Value;
 import java.util.UUID;
@@ -14,7 +15,7 @@ public class ProfileDto {
     String email;
 
     @Schema(description = "User role", example = "interviewer")
-    String role;
+    Role role;
 
     @Schema(description = "Google Calendar email (may differ from login email)")
     String calendarEmail;

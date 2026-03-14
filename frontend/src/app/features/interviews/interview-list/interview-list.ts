@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
@@ -32,6 +32,7 @@ import { InterviewFormDialogComponent } from '../interview-form-dialog/interview
   ],
   templateUrl: './interview-list.html',
   styleUrl: './interview-list.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InterviewListComponent implements OnInit {
   private readonly interviewService = inject(InterviewService);
@@ -44,10 +45,10 @@ export class InterviewListComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
-  pageIndex = 0;
-  pageSize = 20;
-  sortActive = '';
-  sortDirection = '';
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(20);
+  readonly sortActive = signal('');
+  readonly sortDirection = signal('');
 
   ngOnInit(): void {
     this.loadInterviews();
@@ -56,10 +57,10 @@ export class InterviewListComponent implements OnInit {
   loadInterviews(): void {
     this.loading.set(true);
     this.error.set(null);
-    const sort = this.sortActive && this.sortDirection
-      ? `${this.sortActive},${this.sortDirection}`
+    const sort = this.sortActive() && this.sortDirection()
+      ? `${this.sortActive()},${this.sortDirection()}`
       : undefined;
-    this.interviewService.list(this.pageIndex, this.pageSize, sort).subscribe({
+    this.interviewService.list(this.pageIndex(), this.pageSize(), sort).subscribe({
       next: (page) => {
         this.page.set(page);
         this.loading.set(false);
@@ -72,15 +73,15 @@ export class InterviewListComponent implements OnInit {
   }
 
   onPageChange(event: PageEvent): void {
-    this.pageIndex = event.pageIndex;
-    this.pageSize = event.pageSize;
+    this.pageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
     this.loadInterviews();
   }
 
   onSortChange(sort: Sort): void {
-    this.sortActive = sort.active;
-    this.sortDirection = sort.direction;
-    this.pageIndex = 0;
+    this.sortActive.set(sort.active);
+    this.sortDirection.set(sort.direction);
+    this.pageIndex.set(0);
     this.loadInterviews();
   }
 

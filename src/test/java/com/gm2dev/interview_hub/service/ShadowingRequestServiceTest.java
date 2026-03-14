@@ -49,8 +49,8 @@ class ShadowingRequestServiceTest {
 
     @BeforeEach
     void setUp() {
-        interviewer = new Profile(UUID.randomUUID(), "interviewer@example.com", "interviewer", null);
-        shadower = new Profile(UUID.randomUUID(), "shadower@example.com", "interviewer", null);
+        interviewer = new Profile(UUID.randomUUID(), "interviewer@example.com", Role.interviewer, null);
+        shadower = new Profile(UUID.randomUUID(), "shadower@example.com", Role.interviewer, null);
         interviewer = profileRepository.save(interviewer);
         shadower = profileRepository.save(shadower);
 
