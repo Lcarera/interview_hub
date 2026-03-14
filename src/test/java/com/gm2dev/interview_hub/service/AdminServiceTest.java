@@ -5,7 +5,9 @@ import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.CreateUserRequest;
 import com.gm2dev.interview_hub.dto.ProfileDto;
 import com.gm2dev.interview_hub.mapper.ProfileMapper;
+import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
+import com.gm2dev.interview_hub.repository.ShadowingRequestRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,11 +46,17 @@ class AdminServiceTest {
     @Mock
     private ProfileMapper profileMapper;
 
+    @Mock
+    private InterviewRepository interviewRepository;
+
+    @Mock
+    private ShadowingRequestRepository shadowingRequestRepository;
+
     private AdminService adminService;
 
     @BeforeEach
     void setUp() {
-        adminService = new AdminService(profileRepository, passwordEncoder, emailService, profileMapper);
+        adminService = new AdminService(profileRepository, passwordEncoder, emailService, profileMapper, interviewRepository, shadowingRequestRepository);
     }
 
     @Test
@@ -125,6 +133,27 @@ class AdminServiceTest {
     }
 
     @Test
+    void createUser_whenTemporaryPasswordEmailFails_throwsRuntimeException() {
+        CreateUserRequest request = new CreateUserRequest("new@gm2dev.com", Role.interviewer);
+
+        Profile mappedProfile = new Profile();
+        mappedProfile.setId(UUID.randomUUID());
+        mappedProfile.setEmail("new@gm2dev.com");
+        mappedProfile.setCalendarEmail("new@gm2dev.com");
+        mappedProfile.setRole(Role.interviewer);
+        mappedProfile.setEmailVerified(true);
+
+        when(profileRepository.findByEmail("new@gm2dev.com")).thenReturn(Optional.empty());
+        when(profileMapper.toProfileFromCreateUserRequest(request)).thenReturn(mappedProfile);
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+        when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("Email delivery failed"))
+                .when(emailService).sendTemporaryPasswordEmail(anyString(), anyString());
+
+        assertThrows(RuntimeException.class, () -> adminService.createUser(request));
+    }
+
+    @Test
     void createUser_withExistingEmail_throwsIllegalStateException() {
         CreateUserRequest request = new CreateUserRequest("existing@gm2dev.com", Role.interviewer);
         when(profileRepository.findByEmail("existing@gm2dev.com")).thenReturn(Optional.of(new Profile()));
@@ -164,8 +193,41 @@ class AdminServiceTest {
     void deleteUser_withValidId_deletesProfile() {
         UUID id = UUID.randomUUID();
         when(profileRepository.existsById(id)).thenReturn(true);
+        when(interviewRepository.existsByInterviewerId(id)).thenReturn(false);
+        when(interviewRepository.existsByTalentAcquisitionId(id)).thenReturn(false);
+        when(shadowingRequestRepository.existsByShadowerId(id)).thenReturn(false);
         adminService.deleteUser(id);
         verify(profileRepository).deleteById(id);
+    }
+
+    @Test
+    void deleteUser_withExistingInterviewsAsInterviewer_throwsIllegalStateException() {
+        UUID id = UUID.randomUUID();
+        when(profileRepository.existsById(id)).thenReturn(true);
+        when(interviewRepository.existsByInterviewerId(id)).thenReturn(true);
+        assertThrows(IllegalStateException.class, () -> adminService.deleteUser(id));
+        verify(profileRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteUser_withExistingInterviewsAsTalentAcquisition_throwsIllegalStateException() {
+        UUID id = UUID.randomUUID();
+        when(profileRepository.existsById(id)).thenReturn(true);
+        when(interviewRepository.existsByInterviewerId(id)).thenReturn(false);
+        when(interviewRepository.existsByTalentAcquisitionId(id)).thenReturn(true);
+        assertThrows(IllegalStateException.class, () -> adminService.deleteUser(id));
+        verify(profileRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteUser_withExistingShadowingRequests_throwsIllegalStateException() {
+        UUID id = UUID.randomUUID();
+        when(profileRepository.existsById(id)).thenReturn(true);
+        when(interviewRepository.existsByInterviewerId(id)).thenReturn(false);
+        when(interviewRepository.existsByTalentAcquisitionId(id)).thenReturn(false);
+        when(shadowingRequestRepository.existsByShadowerId(id)).thenReturn(true);
+        assertThrows(IllegalStateException.class, () -> adminService.deleteUser(id));
+        verify(profileRepository, never()).deleteById(any());
     }
 
     @Test
@@ -173,5 +235,40 @@ class AdminServiceTest {
         UUID id = UUID.randomUUID();
         when(profileRepository.existsById(id)).thenReturn(false);
         assertThrows(EntityNotFoundException.class, () -> adminService.deleteUser(id));
+    }
+
+    @Test
+    void createUser_generatedPasswordIsShuffled() {
+        CreateUserRequest request = new CreateUserRequest("new@gm2dev.com", Role.interviewer);
+
+        Profile mappedProfile = new Profile();
+        mappedProfile.setId(UUID.randomUUID());
+        mappedProfile.setEmail("new@gm2dev.com");
+        mappedProfile.setCalendarEmail("new@gm2dev.com");
+        mappedProfile.setRole(Role.interviewer);
+        mappedProfile.setEmailVerified(true);
+
+        ProfileDto dto = new ProfileDto(mappedProfile.getId(), "new@gm2dev.com", Role.interviewer, "new@gm2dev.com");
+
+        when(profileRepository.findByEmail("new@gm2dev.com")).thenReturn(Optional.empty());
+        when(profileMapper.toProfileFromCreateUserRequest(request)).thenReturn(mappedProfile);
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+        when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(profileMapper.toDto(any(Profile.class))).thenReturn(dto);
+
+        for (int i = 0; i < 20; i++) {
+            adminService.createUser(request);
+        }
+
+        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
+        verify(emailService, times(20)).sendTemporaryPasswordEmail(eq("new@gm2dev.com"), passwordCaptor.capture());
+        List<String> passwords = passwordCaptor.getAllValues();
+
+        boolean allMatchUnshuffledPattern = passwords.stream()
+                .allMatch(p -> Character.isUpperCase(p.charAt(0))
+                        && Character.isLowerCase(p.charAt(1))
+                        && Character.isDigit(p.charAt(2)));
+        assertFalse(allMatchUnshuffledPattern,
+                "Generated passwords should be shuffled — not always start with [A-Z][a-z][0-9]");
     }
 }

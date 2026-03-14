@@ -5,7 +5,9 @@ import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.CreateUserRequest;
 import com.gm2dev.interview_hub.dto.ProfileDto;
 import com.gm2dev.interview_hub.mapper.ProfileMapper;
+import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
+import com.gm2dev.interview_hub.repository.ShadowingRequestRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,8 @@ public class AdminService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final ProfileMapper profileMapper;
+    private final InterviewRepository interviewRepository;
+    private final ShadowingRequestRepository shadowingRequestRepository;
 
     @Transactional(readOnly = true)
     public Page<ProfileDto> listUsers(Pageable pageable) {
@@ -77,18 +81,32 @@ public class AdminService {
         if (!profileRepository.existsById(userId)) {
             throw new EntityNotFoundException("User not found: " + userId);
         }
+        if (interviewRepository.existsByInterviewerId(userId)
+                || interviewRepository.existsByTalentAcquisitionId(userId)) {
+            throw new IllegalStateException("Cannot delete user with existing interviews");
+        }
+        if (shadowingRequestRepository.existsByShadowerId(userId)) {
+            throw new IllegalStateException("Cannot delete user with existing shadowing requests");
+        }
         profileRepository.deleteById(userId);
         log.debug("Deleted user: {}", userId);
     }
 
     private String generateTemporaryPassword() {
-        StringBuilder sb = new StringBuilder(12);
-        sb.append(UPPER.charAt(RANDOM.nextInt(UPPER.length())));
-        sb.append(LOWER.charAt(RANDOM.nextInt(LOWER.length())));
-        sb.append(DIGITS.charAt(RANDOM.nextInt(DIGITS.length())));
+        char[] password = new char[12];
+        password[0] = UPPER.charAt(RANDOM.nextInt(UPPER.length()));
+        password[1] = LOWER.charAt(RANDOM.nextInt(LOWER.length()));
+        password[2] = DIGITS.charAt(RANDOM.nextInt(DIGITS.length()));
         for (int i = 3; i < 12; i++) {
-            sb.append(CHARS.charAt(RANDOM.nextInt(CHARS.length())));
+            password[i] = CHARS.charAt(RANDOM.nextInt(CHARS.length()));
         }
-        return sb.toString();
+        // Fisher-Yates shuffle to remove predictable [A-Z][a-z][0-9] prefix
+        for (int i = password.length - 1; i > 0; i--) {
+            int j = RANDOM.nextInt(i + 1);
+            char temp = password[i];
+            password[i] = password[j];
+            password[j] = temp;
+        }
+        return new String(password);
     }
 }

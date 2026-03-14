@@ -19,6 +19,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import com.nimbusds.jose.jwk.OctetSequenceKey;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.nimbusds.jose.jwk.JWKSet;
+import javax.crypto.spec.SecretKeySpec;
 
 import java.time.Instant;
 import java.util.List;
@@ -59,9 +65,14 @@ class EmailPasswordAuthServiceTest {
         jwtProps.setSigningSecret(SIGNING_SECRET);
         jwtProps.setExpirationSeconds(3600);
 
+        byte[] keyBytes = SIGNING_SECRET.getBytes();
+        SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
+        OctetSequenceKey jwk = new OctetSequenceKey.Builder(secretKey).build();
+        JwtEncoder jwtEncoder = new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(jwk)));
+
         service = new EmailPasswordAuthService(
                 profileRepository, verificationTokenRepository,
-                passwordEncoder, emailService, jwtProps, profileMapper);
+                passwordEncoder, emailService, jwtProps, profileMapper, jwtEncoder);
     }
 
     // --- Register tests ---
@@ -435,6 +446,28 @@ class EmailPasswordAuthServiceTest {
 
         ResetPasswordRequest request = new ResetPasswordRequest(rawToken, "NewPassword1");
         assertThrows(SecurityException.class, () -> service.resetPassword(request));
+    }
+
+    @Test
+    void register_whenVerificationEmailFails_throwsRuntimeException() {
+        RegisterRequest request = new RegisterRequest("user@gm2dev.com", "Password1");
+
+        Profile mappedProfile = new Profile();
+        mappedProfile.setId(UUID.randomUUID());
+        mappedProfile.setEmail("user@gm2dev.com");
+        mappedProfile.setCalendarEmail("user@gm2dev.com");
+        mappedProfile.setRole(Role.interviewer);
+        mappedProfile.setEmailVerified(false);
+
+        when(profileRepository.findByEmail("user@gm2dev.com")).thenReturn(Optional.empty());
+        when(profileMapper.toProfileFromRegisterRequest(request)).thenReturn(mappedProfile);
+        when(passwordEncoder.encode("Password1")).thenReturn("hashed");
+        when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(verificationTokenRepository.save(any(VerificationToken.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new RuntimeException("Email delivery failed"))
+                .when(emailService).sendVerificationEmail(anyString(), anyString());
+
+        assertThrows(RuntimeException.class, () -> service.register(request));
     }
 
     // --- Token hashing tests ---
