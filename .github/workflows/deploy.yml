@@ -24,17 +24,21 @@ jobs:
       backend: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.backend }}
       frontend: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.frontend }}
       infra: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.infra }}
+      migrations: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.migrations }}
+      base_sha: ${{ steps.base.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Determine comparison base
         id: base
+        env:
+          EVENT_BEFORE: ${{ github.event.before }}
         run: |
-          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+          if [ -z "$EVENT_BEFORE" ] || [ "$EVENT_BEFORE" = "0000000000000000000000000000000000000000" ]; then
             echo "sha=$(git rev-parse HEAD~1)" >> "$GITHUB_OUTPUT"
           else
-            echo "sha=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+            echo "sha=$EVENT_BEFORE" >> "$GITHUB_OUTPUT"
           fi
       - uses: dorny/paths-filter@v3
         id: filter
@@ -53,10 +57,12 @@ jobs:
             infra:
               - 'infra/**'
               - '.github/workflows/deploy.yml'
+            migrations:
+              - 'supabase/migrations/**'
 
   deploy:
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infra == 'true'
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infra == 'true' || needs.changes.outputs.migrations == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -65,6 +71,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
@@ -76,6 +84,38 @@ jobs:
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Install PostgreSQL client
+        if: needs.changes.outputs.migrations == 'true'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Run Supabase migrations
+        if: needs.changes.outputs.migrations == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BASE_SHA: ${{ needs.changes.outputs.base_sha }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set"
+            exit 1
+          fi
+          if [ -z "$BASE_SHA" ]; then
+            echo "No base SHA available; skipping migration detection."
+            exit 0
+          fi
+          NEW_FILES=$(git diff --name-only --diff-filter=A "$BASE_SHA" "$CURRENT_SHA" -- 'supabase/migrations/*.sql' | sort)
+          if [ -z "$NEW_FILES" ]; then
+            echo "No new migration files detected, skipping."
+            exit 0
+          fi
+          echo "New migration files to apply:"
+          echo "$NEW_FILES"
+          for file in $NEW_FILES; do
+            echo "Applying migration: $file"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done
+          echo "All migrations applied successfully."
 
       - name: Set up Java 25
         if: needs.changes.outputs.backend == 'true'

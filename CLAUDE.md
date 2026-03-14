@@ -210,6 +210,9 @@ Required for runtime:
 - `MAIL_FROM` - From email address (default: noreply@lcarera.dev)
 - `GOOGLE_SERVICE_ACCOUNT_KEY` - Service account JSON key for calendar domain-wide delegation
 
+Required for CI/CD (GitHub Actions secrets):
+- `SUPABASE_DB_URL` - PostgreSQL connection string for running migrations in the deploy pipeline (format: `postgresql://user:pass@host:port/dbname`)
+
 ## Dependencies
 
 **Backend:**
