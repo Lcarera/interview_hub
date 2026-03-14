@@ -1,11 +1,9 @@
 package com.gm2dev.interview_hub.service;
 
-import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
 import com.gm2dev.interview_hub.config.GoogleServiceAccountProperties;
 import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.Profile;
-import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
@@ -32,18 +30,9 @@ import java.util.UUID;
 @Slf4j
 public class GoogleCalendarService {
 
-    private final TokenEncryptionService tokenEncryptionService;
-    private final ProfileRepository profileRepository;
-    private final GoogleOAuthProperties googleProperties;
     private final GoogleServiceAccountProperties serviceAccountProperties;
 
-    public GoogleCalendarService(TokenEncryptionService tokenEncryptionService,
-                                  ProfileRepository profileRepository,
-                                  GoogleOAuthProperties googleProperties,
-                                  GoogleServiceAccountProperties serviceAccountProperties) {
-        this.tokenEncryptionService = tokenEncryptionService;
-        this.profileRepository = profileRepository;
-        this.googleProperties = googleProperties;
+    public GoogleCalendarService(GoogleServiceAccountProperties serviceAccountProperties) {
         this.serviceAccountProperties = serviceAccountProperties;
     }
 

@@ -1,6 +1,7 @@
 package com.gm2dev.interview_hub.controller;
 
 import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(EntityNotFoundException.class)
@@ -33,6 +35,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SecurityException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public Map<String, String> handleSecurityException(SecurityException ex) {
-        return Map.of("error", ex.getMessage());
+        log.debug("Security exception: {}", ex.getMessage());
+        return Map.of("error", "Access denied");
     }
 }

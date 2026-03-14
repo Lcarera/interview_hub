@@ -1,13 +1,11 @@
 package com.gm2dev.interview_hub.service;
 
-import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
 import com.gm2dev.interview_hub.config.GoogleServiceAccountProperties;
 import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.Role;
-import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventAttendee;
@@ -32,11 +30,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class GoogleCalendarServiceTest {
 
-    private static final String ENCRYPTION_KEY = "test-encryption-key-32chars-long!";
-
-    @Mock
-    private ProfileRepository profileRepository;
-
     @Mock
     private Calendar calendarClient;
 
@@ -58,21 +51,14 @@ class GoogleCalendarServiceTest {
     @Mock
     private Calendar.Events.Patch patchOp;
 
-    private TokenEncryptionService tokenEncryptionService;
     private GoogleCalendarService googleCalendarService;
 
     @BeforeEach
     void setUp() {
-        tokenEncryptionService = new TokenEncryptionService(ENCRYPTION_KEY);
-        GoogleOAuthProperties googleProps = new GoogleOAuthProperties();
-        googleProps.setClientId("test-client-id");
-        googleProps.setClientSecret("test-client-secret");
-
         GoogleServiceAccountProperties serviceAccountProps = new GoogleServiceAccountProperties();
         serviceAccountProps.setKeyJson("");
 
-        googleCalendarService = spy(new GoogleCalendarService(
-                tokenEncryptionService, profileRepository, googleProps, serviceAccountProps));
+        googleCalendarService = spy(new GoogleCalendarService(serviceAccountProps));
     }
 
     private Profile buildProfile() {
@@ -80,9 +66,6 @@ class GoogleCalendarServiceTest {
         profile.setId(UUID.randomUUID());
         profile.setEmail("interviewer@gm2dev.com");
         profile.setRole(Role.interviewer);
-        profile.setGoogleAccessToken(tokenEncryptionService.encrypt("access-token"));
-        profile.setGoogleRefreshToken(tokenEncryptionService.encrypt("refresh-token"));
-        profile.setGoogleTokenExpiry(Instant.now().plus(1, ChronoUnit.HOURS));
         return profile;
     }
 

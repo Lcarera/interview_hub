@@ -102,21 +102,31 @@ public class EmailPasswordAuthService {
         log.debug("Email verified for: {}", profile.getEmail());
     }
 
+    private static final String LOGIN_FAILURE_MESSAGE = "Invalid credentials";
+
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         Profile profile = profileRepository.findByEmail(request.email())
-                .orElseThrow(() -> new SecurityException("Invalid email or password"));
+                .orElse(null);
+
+        if (profile == null) {
+            log.debug("Login failed: no account for {}", request.email());
+            throw new SecurityException(LOGIN_FAILURE_MESSAGE);
+        }
 
         if (profile.getPasswordHash() == null) {
-            throw new SecurityException("This account uses Google login. Please sign in with Google.");
+            log.debug("Login failed: Google-only account {}", request.email());
+            throw new SecurityException(LOGIN_FAILURE_MESSAGE);
         }
 
         if (!profile.isEmailVerified()) {
-            throw new SecurityException("Please verify your email before logging in");
+            log.debug("Login failed: unverified email {}", request.email());
+            throw new SecurityException(LOGIN_FAILURE_MESSAGE);
         }
 
         if (!passwordEncoder.matches(request.password(), profile.getPasswordHash())) {
-            throw new SecurityException("Invalid email or password");
+            log.debug("Login failed: wrong password for {}", request.email());
+            throw new SecurityException(LOGIN_FAILURE_MESSAGE);
         }
 
         String jwt = issueJwt(profile);

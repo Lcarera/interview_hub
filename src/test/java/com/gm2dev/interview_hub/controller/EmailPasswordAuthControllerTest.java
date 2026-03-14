@@ -110,7 +110,7 @@ class EmailPasswordAuthControllerTest {
     @Test
     void login_withInvalidCredentials_returns403() throws Exception {
         when(authService.login(any()))
-                .thenThrow(new SecurityException("Invalid email or password"));
+                .thenThrow(new SecurityException("Invalid credentials"));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

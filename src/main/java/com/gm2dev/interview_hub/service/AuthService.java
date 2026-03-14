@@ -39,22 +39,19 @@ public class AuthService {
 
     private static final String GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
     private static final String GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com";
-    private static final String SCOPES = "openid email profile https://www.googleapis.com/auth/calendar.events";
+    private static final String SCOPES = "openid email profile";
 
     private final GoogleOAuthProperties googleProperties;
     private final JwtProperties jwtProperties;
     private final ProfileRepository profileRepository;
-    private final TokenEncryptionService tokenEncryptionService;
     private final JwtEncoder jwtEncoder;
 
     public AuthService(GoogleOAuthProperties googleProperties,
                        JwtProperties jwtProperties,
-                       ProfileRepository profileRepository,
-                       TokenEncryptionService tokenEncryptionService) {
+                       ProfileRepository profileRepository) {
         this.googleProperties = googleProperties;
         this.jwtProperties = jwtProperties;
         this.profileRepository = profileRepository;
-        this.tokenEncryptionService = tokenEncryptionService;
 
         byte[] keyBytes = jwtProperties.getSigningSecret().getBytes();
         SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
@@ -68,8 +65,6 @@ public class AuthService {
                 .queryParam("redirect_uri", googleProperties.getRedirectUri())
                 .queryParam("response_type", "code")
                 .queryParam("scope", SCOPES)
-                .queryParam("access_type", "offline")
-                .queryParam("prompt", "consent")
                 .queryParam("hd", "*")
                 .build()
                 .toUriString();
@@ -107,14 +102,6 @@ public class AuthService {
 
         profile.setEmail(email);
         profile.setCalendarEmail(email);
-        profile.setGoogleAccessToken(tokenEncryptionService.encrypt(tokenResponse.getAccessToken()));
-        if (tokenResponse.getRefreshToken() != null) {
-            profile.setGoogleRefreshToken(tokenEncryptionService.encrypt(tokenResponse.getRefreshToken()));
-        }
-        Long expiresInSeconds = tokenResponse.getExpiresInSeconds();
-        if (expiresInSeconds != null) {
-            profile.setGoogleTokenExpiry(Instant.now().plusSeconds(expiresInSeconds));
-        }
 
         profileRepository.save(profile);
 
