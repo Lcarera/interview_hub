@@ -13,6 +13,7 @@ _SECRET_NAMES = [
     "GOOGLE_CLIENT_SECRET",
     "JWT_SIGNING_SECRET",
     "TOKEN_ENCRYPTION_KEY",
+    "MAIL_PASSWORD",
 ]
 
 secrets: dict[str, gcp.secretmanager.Secret] = {}
