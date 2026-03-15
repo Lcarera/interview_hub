@@ -1,13 +1,15 @@
 package com.gm2dev.interview_hub.service;
 
-import jakarta.mail.internet.MimeMessage;
+import com.resend.Resend;
+import com.resend.core.exception.ResendException;
+import com.resend.services.emails.Emails;
+import com.resend.services.emails.model.CreateEmailOptions;
+import com.resend.services.emails.model.CreateEmailResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mail.MailSendException;
-import org.springframework.mail.javamail.JavaMailSender;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -18,64 +20,76 @@ import static org.mockito.Mockito.*;
 class EmailServiceTest {
 
     @Mock
-    private JavaMailSender mailSender;
+    private Resend resend;
 
     @Mock
-    private MimeMessage mimeMessage;
+    private Emails resendEmails;
+
+    @Mock
+    private CreateEmailResponse createEmailResponse;
 
     private EmailService emailService;
 
     @BeforeEach
     void setUp() {
-        emailService = new EmailService(mailSender, "noreply@gm2dev.com", "http://localhost:4200");
+        emailService = new EmailService(resend, "noreply@gm2dev.com", "http://localhost:4200");
     }
 
     @Test
-    void sendVerificationEmail_sendsEmail() {
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+    void sendVerificationEmail_sendsEmail() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any(CreateEmailOptions.class))).thenReturn(createEmailResponse);
+
         emailService.sendVerificationEmail("user@gm2dev.com", "abc-token-123");
-        verify(mailSender).send(mimeMessage);
+
+        verify(resendEmails).send(any(CreateEmailOptions.class));
     }
 
     @Test
-    void sendPasswordResetEmail_sendsEmail() {
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+    void sendPasswordResetEmail_sendsEmail() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any(CreateEmailOptions.class))).thenReturn(createEmailResponse);
+
         emailService.sendPasswordResetEmail("user@gm2dev.com", "reset-token-456");
-        verify(mailSender).send(mimeMessage);
+
+        verify(resendEmails).send(any(CreateEmailOptions.class));
     }
 
     @Test
-    void sendTemporaryPasswordEmail_sendsEmail() {
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+    void sendTemporaryPasswordEmail_sendsEmail() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any(CreateEmailOptions.class))).thenReturn(createEmailResponse);
+
         emailService.sendTemporaryPasswordEmail("user@gm2dev.com", "TempPass123");
-        verify(mailSender).send(mimeMessage);
+
+        verify(resendEmails).send(any(CreateEmailOptions.class));
     }
 
     @Test
-    void sendVerificationEmail_whenMailSenderFails_throwsRuntimeException() {
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doThrow(new MailSendException("SMTP error"))
-                .when(mailSender).send(any(MimeMessage.class));
+    void sendVerificationEmail_whenResendFails_throwsRuntimeException() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any(CreateEmailOptions.class)))
+                .thenThrow(new ResendException("API error"));
 
         assertThrows(RuntimeException.class,
                 () -> emailService.sendVerificationEmail("user@gm2dev.com", "token123"));
     }
 
     @Test
-    void sendTemporaryPasswordEmail_whenMailSenderFails_throwsRuntimeException() {
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doThrow(new MailSendException("SMTP error"))
-                .when(mailSender).send(any(MimeMessage.class));
+    void sendTemporaryPasswordEmail_whenResendFails_throwsRuntimeException() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any(CreateEmailOptions.class)))
+                .thenThrow(new ResendException("API error"));
 
         assertThrows(RuntimeException.class,
                 () -> emailService.sendTemporaryPasswordEmail("user@gm2dev.com", "TmpPass1"));
     }
 
     @Test
-    void sendPasswordResetEmail_whenMailSenderFails_doesNotThrow() {
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
-        doThrow(new MailSendException("SMTP error"))
-                .when(mailSender).send(any(MimeMessage.class));
+    void sendPasswordResetEmail_whenResendFails_doesNotThrow() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any(CreateEmailOptions.class)))
+                .thenThrow(new ResendException("API error"));
 
         assertDoesNotThrow(() -> emailService.sendPasswordResetEmail("user@gm2dev.com", "reset-token"));
     }

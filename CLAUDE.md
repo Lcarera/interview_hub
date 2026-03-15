@@ -204,10 +204,7 @@ Required for runtime:
 - `JWT_SIGNING_SECRET` - HMAC-SHA256 key for app JWT signing (min 32 bytes)
 - `APP_BASE_URL` - Application base URL (default: http://localhost:8080)
 - `FRONTEND_URL` - Frontend URL for OAuth callback redirects (default in compose: http://localhost)
-- `MAIL_HOST` - SMTP server host
-- `MAIL_PORT` - SMTP server port
-- `MAIL_USERNAME` - SMTP username
-- `MAIL_PASSWORD` - SMTP password
+- `RESEND_API_KEY` - Resend API key for sending emails
 - `MAIL_FROM` - From email address (default: noreply@lcarera.dev)
 - `GOOGLE_SERVICE_ACCOUNT_KEY` - Service account JSON key for calendar integration
 - `GOOGLE_CALENDAR_ID` - Google Calendar ID for shared event calendar (default: `primary`)
@@ -223,6 +220,7 @@ Required for CI/CD (GitHub Actions secrets):
 - Spring Data JPA with PostgreSQL
 - Spring Security OAuth2 Resource Server + Client
 - Spring Boot Actuator
+- Resend Java SDK (email sending)
 - Google Calendar API v3
 - Google Auth Library (OAuth2 HTTP)
 - Lombok (code generation)
