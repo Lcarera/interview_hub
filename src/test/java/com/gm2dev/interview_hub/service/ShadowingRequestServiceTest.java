@@ -1,6 +1,7 @@
 package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.domain.*;
+import com.gm2dev.interview_hub.repository.CandidateRepository;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.gm2dev.interview_hub.repository.ShadowingRequestRepository;
@@ -20,6 +21,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
@@ -40,8 +44,14 @@ class ShadowingRequestServiceTest {
     @Autowired
     private ShadowingRequestRepository shadowingRequestRepository;
 
+    @Autowired
+    private CandidateRepository candidateRepository;
+
     @MockitoBean
     private GoogleCalendarService googleCalendarService;
+
+    @MockitoBean
+    private EmailService emailService;
 
     private Profile interviewer;
     private Profile shadower;
@@ -195,5 +205,52 @@ class ShadowingRequestServiceTest {
 
         assertThrows(AccessDeniedException.class,
                 () -> shadowingRequestService.rejectShadowingRequest(request.getId(), "reason", otherId));
+    }
+
+    @Test
+    void approveShadowingRequest_withCandidateWithoutName_usesUnknownInEmail() {
+        Candidate candidate = candidateRepository.save(
+                new Candidate(null, null, "noname@example.com", null, null, null));
+        interview.setCandidate(candidate);
+        interview = interviewRepository.save(interview);
+
+        ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
+        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
+
+        verify(emailService).sendShadowingApprovedEmail(
+                eq("shadower@example.com"),
+                eq("Java Interview - Unknown"),
+                any(),
+                any());
+    }
+
+    @Test
+    void approveShadowingRequest_withCandidate_usesCandidateNameInEmail() {
+        Candidate candidate = candidateRepository.save(
+                new Candidate(null, "Jane Doe", "jane@example.com", null, null, null));
+        interview.setCandidate(candidate);
+        interview = interviewRepository.save(interview);
+
+        ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
+        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
+
+        verify(emailService).sendShadowingApprovedEmail(
+                eq("shadower@example.com"),
+                eq("Java Interview - Jane Doe"),
+                any(),
+                any());
+    }
+
+    @Test
+    void approveShadowingRequest_sendsApprovalEmail() {
+        ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
+
+        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
+
+        verify(emailService).sendShadowingApprovedEmail(
+                eq("shadower@example.com"),
+                contains("Java"),
+                any(),
+                any());
     }
 }

@@ -29,23 +29,25 @@ import java.util.UUID;
 @Slf4j
 public class GoogleCalendarService {
 
+    public record CalendarEventResult(String eventId, String meetLink) {}
+
     private final GoogleServiceAccountProperties serviceAccountProperties;
 
     public GoogleCalendarService(GoogleServiceAccountProperties serviceAccountProperties) {
         this.serviceAccountProperties = serviceAccountProperties;
     }
 
-    public String createEvent(Interview interview) throws IOException {
+    public CalendarEventResult createEvent(Interview interview) throws IOException {
         Calendar calendar = buildCalendarClient();
         String calendarId = serviceAccountProperties.getCalendarId();
         Event event = buildEvent(interview);
 
         Event created = calendar.events().insert(calendarId, event)
                 .setConferenceDataVersion(1)
-                .setSendUpdates("all")
+                .setSendUpdates("none")
                 .execute();
         log.debug("Created Google Calendar event: {}", created.getId());
-        return created.getId();
+        return new CalendarEventResult(created.getId(), created.getHangoutLink());
     }
 
     public void updateEvent(Interview interview) throws IOException {
@@ -55,7 +57,7 @@ public class GoogleCalendarService {
 
         calendar.events().update(calendarId, interview.getGoogleEventId(), event)
                 .setConferenceDataVersion(1)
-                .setSendUpdates("all")
+                .setSendUpdates("none")
                 .execute();
         log.debug("Updated Google Calendar event: {}", interview.getGoogleEventId());
     }
@@ -64,7 +66,9 @@ public class GoogleCalendarService {
         Calendar calendar = buildCalendarClient();
         String calendarId = serviceAccountProperties.getCalendarId();
 
-        calendar.events().delete(calendarId, googleEventId).execute();
+        calendar.events().delete(calendarId, googleEventId)
+                .setSendUpdates("none")
+                .execute();
         log.debug("Deleted Google Calendar event: {}", googleEventId);
     }
 
@@ -83,7 +87,7 @@ public class GoogleCalendarService {
 
         Event patch = new Event().setAttendees(attendees);
         calendar.events().patch(calendarId, googleEventId, patch)
-                .setSendUpdates("all")
+                .setSendUpdates("none")
                 .execute();
 
         log.debug("Added attendee {} to event {}", attendeeEmail, googleEventId);
