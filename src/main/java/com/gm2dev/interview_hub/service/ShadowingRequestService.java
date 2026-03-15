@@ -26,6 +26,7 @@ public class ShadowingRequestService {
     private final InterviewRepository interviewRepository;
     private final ProfileRepository profileRepository;
     private final GoogleCalendarService googleCalendarService;
+    private final EmailService emailService;
 
     @Transactional
     public ShadowingRequest requestShadowing(UUID interviewId, UUID shadowerId) {
@@ -78,6 +79,20 @@ public class ShadowingRequestService {
                 log.warn("Failed to add shadower {} to Calendar event {}: {}",
                         request.getShadower().getEmail(), interview.getGoogleEventId(), e.getMessage());
             }
+        }
+
+        String summary = interview.getTechStack() + " Interview - "
+                + (interview.getCandidate() != null && interview.getCandidate().getName() != null
+                   ? interview.getCandidate().getName() : "Unknown");
+
+        try {
+            emailService.sendShadowingApprovedEmail(
+                    request.getShadower().getEmail(),
+                    summary,
+                    interview.getStartTime().toString(),
+                    interview.getEndTime().toString());
+        } catch (Exception e) {
+            log.warn("Failed to send shadowing approval email: {}", e.getMessage());
         }
 
         return saved;

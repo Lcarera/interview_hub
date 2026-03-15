@@ -20,6 +20,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
@@ -42,6 +45,9 @@ class ShadowingRequestServiceTest {
 
     @MockitoBean
     private GoogleCalendarService googleCalendarService;
+
+    @MockitoBean
+    private EmailService emailService;
 
     private Profile interviewer;
     private Profile shadower;
@@ -195,5 +201,18 @@ class ShadowingRequestServiceTest {
 
         assertThrows(AccessDeniedException.class,
                 () -> shadowingRequestService.rejectShadowingRequest(request.getId(), "reason", otherId));
+    }
+
+    @Test
+    void approveShadowingRequest_sendsApprovalEmail() {
+        ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
+
+        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
+
+        verify(emailService).sendShadowingApprovedEmail(
+                eq("shadower@example.com"),
+                contains("Java"),
+                any(),
+                any());
     }
 }
