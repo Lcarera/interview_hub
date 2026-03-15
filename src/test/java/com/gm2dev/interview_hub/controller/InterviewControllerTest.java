@@ -100,8 +100,8 @@ class InterviewControllerTest {
                     "interviewerId": "%s",
                     "candidateId": "%s",
                     "techStack": "Java",
-                    "startTime": "2026-03-15T10:00:00Z",
-                    "endTime": "2026-03-15T11:00:00Z"
+                    "startTime": "2027-03-15T10:00:00Z",
+                    "endTime": "2027-03-15T11:00:00Z"
                 }
                 """.formatted(UUID.randomUUID(), UUID.randomUUID());
 
