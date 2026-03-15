@@ -26,6 +26,7 @@ public class ShadowingRequestService {
     private final InterviewRepository interviewRepository;
     private final ProfileRepository profileRepository;
     private final GoogleCalendarService googleCalendarService;
+    private final EmailService emailService;
 
     @Transactional
     public ShadowingRequest requestShadowing(UUID interviewId, UUID shadowerId) {
@@ -79,6 +80,14 @@ public class ShadowingRequestService {
                         request.getShadower().getEmail(), interview.getGoogleEventId(), e.getMessage());
             }
         }
+
+        String summary = InterviewService.buildSummary(interview);
+
+        emailService.sendShadowingApprovedEmail(
+                request.getShadower().getEmail(),
+                summary,
+                InterviewService.EMAIL_DATE_FMT.format(interview.getStartTime()),
+                InterviewService.EMAIL_DATE_FMT.format(interview.getEndTime()));
 
         return saved;
     }

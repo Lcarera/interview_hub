@@ -86,6 +86,81 @@ class EmailServiceTest {
     }
 
     @Test
+    void sendInterviewInviteEmail_sendsEmail() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any(CreateEmailOptions.class))).thenReturn(createEmailResponse);
+
+        emailService.sendInterviewInviteEmail(
+                "attendee@example.com",
+                "Java Interview - Jane Doe",
+                "2026-03-20T10:00:00Z",
+                "2026-03-20T11:00:00Z",
+                "https://meet.google.com/abc-defg-hij"
+        );
+
+        verify(resendEmails).send(any(CreateEmailOptions.class));
+    }
+
+    @Test
+    void sendInterviewInviteEmail_withNullMeetLink_sendsEmail() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any(CreateEmailOptions.class))).thenReturn(createEmailResponse);
+
+        emailService.sendInterviewInviteEmail(
+                "attendee@example.com",
+                "Java Interview - Jane Doe",
+                "2026-03-20T10:00:00Z",
+                "2026-03-20T11:00:00Z",
+                null
+        );
+
+        verify(resendEmails).send(any(CreateEmailOptions.class));
+    }
+
+    @Test
+    void sendInterviewUpdateEmail_sendsEmail() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any(CreateEmailOptions.class))).thenReturn(createEmailResponse);
+
+        emailService.sendInterviewUpdateEmail(
+                "attendee@example.com",
+                "Java Interview - Jane Doe",
+                "2026-03-21T10:00:00Z",
+                "2026-03-21T11:00:00Z"
+        );
+
+        verify(resendEmails).send(any(CreateEmailOptions.class));
+    }
+
+    @Test
+    void sendInterviewCancellationEmail_sendsEmail() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any(CreateEmailOptions.class))).thenReturn(createEmailResponse);
+
+        emailService.sendInterviewCancellationEmail(
+                "attendee@example.com",
+                "Java Interview - Jane Doe"
+        );
+
+        verify(resendEmails).send(any(CreateEmailOptions.class));
+    }
+
+    @Test
+    void sendShadowingApprovedEmail_sendsEmail() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any(CreateEmailOptions.class))).thenReturn(createEmailResponse);
+
+        emailService.sendShadowingApprovedEmail(
+                "shadower@example.com",
+                "Java Interview - Jane Doe",
+                "2026-03-20T10:00:00Z",
+                "2026-03-20T11:00:00Z"
+        );
+
+        verify(resendEmails).send(any(CreateEmailOptions.class));
+    }
+
+    @Test
     void sendPasswordResetEmail_whenResendFails_doesNotThrow() throws ResendException {
         when(resend.emails()).thenReturn(resendEmails);
         when(resendEmails.send(any(CreateEmailOptions.class)))
