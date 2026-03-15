@@ -18,4 +18,8 @@ public interface InterviewRepository extends JpaRepository<Interview, UUID> {
     List<Interview> findByCandidateId(UUID candidateId);
 
     boolean existsByCandidateId(UUID candidateId);
+
+    boolean existsByInterviewerId(UUID interviewerId);
+
+    boolean existsByTalentAcquisitionId(UUID talentAcquisitionId);
 }
