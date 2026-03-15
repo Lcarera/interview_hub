@@ -46,10 +46,7 @@ src/main/java/com/gm2dev/interview_hub/
 │   ├── InterviewService.java          # Interview business logic
 │   ├── ShadowingRequestService.java   # Shadowing request business logic
 │   ├── ProfileService.java           # Profile business logic
-│   ├── GoogleCalendarService.java     # Calendar API integration
-│   └── TokenEncryptionService.java    # AES encrypt/decrypt for tokens
-└── util/
-    └── JsonbConverter.java            # JPA AttributeConverter (unused)
+│   └── GoogleCalendarService.java     # Calendar API integration (service account)
 ```
 
 ## Domain Model
@@ -60,16 +57,20 @@ src/main/java/com/gm2dev/interview_hub/
 │           │       │             │       │                     │
 │ id (UUID) │       │ id (UUID)   │       │ id (UUID)           │
 │ email     │       │ interviewer │◄──────│ interview           │
-│ role      │       │ candidateInfo│      │ shadower ───────────┤►Profile
-│ googleSub │       │ techStack   │       │ status              │
-│ tokens    │       │ start/end   │       │ reason              │
-│ (encrypted)│      │ status      │       └────────────────────┘
-└──────────┘       │ googleEventId│
-                   └────────────┘
+│ role      │       │ candidate   │       │ shadower ───────────┤►Profile
+│ googleSub │       │ start/end   │       │ status              │
+└──────────┘       │ status      │       │ reason              │
+                   │ googleEventId│       └────────────────────┘
+    ┌──────────┐   └─────┬───────┘
+    │ Candidate │ *───1   │
+    │ name/email│◄────────┘
+    │ linkedin  │
+    └──────────┘
 ```
 
-- **Profile** — Users (interviewers and shadowers). UUID `id` is app-generated on first OAuth login. Google OAuth tokens are AES-encrypted at rest.
-- **Interview** — Scheduled interviews with a JSONB `candidateInfo` field for flexible candidate data. Linked to a Google Calendar event via `googleEventId`.
+- **Profile** — Users (interviewers and shadowers). UUID `id` is app-generated on first OAuth login.
+- **Candidate** — External candidates being interviewed. Name, email (required), LinkedIn URL, primary area/tech.
+- **Interview** — Scheduled interviews linking an interviewer, candidate, and optional talent acquisition contact. Linked to a Google Calendar event via `googleEventId`.
 - **ShadowingRequest** — Requests to observe an interview. Status transitions: PENDING → APPROVED/REJECTED/CANCELLED.
 
 ## REST API
@@ -119,24 +120,24 @@ src/main/java/com/gm2dev/interview_hub/
 ## Authentication Flow
 
 1. Frontend redirects user to `GET /auth/google`
-2. Backend redirects to Google OAuth consent (scopes: openid, email, profile, calendar.events; `hd=gm2dev.com`)
+2. Backend redirects to Google OAuth consent (scopes: openid, email, profile)
 3. Google redirects back to `GET /auth/google/callback` with an authorization code
-4. Backend exchanges code for Google tokens, validates `hd` claim, creates/updates Profile
+4. Backend exchanges code for Google tokens, validates domain allowlist, creates/updates Profile
 5. Backend issues an HMAC-SHA256 JWT (1-hour expiry) and redirects to the frontend with the token in the URL hash fragment
 6. Frontend stores the token in localStorage and attaches it as `Authorization: Bearer <token>` on all API calls
 
-Only `@gm2dev.com` Google Workspace accounts are allowed.
+Only `@gm2dev.com` and `@lcarera.dev` accounts are allowed (configured in `AllowedDomains.ALLOWED_DOMAINS`).
 
 ## Google Calendar Integration
 
 | Action                        | Calendar Effect                                    |
 |-------------------------------|----------------------------------------------------|
-| Create interview              | Creates event on interviewer's Google Calendar      |
+| Create interview              | Creates event on shared calendar, adds interviewer + candidate as attendees |
 | Update interview              | Updates the Calendar event                         |
 | Delete interview              | Cancels the Calendar event                         |
 | Approve shadowing request     | Adds shadower as attendee to the Calendar event    |
 
-Calendar API failures are logged but do **not** block the primary database operation.
+Uses a Google Service Account's own calendar (configurable via `GOOGLE_CALENDAR_ID`). No domain-wide delegation required. Attendees receive email invitations. Calendar API failures are logged but do **not** block the primary database operation.
 
 ## Configuration
 
@@ -151,9 +152,9 @@ Key properties from `application.yml`:
 | `app.google.client-secret`       | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret          |
 | `app.jwt.signing-secret`         | `JWT_SIGNING_SECRET`   | HMAC-SHA256 signing key (min 32 bytes) |
 | `app.jwt.expiration-seconds`     | -                      | JWT expiry (default: 3600)          |
-| `app.token-encryption-key`       | `TOKEN_ENCRYPTION_KEY` | AES key for Google token encryption |
 | `app.frontend-url`               | `FRONTEND_URL`         | Frontend URL for OAuth redirects    |
 | `app.google.redirect-uri`        | `APP_BASE_URL`         | Backend URL + `/auth/google/callback` |
+| `app.google-service-account.calendar-id` | `GOOGLE_CALENDAR_ID` | Shared calendar ID (default: `primary`) |
 
 Hibernate uses `ddl-auto: validate` — it will not modify the schema.
 
@@ -201,9 +202,11 @@ Two test styles are used — never mix them:
 
 ### Code Coverage
 
-JaCoCo enforces **80% branch coverage**. Excluded classes:
+JaCoCo enforces **95% branch coverage**. Excluded classes:
 - `InterviewHubApplication`
 - `GoogleCalendarService`
+- `OpenApiConfig`
+- `*MapperImpl`
 
 ## Dependencies
 
