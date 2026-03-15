@@ -20,12 +20,19 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class InterviewService {
+
+    static final DateTimeFormatter EMAIL_DATE_FMT =
+            DateTimeFormatter.ofPattern("MMMM d, yyyy 'at' h:mm a z")
+                    .withZone(ZoneId.of("UTC"));
 
     private final InterviewRepository interviewRepository;
     private final ProfileRepository profileRepository;
@@ -150,8 +157,8 @@ public class InterviewService {
 
     private void sendInviteEmails(Interview interview, String meetLink) {
         String summary = buildSummary(interview);
-        String start = interview.getStartTime().toString();
-        String end = interview.getEndTime().toString();
+        String start = EMAIL_DATE_FMT.format(interview.getStartTime());
+        String end = EMAIL_DATE_FMT.format(interview.getEndTime());
 
         emailService.sendInterviewInviteEmail(interview.getInterviewer().getEmail(), summary, start, end, meetLink);
 
@@ -166,8 +173,8 @@ public class InterviewService {
 
     private void sendUpdateEmails(Interview interview) {
         String summary = buildSummary(interview);
-        String start = interview.getStartTime().toString();
-        String end = interview.getEndTime().toString();
+        String start = EMAIL_DATE_FMT.format(interview.getStartTime());
+        String end = EMAIL_DATE_FMT.format(interview.getEndTime());
 
         emailService.sendInterviewUpdateEmail(interview.getInterviewer().getEmail(), summary, start, end);
 

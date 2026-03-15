@@ -66,7 +66,9 @@ public class GoogleCalendarService {
         Calendar calendar = buildCalendarClient();
         String calendarId = serviceAccountProperties.getCalendarId();
 
-        calendar.events().delete(calendarId, googleEventId).execute();
+        calendar.events().delete(calendarId, googleEventId)
+                .setSendUpdates("none")
+                .execute();
         log.debug("Deleted Google Calendar event: {}", googleEventId);
     }
 

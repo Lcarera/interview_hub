@@ -86,8 +86,8 @@ public class ShadowingRequestService {
         emailService.sendShadowingApprovedEmail(
                 request.getShadower().getEmail(),
                 summary,
-                interview.getStartTime().toString(),
-                interview.getEndTime().toString());
+                InterviewService.EMAIL_DATE_FMT.format(interview.getStartTime()),
+                InterviewService.EMAIL_DATE_FMT.format(interview.getEndTime()));
 
         return saved;
     }

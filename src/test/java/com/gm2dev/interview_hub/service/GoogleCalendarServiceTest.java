@@ -166,10 +166,12 @@ class GoogleCalendarServiceTest {
         doReturn(calendarClient).when(googleCalendarService).buildCalendarClient();
         when(calendarClient.events()).thenReturn(events);
         when(events.delete("test-calendar-id", "event-to-delete")).thenReturn(deleteOp);
+        when(deleteOp.setSendUpdates("none")).thenReturn(deleteOp);
 
         googleCalendarService.deleteEvent("event-to-delete");
 
         verify(events).delete("test-calendar-id", "event-to-delete");
+        verify(deleteOp).setSendUpdates("none");
         verify(deleteOp).execute();
     }
 
