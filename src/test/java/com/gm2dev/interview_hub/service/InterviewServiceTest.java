@@ -28,7 +28,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
@@ -51,6 +51,9 @@ class InterviewServiceTest {
 
     @MockitoBean
     private GoogleCalendarService googleCalendarService;
+
+    @MockitoBean
+    private EmailService emailService;
 
     private Candidate createTestCandidate() {
         return candidateRepository.save(new Candidate(null, "Test Candidate", "candidate@example.com", null, null, null));
@@ -408,5 +411,35 @@ class InterviewServiceTest {
 
         assertNotNull(result.getTalentAcquisition());
         assertEquals(taId, result.getTalentAcquisition().getId());
+    }
+
+    @Test
+    void createInterview_sendsInviteEmailsToAttendees() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "invite-test@example.com", Role.interviewer);
+        profileRepository.save(interviewer);
+
+        UUID taId = UUID.randomUUID();
+        Profile ta = new Profile(taId, "ta-invite@example.com", Role.interviewer);
+        profileRepository.save(ta);
+
+        Candidate candidate = createTestCandidate();
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        CreateInterviewRequest request = new CreateInterviewRequest(
+                profileId, candidate.getId(), taId, "Java", start, end);
+
+        interviewService.createInterview(request);
+
+        String expectedSummary = "Java Interview - Test Candidate";
+
+        verify(emailService).sendInterviewInviteEmail(
+                eq("invite-test@example.com"), eq(expectedSummary), anyString(), anyString(), isNull());
+        verify(emailService).sendInterviewInviteEmail(
+                eq("candidate@example.com"), eq(expectedSummary), anyString(), anyString(), isNull());
+        verify(emailService).sendInterviewInviteEmail(
+                eq("ta-invite@example.com"), eq(expectedSummary), anyString(), anyString(), isNull());
     }
 }

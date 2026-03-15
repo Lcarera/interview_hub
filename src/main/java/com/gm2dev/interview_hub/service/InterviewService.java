@@ -31,6 +31,7 @@ public class InterviewService {
     private final ProfileRepository profileRepository;
     private final CandidateRepository candidateRepository;
     private final GoogleCalendarService googleCalendarService;
+    private final EmailService emailService;
     private final InterviewMapper interviewMapper;
 
     @Transactional
@@ -66,6 +67,8 @@ public class InterviewService {
         } catch (Exception e) {
             log.warn("Failed to create Google Calendar event for interview {}: {}", interview.getId(), e.getMessage());
         }
+
+        sendInviteEmails(interview);
 
         return interview;
     }
@@ -131,5 +134,36 @@ public class InterviewService {
         }
 
         interviewRepository.delete(interview);
+    }
+
+    private void sendInviteEmails(Interview interview) {
+        String summary = interview.getTechStack() + " Interview - "
+                + (interview.getCandidate() != null && interview.getCandidate().getName() != null
+                   ? interview.getCandidate().getName() : "Unknown");
+        String start = interview.getStartTime().toString();
+        String end = interview.getEndTime().toString();
+        String meetLink = null;
+
+        try {
+            emailService.sendInterviewInviteEmail(interview.getInterviewer().getEmail(), summary, start, end, meetLink);
+        } catch (Exception e) {
+            log.warn("Failed to send invite email to interviewer {}: {}", interview.getInterviewer().getEmail(), e.getMessage());
+        }
+
+        if (interview.getCandidate() != null && interview.getCandidate().getEmail() != null) {
+            try {
+                emailService.sendInterviewInviteEmail(interview.getCandidate().getEmail(), summary, start, end, meetLink);
+            } catch (Exception e) {
+                log.warn("Failed to send invite email to candidate {}: {}", interview.getCandidate().getEmail(), e.getMessage());
+            }
+        }
+
+        if (interview.getTalentAcquisition() != null) {
+            try {
+                emailService.sendInterviewInviteEmail(interview.getTalentAcquisition().getEmail(), summary, start, end, meetLink);
+            } catch (Exception e) {
+                log.warn("Failed to send invite email to talent acquisition {}: {}", interview.getTalentAcquisition().getEmail(), e.getMessage());
+            }
+        }
     }
 }
