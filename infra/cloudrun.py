@@ -73,7 +73,7 @@ backend_service = gcp.cloudrunv2.Service(
                     ),
                     gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
                         name="GOOGLE_CALENDAR_ID",
-                        value="primary",
+                        value="0cae724ce3870858a6213c7f351107891bd3c1265b336d3bfef5693c3a3cdc9d@group.calendar.google.com",
                     ),
                 ],
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
