@@ -9,9 +9,9 @@ project = gcp_config.require("project")
 region = gcp_config.require("region")
 domain = config.require("domain")
 
-# Image URIs are set at deploy time via CI — no fallback to prevent deploying placeholder containers
-backend_image = config.require("backend_image")
-frontend_image = config.require("frontend_image")
+# Image URIs are set at deploy time via CI; optional here so targeted `pulumi up` for secrets works
+backend_image = config.get("backend_image") or "placeholder"
+frontend_image = config.get("frontend_image") or "placeholder"
 backend_domain = config.get("backend_domain") or "i-hub-be.lcarera.dev"
 
 # Build secret env var list from Secret Manager secrets
@@ -54,6 +54,26 @@ backend_service = gcp.cloudrunv2.Service(
                     gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
                         name="FRONTEND_URL",
                         value=pulumi.Output.concat("https://", domain),
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="MAIL_HOST",
+                        value="smtp.resend.com",
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="MAIL_PORT",
+                        value="587",
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="MAIL_USERNAME",
+                        value="resend",
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="MAIL_FROM",
+                        value="noreply@lcarera.dev",
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="GOOGLE_CALENDAR_ID",
+                        value="0cae724ce3870858a6213c7f351107891bd3c1265b336d3bfef5693c3a3cdc9d@group.calendar.google.com",
                     ),
                 ],
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(

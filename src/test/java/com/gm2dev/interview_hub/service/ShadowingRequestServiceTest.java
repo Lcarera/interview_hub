@@ -49,8 +49,8 @@ class ShadowingRequestServiceTest {
 
     @BeforeEach
     void setUp() {
-        interviewer = new Profile(UUID.randomUUID(), "interviewer@example.com", Role.interviewer, null);
-        shadower = new Profile(UUID.randomUUID(), "shadower@example.com", Role.interviewer, null);
+        interviewer = new Profile(UUID.randomUUID(), "interviewer@example.com", Role.interviewer);
+        shadower = new Profile(UUID.randomUUID(), "shadower@example.com", Role.interviewer);
         interviewer = profileRepository.save(interviewer);
         shadower = profileRepository.save(shadower);
 
@@ -167,7 +167,7 @@ class ShadowingRequestServiceTest {
         shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
 
         verify(googleCalendarService).addAttendee(
-                interviewer, "gcal-shadow-event", "shadower@example.com");
+                "gcal-shadow-event", "shadower@example.com");
     }
 
     @Test

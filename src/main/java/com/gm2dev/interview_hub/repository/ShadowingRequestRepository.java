@@ -13,4 +13,6 @@ public interface ShadowingRequestRepository extends JpaRepository<ShadowingReque
     List<ShadowingRequest> findByInterviewId(UUID interviewId);
 
     List<ShadowingRequest> findByShadowerId(UUID shadowerId);
+
+    boolean existsByShadowerId(UUID shadowerId);
 }

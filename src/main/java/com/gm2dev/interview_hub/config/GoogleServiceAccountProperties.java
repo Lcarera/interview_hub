@@ -9,4 +9,5 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "app.google-service-account")
 public class GoogleServiceAccountProperties {
     private String keyJson;
+    private String calendarId = "primary";
 }

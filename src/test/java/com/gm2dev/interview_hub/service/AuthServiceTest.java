@@ -16,8 +16,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import com.nimbusds.jose.jwk.OctetSequenceKey;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.nimbusds.jose.jwk.JWKSet;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
@@ -53,11 +58,14 @@ class AuthServiceTest {
         jwtProps.setSigningSecret(SIGNING_SECRET);
         jwtProps.setExpirationSeconds(3600);
 
-        authService = spy(new AuthService(googleProps, jwtProps, profileRepository));
-
         byte[] keyBytes = SIGNING_SECRET.getBytes();
-        SecretKeySpec key = new SecretKeySpec(keyBytes, "HmacSHA256");
-        jwtDecoder = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
+        SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
+        OctetSequenceKey jwk = new OctetSequenceKey.Builder(secretKey).build();
+        JwtEncoder jwtEncoder = new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(jwk)));
+
+        authService = spy(new AuthService(googleProps, jwtProps, profileRepository, jwtEncoder));
+
+        jwtDecoder = NimbusJwtDecoder.withSecretKey(secretKey).macAlgorithm(MacAlgorithm.HS256).build();
     }
 
     @Test
@@ -133,7 +141,6 @@ class AuthServiceTest {
         Profile saved = captor.getValue();
         assertEquals(existingProfile.getId(), saved.getId());
         assertEquals("updated@gm2dev.com", saved.getEmail());
-        assertEquals("updated@gm2dev.com", saved.getCalendarEmail());
     }
 
     @Test
@@ -152,7 +159,6 @@ class AuthServiceTest {
         assertEquals("sub-new", saved.getGoogleSub());
         assertEquals("new@gm2dev.com", saved.getEmail());
         assertEquals(Role.interviewer, saved.getRole());
-        assertEquals("new@gm2dev.com", saved.getCalendarEmail());
     }
 
     private GoogleTokenResponse mockTokenResponse(String hostedDomain, String subject, String email) throws IOException {

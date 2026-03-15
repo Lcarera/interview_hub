@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -41,6 +43,9 @@ class AdminControllerTest {
 
     @MockitoBean
     private JwtDecoder jwtDecoder;
+
+    @MockitoBean
+    private JwtEncoder jwtEncoder;
 
     @MockitoBean
     private JwtProperties jwtProperties;
@@ -70,7 +75,7 @@ class AdminControllerTest {
 
     @Test
     void createUser_asAdmin_returns201() throws Exception {
-        ProfileDto dto = new ProfileDto(UUID.randomUUID(), "new@gm2dev.com", Role.interviewer, "new@gm2dev.com");
+        ProfileDto dto = new ProfileDto(UUID.randomUUID(), "new@gm2dev.com", Role.interviewer);
 
         when(adminService.createUser(any(CreateUserRequest.class))).thenReturn(dto);
 
@@ -117,5 +122,16 @@ class AdminControllerTest {
         mockMvc.perform(delete("/admin/users/" + userId)
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_admin"))))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void deleteUser_withExistingRelations_returns409() throws Exception {
+        UUID userId = UUID.randomUUID();
+        doThrow(new IllegalStateException("Cannot delete user with existing interviews"))
+                .when(adminService).deleteUser(userId);
+
+        mockMvc.perform(delete("/admin/users/" + userId)
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_admin"))))
+                .andExpect(status().isConflict());
     }
 }

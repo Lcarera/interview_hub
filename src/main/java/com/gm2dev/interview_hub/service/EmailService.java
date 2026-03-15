@@ -4,6 +4,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,7 @@ public class EmailService {
                 + "<p>Click the link below to reset your password:</p>"
                 + "<p><a href=\"" + link + "\">Reset Password</a></p>"
                 + "<p>This link expires in 1 hour. If you didn't request this, ignore this email.</p>";
-        sendHtmlEmail(toEmail, subject, body);
+        sendHtmlEmailQuietly(toEmail, subject, body);
     }
 
     public void sendTemporaryPasswordEmail(String toEmail, String temporaryPassword) {
@@ -55,16 +56,30 @@ public class EmailService {
 
     private void sendHtmlEmail(String to, String subject, String htmlBody) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true);
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(htmlBody, true);
-            mailSender.send(message);
-            log.debug("Sent email to {} with subject: {}", to, subject);
-        } catch (MessagingException e) {
-            log.error("Failed to send email to {}", to, e);
+            doSend(to, subject, htmlBody);
+        } catch (MessagingException | MailException e) {
+            throw new RuntimeException("Failed to send email to " + to + " (subject: " + subject + ")", e);
         }
+    }
+
+    private void sendHtmlEmailQuietly(String to, String subject, String htmlBody) {
+        try {
+            doSend(to, subject, htmlBody);
+        } catch (MessagingException | MailException e) {
+            log.error("Failed to send email to {} with subject: {}", to, subject, e);
+        }
+    }
+
+    // MimeMessageHelper setters throw MessagingException (checked).
+    // mailSender.send() throws MailException (unchecked) — callers catch both.
+    private void doSend(String to, String subject, String htmlBody) throws MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+        helper.setFrom(fromEmail);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(htmlBody, true);
+        mailSender.send(message);
+        log.debug("Sent email to {} with subject: {}", to, subject);
     }
 }

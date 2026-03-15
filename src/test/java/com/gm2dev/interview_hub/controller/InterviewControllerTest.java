@@ -25,6 +25,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -62,15 +63,15 @@ class InterviewControllerTest {
     private JwtDecoder jwtDecoder;
 
     @MockitoBean
+    private JwtEncoder jwtEncoder;
+
+    @MockitoBean
     private JwtProperties jwtProperties;
 
     private Interview buildInterview() {
         UUID id = UUID.randomUUID();
-        Profile interviewer = new Profile(UUID.randomUUID(), "test@example.com", Role.interviewer, null);
+        Profile interviewer = new Profile(UUID.randomUUID(), "test@example.com", Role.interviewer);
         interviewer.setGoogleSub("google-sub-123");
-        interviewer.setGoogleAccessToken("encrypted-access-token");
-        interviewer.setGoogleRefreshToken("encrypted-refresh-token");
-        interviewer.setGoogleTokenExpiry(Instant.now().plus(1, ChronoUnit.HOURS));
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
@@ -141,9 +142,6 @@ class InterviewControllerTest {
                 .andExpect(jsonPath("$.techStack").value("Java"))
                 .andExpect(jsonPath("$.interviewer.id").exists())
                 .andExpect(jsonPath("$.interviewer.email").exists())
-                .andExpect(jsonPath("$.interviewer.googleAccessToken").doesNotExist())
-                .andExpect(jsonPath("$.interviewer.googleRefreshToken").doesNotExist())
-                .andExpect(jsonPath("$.interviewer.googleTokenExpiry").doesNotExist())
                 .andExpect(jsonPath("$.interviewer.googleSub").doesNotExist())
                 .andExpect(jsonPath("$.googleEventId").doesNotExist());
     }
@@ -155,7 +153,7 @@ class InterviewControllerTest {
         ShadowingRequest request = new ShadowingRequest();
         request.setId(UUID.randomUUID());
         request.setInterview(interview);
-        request.setShadower(new Profile(UUID.randomUUID(), "shadow@example.com", Role.interviewer, null));
+        request.setShadower(new Profile(UUID.randomUUID(), "shadow@example.com", Role.interviewer));
         request.setStatus(ShadowingRequestStatus.PENDING);
 
         interview.setShadowingRequests(List.of(request));

@@ -17,16 +17,9 @@ import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import com.nimbusds.jose.jwk.OctetSequenceKey;
-import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
-import com.nimbusds.jose.jwk.JWKSet;
-
-import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.UUID;
@@ -48,15 +41,12 @@ public class AuthService {
 
     public AuthService(GoogleOAuthProperties googleProperties,
                        JwtProperties jwtProperties,
-                       ProfileRepository profileRepository) {
+                       ProfileRepository profileRepository,
+                       JwtEncoder jwtEncoder) {
         this.googleProperties = googleProperties;
         this.jwtProperties = jwtProperties;
         this.profileRepository = profileRepository;
-
-        byte[] keyBytes = jwtProperties.getSigningSecret().getBytes();
-        SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
-        OctetSequenceKey jwk = new OctetSequenceKey.Builder(secretKey).build();
-        this.jwtEncoder = new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(jwk)));
+        this.jwtEncoder = jwtEncoder;
     }
 
     public String buildAuthorizationUrl() {
@@ -101,7 +91,6 @@ public class AuthService {
                 });
 
         profile.setEmail(email);
-        profile.setCalendarEmail(email);
 
         profileRepository.save(profile);
 

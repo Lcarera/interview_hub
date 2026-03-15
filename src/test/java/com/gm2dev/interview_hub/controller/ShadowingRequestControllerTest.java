@@ -16,6 +16,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -48,11 +49,14 @@ class ShadowingRequestControllerTest {
     private JwtDecoder jwtDecoder;
 
     @MockitoBean
+    private JwtEncoder jwtEncoder;
+
+    @MockitoBean
     private JwtProperties jwtProperties;
 
     private ShadowingRequest buildShadowingRequest(ShadowingRequestStatus status) {
-        Profile shadower = new Profile(UUID.randomUUID(), "shadower@example.com", Role.interviewer, null);
-        Profile interviewer = new Profile(UUID.randomUUID(), "interviewer@example.com", Role.interviewer, null);
+        Profile shadower = new Profile(UUID.randomUUID(), "shadower@example.com", Role.interviewer);
+        Profile interviewer = new Profile(UUID.randomUUID(), "interviewer@example.com", Role.interviewer);
 
         Interview interview = new Interview();
         interview.setId(UUID.randomUUID());

@@ -10,7 +10,6 @@ import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -28,24 +27,9 @@ public class Profile {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    @Column(name = "calendar_email")
-    private String calendarEmail;
-
     @JsonIgnore
     @Column(name = "google_sub", unique = true)
     private String googleSub;
-
-    @JsonIgnore
-    @Column(name = "google_access_token")
-    private String googleAccessToken;
-
-    @JsonIgnore
-    @Column(name = "google_refresh_token")
-    private String googleRefreshToken;
-
-    @JsonIgnore
-    @Column(name = "google_token_expiry")
-    private Instant googleTokenExpiry;
 
     @JsonIgnore
     @Column(name = "password_hash")
@@ -54,10 +38,9 @@ public class Profile {
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
 
-    public Profile(UUID id, String email, Role role, String calendarEmail) {
+    public Profile(UUID id, String email, Role role) {
         this.id = id;
         this.email = email;
         this.role = role;
-        this.calendarEmail = calendarEmail;
     }
 }
