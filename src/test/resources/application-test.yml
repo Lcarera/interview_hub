@@ -12,10 +12,6 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
 
-  mail:
-    host: localhost
-    port: 2525
-
 app:
   frontend-url: http://localhost:4200
   google:
@@ -27,6 +23,8 @@ app:
     expiration-seconds: 3600
   mail:
     from: test@gm2dev.com
+  resend:
+    api-key: test-resend-api-key
   google-service-account:
     key-json: ""
     calendar-id: primary

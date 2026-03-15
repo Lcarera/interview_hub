@@ -12,10 +12,7 @@ services:
       JWT_SIGNING_SECRET: ${JWT_SIGNING_SECRET}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
-      MAIL_HOST: ${MAIL_HOST:-smtp.resend.com}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USERNAME: ${MAIL_USERNAME:-resend}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-noreply@lcarera.dev}
       GOOGLE_SERVICE_ACCOUNT_KEY: ${GOOGLE_SERVICE_ACCOUNT_KEY}
       GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-primary}
