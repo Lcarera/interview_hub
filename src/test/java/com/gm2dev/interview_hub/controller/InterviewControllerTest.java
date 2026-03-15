@@ -35,6 +35,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -95,15 +96,17 @@ class InterviewControllerTest {
         Interview interview = buildInterview();
         when(interviewService.createInterview(any(CreateInterviewRequest.class))).thenReturn(interview);
 
+        Instant futureStart = Instant.now().plus(30, ChronoUnit.DAYS);
+        Instant futureEnd = futureStart.plus(1, ChronoUnit.HOURS);
         String body = """
                 {
                     "interviewerId": "%s",
                     "candidateId": "%s",
                     "techStack": "Java",
-                    "startTime": "2027-03-15T10:00:00Z",
-                    "endTime": "2027-03-15T11:00:00Z"
+                    "startTime": "%s",
+                    "endTime": "%s"
                 }
-                """.formatted(UUID.randomUUID(), UUID.randomUUID());
+                """.formatted(UUID.randomUUID(), UUID.randomUUID(), futureStart, futureEnd);
 
         mockMvc.perform(post("/api/interviews")
                         .with(jwt())

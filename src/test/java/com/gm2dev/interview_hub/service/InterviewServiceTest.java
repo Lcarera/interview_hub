@@ -240,7 +240,7 @@ class InterviewServiceTest {
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
         when(googleCalendarService.createEvent(any(Interview.class)))
-                .thenReturn("gcal-event-123");
+                .thenReturn(new GoogleCalendarService.CalendarEventResult("gcal-event-123", null));
 
         Interview result = interviewService.createInterview(
                 new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
@@ -281,7 +281,7 @@ class InterviewServiceTest {
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
         when(googleCalendarService.createEvent(any(Interview.class)))
-                .thenReturn("gcal-upd-event");
+                .thenReturn(new GoogleCalendarService.CalendarEventResult("gcal-upd-event", null));
 
         Interview created = interviewService.createInterview(
                 new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
@@ -307,7 +307,7 @@ class InterviewServiceTest {
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
         when(googleCalendarService.createEvent(any(Interview.class)))
-                .thenReturn("gcal-del-event");
+                .thenReturn(new GoogleCalendarService.CalendarEventResult("gcal-del-event", null));
 
         Interview created = interviewService.createInterview(
                 new CreateInterviewRequest(profileId, candidate.getId(), null, "Rust", start, end));
@@ -469,6 +469,162 @@ class InterviewServiceTest {
                 eq("del-email@example.com"), eq(expectedSummary));
         verify(emailService).sendInterviewCancellationEmail(
                 eq("candidate@example.com"), eq(expectedSummary));
+    }
+
+    @Test
+    void createInterview_withCandidateWithoutEmail_sendsInviteOnlyToInterviewer() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "no-email-test@example.com", Role.interviewer);
+        profileRepository.save(interviewer);
+
+        Candidate candidate = candidateRepository.save(
+                new Candidate(null, "No Email Candidate", null, null, null, null));
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        interviewService.createInterview(
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
+
+        verify(emailService).sendInterviewInviteEmail(
+                eq("no-email-test@example.com"), anyString(), anyString(), anyString(), isNull());
+        verify(emailService, never()).sendInterviewInviteEmail(
+                eq((String) null), anyString(), anyString(), anyString(), any());
+    }
+
+    @Test
+    void createInterview_withCandidateWithoutName_usesUnknownInSummary() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "no-name-test@example.com", Role.interviewer);
+        profileRepository.save(interviewer);
+
+        Candidate candidate = candidateRepository.save(
+                new Candidate(null, null, "noname@example.com", null, null, null));
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        interviewService.createInterview(
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
+
+        verify(emailService).sendInterviewInviteEmail(
+                eq("no-name-test@example.com"), eq("Java Interview - Unknown"), anyString(), anyString(), isNull());
+    }
+
+    @Test
+    void updateInterview_withTalentAcquisition_sendsUpdateEmailsToAll() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "upd-ta-email@example.com", Role.interviewer);
+        profileRepository.save(interviewer);
+
+        UUID taId = UUID.randomUUID();
+        Profile ta = new Profile(taId, "ta-upd-email@example.com", Role.interviewer);
+        profileRepository.save(ta);
+
+        Candidate candidate = createTestCandidate();
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        Interview created = interviewService.createInterview(
+                new CreateInterviewRequest(profileId, candidate.getId(), taId, "Java", start, end));
+
+        reset(emailService);
+
+        Instant newStart = Instant.now().plus(2, ChronoUnit.DAYS);
+        Instant newEnd = newStart.plus(1, ChronoUnit.HOURS);
+
+        interviewService.updateInterview(created.getId(), new UpdateInterviewRequest(
+                candidate.getId(), taId, "Kotlin", newStart, newEnd, InterviewStatus.SCHEDULED), profileId);
+
+        verify(emailService).sendInterviewUpdateEmail(
+                eq("upd-ta-email@example.com"), anyString(), anyString(), anyString());
+        verify(emailService).sendInterviewUpdateEmail(
+                eq("candidate@example.com"), anyString(), anyString(), anyString());
+        verify(emailService).sendInterviewUpdateEmail(
+                eq("ta-upd-email@example.com"), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void deleteInterview_withTalentAcquisition_sendsCancellationEmailsToAll() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "del-ta-email@example.com", Role.interviewer);
+        profileRepository.save(interviewer);
+
+        UUID taId = UUID.randomUUID();
+        Profile ta = new Profile(taId, "ta-del-email@example.com", Role.interviewer);
+        profileRepository.save(ta);
+
+        Candidate candidate = createTestCandidate();
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        Interview created = interviewService.createInterview(
+                new CreateInterviewRequest(profileId, candidate.getId(), taId, "Rust", start, end));
+
+        reset(emailService);
+
+        interviewService.deleteInterview(created.getId(), profileId);
+
+        verify(emailService).sendInterviewCancellationEmail(
+                eq("del-ta-email@example.com"), anyString());
+        verify(emailService).sendInterviewCancellationEmail(
+                eq("candidate@example.com"), anyString());
+        verify(emailService).sendInterviewCancellationEmail(
+                eq("ta-del-email@example.com"), anyString());
+    }
+
+    @Test
+    void updateInterview_withCandidateWithoutEmail_skipsEmailToCandidate() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "upd-noemail@example.com", Role.interviewer);
+        profileRepository.save(interviewer);
+
+        Candidate candidate = candidateRepository.save(
+                new Candidate(null, "No Email", null, null, null, null));
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        Interview created = interviewService.createInterview(
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
+
+        reset(emailService);
+
+        Instant newStart = Instant.now().plus(2, ChronoUnit.DAYS);
+        Instant newEnd = newStart.plus(1, ChronoUnit.HOURS);
+
+        interviewService.updateInterview(created.getId(), new UpdateInterviewRequest(
+                candidate.getId(), null, "Kotlin", newStart, newEnd, InterviewStatus.SCHEDULED), profileId);
+
+        verify(emailService).sendInterviewUpdateEmail(
+                eq("upd-noemail@example.com"), anyString(), anyString(), anyString());
+        verify(emailService, times(1)).sendInterviewUpdateEmail(anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void deleteInterview_withCandidateWithoutEmail_skipsEmailToCandidate() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "del-noemail@example.com", Role.interviewer);
+        profileRepository.save(interviewer);
+
+        Candidate candidate = candidateRepository.save(
+                new Candidate(null, "No Email", null, null, null, null));
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        Interview created = interviewService.createInterview(
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Rust", start, end));
+
+        reset(emailService);
+
+        interviewService.deleteInterview(created.getId(), profileId);
+
+        verify(emailService).sendInterviewCancellationEmail(
+                eq("del-noemail@example.com"), anyString());
+        verify(emailService, times(1)).sendInterviewCancellationEmail(anyString(), anyString());
     }
 
     @Test

@@ -96,9 +96,9 @@ class GoogleCalendarServiceTest {
         when(insert.setSendUpdates("none")).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
-        String eventId = googleCalendarService.createEvent(interview);
+        GoogleCalendarService.CalendarEventResult result = googleCalendarService.createEvent(interview);
 
-        assertEquals("google-event-id-123", eventId);
+        assertEquals("google-event-id-123", result.eventId());
         verify(events).insert(eq("test-calendar-id"), any(Event.class));
     }
 

@@ -60,15 +60,17 @@ public class InterviewService {
 
         interview = interviewRepository.save(interview);
 
+        String meetLink = null;
         try {
-            String googleEventId = googleCalendarService.createEvent(interview);
-            interview.setGoogleEventId(googleEventId);
+            GoogleCalendarService.CalendarEventResult calendarResult = googleCalendarService.createEvent(interview);
+            interview.setGoogleEventId(calendarResult.eventId());
+            meetLink = calendarResult.meetLink();
             interview = interviewRepository.save(interview);
         } catch (Exception e) {
             log.warn("Failed to create Google Calendar event for interview {}: {}", interview.getId(), e.getMessage());
         }
 
-        sendInviteEmails(interview);
+        sendInviteEmails(interview, meetLink);
 
         return interview;
     }
@@ -140,38 +142,25 @@ public class InterviewService {
         interviewRepository.delete(interview);
     }
 
-    private String buildSummary(Interview interview) {
-        return interview.getTechStack() + " Interview - "
-                + (interview.getCandidate() != null && interview.getCandidate().getName() != null
-                   ? interview.getCandidate().getName() : "Unknown");
+    static String buildSummary(Interview interview) {
+        String candidateName = interview.getCandidate() != null && interview.getCandidate().getName() != null
+                ? interview.getCandidate().getName() : "Unknown";
+        return interview.getTechStack() + " Interview - " + candidateName;
     }
 
-    private void sendInviteEmails(Interview interview) {
+    private void sendInviteEmails(Interview interview, String meetLink) {
         String summary = buildSummary(interview);
         String start = interview.getStartTime().toString();
         String end = interview.getEndTime().toString();
-        String meetLink = null;
 
-        try {
-            emailService.sendInterviewInviteEmail(interview.getInterviewer().getEmail(), summary, start, end, meetLink);
-        } catch (Exception e) {
-            log.warn("Failed to send invite email to interviewer {}: {}", interview.getInterviewer().getEmail(), e.getMessage());
-        }
+        emailService.sendInterviewInviteEmail(interview.getInterviewer().getEmail(), summary, start, end, meetLink);
 
-        if (interview.getCandidate() != null && interview.getCandidate().getEmail() != null) {
-            try {
-                emailService.sendInterviewInviteEmail(interview.getCandidate().getEmail(), summary, start, end, meetLink);
-            } catch (Exception e) {
-                log.warn("Failed to send invite email to candidate {}: {}", interview.getCandidate().getEmail(), e.getMessage());
-            }
+        if (interview.getCandidate().getEmail() != null) {
+            emailService.sendInterviewInviteEmail(interview.getCandidate().getEmail(), summary, start, end, meetLink);
         }
 
         if (interview.getTalentAcquisition() != null) {
-            try {
-                emailService.sendInterviewInviteEmail(interview.getTalentAcquisition().getEmail(), summary, start, end, meetLink);
-            } catch (Exception e) {
-                log.warn("Failed to send invite email to talent acquisition {}: {}", interview.getTalentAcquisition().getEmail(), e.getMessage());
-            }
+            emailService.sendInterviewInviteEmail(interview.getTalentAcquisition().getEmail(), summary, start, end, meetLink);
         }
     }
 
@@ -180,52 +169,28 @@ public class InterviewService {
         String start = interview.getStartTime().toString();
         String end = interview.getEndTime().toString();
 
-        try {
-            emailService.sendInterviewUpdateEmail(interview.getInterviewer().getEmail(), summary, start, end);
-        } catch (Exception e) {
-            log.warn("Failed to send update email to interviewer {}: {}", interview.getInterviewer().getEmail(), e.getMessage());
-        }
+        emailService.sendInterviewUpdateEmail(interview.getInterviewer().getEmail(), summary, start, end);
 
-        if (interview.getCandidate() != null && interview.getCandidate().getEmail() != null) {
-            try {
-                emailService.sendInterviewUpdateEmail(interview.getCandidate().getEmail(), summary, start, end);
-            } catch (Exception e) {
-                log.warn("Failed to send update email to candidate {}: {}", interview.getCandidate().getEmail(), e.getMessage());
-            }
+        if (interview.getCandidate().getEmail() != null) {
+            emailService.sendInterviewUpdateEmail(interview.getCandidate().getEmail(), summary, start, end);
         }
 
         if (interview.getTalentAcquisition() != null) {
-            try {
-                emailService.sendInterviewUpdateEmail(interview.getTalentAcquisition().getEmail(), summary, start, end);
-            } catch (Exception e) {
-                log.warn("Failed to send update email to talent acquisition {}: {}", interview.getTalentAcquisition().getEmail(), e.getMessage());
-            }
+            emailService.sendInterviewUpdateEmail(interview.getTalentAcquisition().getEmail(), summary, start, end);
         }
     }
 
     private void sendCancellationEmails(Interview interview) {
         String summary = buildSummary(interview);
 
-        try {
-            emailService.sendInterviewCancellationEmail(interview.getInterviewer().getEmail(), summary);
-        } catch (Exception e) {
-            log.warn("Failed to send cancellation email to interviewer {}: {}", interview.getInterviewer().getEmail(), e.getMessage());
-        }
+        emailService.sendInterviewCancellationEmail(interview.getInterviewer().getEmail(), summary);
 
-        if (interview.getCandidate() != null && interview.getCandidate().getEmail() != null) {
-            try {
-                emailService.sendInterviewCancellationEmail(interview.getCandidate().getEmail(), summary);
-            } catch (Exception e) {
-                log.warn("Failed to send cancellation email to candidate {}: {}", interview.getCandidate().getEmail(), e.getMessage());
-            }
+        if (interview.getCandidate().getEmail() != null) {
+            emailService.sendInterviewCancellationEmail(interview.getCandidate().getEmail(), summary);
         }
 
         if (interview.getTalentAcquisition() != null) {
-            try {
-                emailService.sendInterviewCancellationEmail(interview.getTalentAcquisition().getEmail(), summary);
-            } catch (Exception e) {
-                log.warn("Failed to send cancellation email to talent acquisition {}: {}", interview.getTalentAcquisition().getEmail(), e.getMessage());
-            }
+            emailService.sendInterviewCancellationEmail(interview.getTalentAcquisition().getEmail(), summary);
         }
     }
 }

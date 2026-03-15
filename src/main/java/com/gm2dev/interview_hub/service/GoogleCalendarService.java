@@ -29,13 +29,15 @@ import java.util.UUID;
 @Slf4j
 public class GoogleCalendarService {
 
+    public record CalendarEventResult(String eventId, String meetLink) {}
+
     private final GoogleServiceAccountProperties serviceAccountProperties;
 
     public GoogleCalendarService(GoogleServiceAccountProperties serviceAccountProperties) {
         this.serviceAccountProperties = serviceAccountProperties;
     }
 
-    public String createEvent(Interview interview) throws IOException {
+    public CalendarEventResult createEvent(Interview interview) throws IOException {
         Calendar calendar = buildCalendarClient();
         String calendarId = serviceAccountProperties.getCalendarId();
         Event event = buildEvent(interview);
@@ -45,7 +47,7 @@ public class GoogleCalendarService {
                 .setSendUpdates("none")
                 .execute();
         log.debug("Created Google Calendar event: {}", created.getId());
-        return created.getId();
+        return new CalendarEventResult(created.getId(), created.getHangoutLink());
     }
 
     public void updateEvent(Interview interview) throws IOException {

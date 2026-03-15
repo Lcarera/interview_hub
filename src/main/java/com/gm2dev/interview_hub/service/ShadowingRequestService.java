@@ -81,19 +81,13 @@ public class ShadowingRequestService {
             }
         }
 
-        String summary = interview.getTechStack() + " Interview - "
-                + (interview.getCandidate() != null && interview.getCandidate().getName() != null
-                   ? interview.getCandidate().getName() : "Unknown");
+        String summary = InterviewService.buildSummary(interview);
 
-        try {
-            emailService.sendShadowingApprovedEmail(
-                    request.getShadower().getEmail(),
-                    summary,
-                    interview.getStartTime().toString(),
-                    interview.getEndTime().toString());
-        } catch (Exception e) {
-            log.warn("Failed to send shadowing approval email: {}", e.getMessage());
-        }
+        emailService.sendShadowingApprovedEmail(
+                request.getShadower().getEmail(),
+                summary,
+                interview.getStartTime().toString(),
+                interview.getEndTime().toString());
 
         return saved;
     }
