@@ -42,7 +42,7 @@ public class GoogleCalendarService {
 
         Event created = calendar.events().insert(calendarId, event)
                 .setConferenceDataVersion(1)
-                .setSendUpdates("all")
+                .setSendUpdates("none")
                 .execute();
         log.debug("Created Google Calendar event: {}", created.getId());
         return created.getId();
@@ -55,7 +55,7 @@ public class GoogleCalendarService {
 
         calendar.events().update(calendarId, interview.getGoogleEventId(), event)
                 .setConferenceDataVersion(1)
-                .setSendUpdates("all")
+                .setSendUpdates("none")
                 .execute();
         log.debug("Updated Google Calendar event: {}", interview.getGoogleEventId());
     }
@@ -83,7 +83,7 @@ public class GoogleCalendarService {
 
         Event patch = new Event().setAttendees(attendees);
         calendar.events().patch(calendarId, googleEventId, patch)
-                .setSendUpdates("all")
+                .setSendUpdates("none")
                 .execute();
 
         log.debug("Added attendee {} to event {}", attendeeEmail, googleEventId);

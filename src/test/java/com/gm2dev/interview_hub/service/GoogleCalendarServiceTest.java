@@ -93,7 +93,7 @@ class GoogleCalendarServiceTest {
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("test-calendar-id"), any(Event.class))).thenReturn(insert);
         when(insert.setConferenceDataVersion(1)).thenReturn(insert);
-        when(insert.setSendUpdates("all")).thenReturn(insert);
+        when(insert.setSendUpdates("none")).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         String eventId = googleCalendarService.createEvent(interview);
@@ -111,7 +111,7 @@ class GoogleCalendarServiceTest {
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("test-calendar-id"), any(Event.class))).thenReturn(insert);
         when(insert.setConferenceDataVersion(1)).thenReturn(insert);
-        when(insert.setSendUpdates("all")).thenReturn(insert);
+        when(insert.setSendUpdates("none")).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         googleCalendarService.createEvent(interview);
@@ -128,7 +128,7 @@ class GoogleCalendarServiceTest {
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("test-calendar-id"), any(Event.class))).thenReturn(insert);
         when(insert.setConferenceDataVersion(1)).thenReturn(insert);
-        when(insert.setSendUpdates("all")).thenReturn(insert);
+        when(insert.setSendUpdates("none")).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         googleCalendarService.createEvent(interview);
@@ -153,7 +153,7 @@ class GoogleCalendarServiceTest {
         when(calendarClient.events()).thenReturn(events);
         when(events.update(eq("test-calendar-id"), eq("existing-event-id"), any(Event.class))).thenReturn(update);
         when(update.setConferenceDataVersion(1)).thenReturn(update);
-        when(update.setSendUpdates("all")).thenReturn(update);
+        when(update.setSendUpdates("none")).thenReturn(update);
         when(update.execute()).thenReturn(updatedEvent);
 
         googleCalendarService.updateEvent(interview);
@@ -183,7 +183,7 @@ class GoogleCalendarServiceTest {
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("test-calendar-id"), any(Event.class))).thenReturn(insert);
         when(insert.setConferenceDataVersion(1)).thenReturn(insert);
-        when(insert.setSendUpdates("all")).thenReturn(insert);
+        when(insert.setSendUpdates("none")).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         googleCalendarService.createEvent(interview);
@@ -208,7 +208,7 @@ class GoogleCalendarServiceTest {
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("test-calendar-id"), any(Event.class))).thenReturn(insert);
         when(insert.setConferenceDataVersion(1)).thenReturn(insert);
-        when(insert.setSendUpdates("all")).thenReturn(insert);
+        when(insert.setSendUpdates("none")).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         googleCalendarService.createEvent(interview);
@@ -228,7 +228,7 @@ class GoogleCalendarServiceTest {
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("test-calendar-id"), any(Event.class))).thenReturn(insert);
         when(insert.setConferenceDataVersion(1)).thenReturn(insert);
-        when(insert.setSendUpdates("all")).thenReturn(insert);
+        when(insert.setSendUpdates("none")).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         googleCalendarService.createEvent(interview);
@@ -253,7 +253,7 @@ class GoogleCalendarServiceTest {
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("test-calendar-id"), any(Event.class))).thenReturn(insert);
         when(insert.setConferenceDataVersion(1)).thenReturn(insert);
-        when(insert.setSendUpdates("all")).thenReturn(insert);
+        when(insert.setSendUpdates("none")).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         googleCalendarService.createEvent(interview);
@@ -281,7 +281,7 @@ class GoogleCalendarServiceTest {
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("test-calendar-id"), any(Event.class))).thenReturn(insert);
         when(insert.setConferenceDataVersion(1)).thenReturn(insert);
-        when(insert.setSendUpdates("all")).thenReturn(insert);
+        when(insert.setSendUpdates("none")).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         googleCalendarService.createEvent(interview);
@@ -307,7 +307,7 @@ class GoogleCalendarServiceTest {
         when(events.get("test-calendar-id", "event-with-attendees")).thenReturn(getOp);
         when(getOp.execute()).thenReturn(existingEvent);
         when(events.patch(eq("test-calendar-id"), eq("event-with-attendees"), any(Event.class))).thenReturn(patchOp);
-        when(patchOp.setSendUpdates("all")).thenReturn(patchOp);
+        when(patchOp.setSendUpdates("none")).thenReturn(patchOp);
         when(patchOp.execute()).thenReturn(patchedEvent);
 
         googleCalendarService.addAttendee("event-with-attendees", "shadower@gm2dev.com");
@@ -332,7 +332,7 @@ class GoogleCalendarServiceTest {
         when(events.get("test-calendar-id", "event-null-attendees")).thenReturn(getOp);
         when(getOp.execute()).thenReturn(existingEvent);
         when(events.patch(eq("test-calendar-id"), eq("event-null-attendees"), any(Event.class))).thenReturn(patchOp);
-        when(patchOp.setSendUpdates("all")).thenReturn(patchOp);
+        when(patchOp.setSendUpdates("none")).thenReturn(patchOp);
         when(patchOp.execute()).thenReturn(patchedEvent);
 
         googleCalendarService.addAttendee("event-null-attendees", "new@gm2dev.com");
@@ -353,7 +353,7 @@ class GoogleCalendarServiceTest {
         when(calendarClient.events()).thenReturn(events);
         when(events.insert(eq("test-calendar-id"), any(Event.class))).thenReturn(insert);
         when(insert.setConferenceDataVersion(1)).thenReturn(insert);
-        when(insert.setSendUpdates("all")).thenReturn(insert);
+        when(insert.setSendUpdates("none")).thenReturn(insert);
         when(insert.execute()).thenReturn(createdEvent);
 
         googleCalendarService.createEvent(interview);
