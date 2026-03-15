@@ -414,6 +414,64 @@ class InterviewServiceTest {
     }
 
     @Test
+    void updateInterview_sendsUpdateEmailsToAttendees() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "upd-email@example.com", Role.interviewer);
+        profileRepository.save(interviewer);
+
+        Candidate candidate = createTestCandidate();
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        Interview created = interviewService.createInterview(
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
+
+        // Reset mock to ignore invite emails from createInterview
+        reset(emailService);
+
+        Instant newStart = Instant.now().plus(2, ChronoUnit.DAYS);
+        Instant newEnd = newStart.plus(1, ChronoUnit.HOURS);
+
+        interviewService.updateInterview(created.getId(), new UpdateInterviewRequest(
+                candidate.getId(), null, "Kotlin", newStart, newEnd, InterviewStatus.SCHEDULED), profileId);
+
+        String expectedSummary = "Kotlin Interview - Test Candidate";
+
+        verify(emailService).sendInterviewUpdateEmail(
+                eq("upd-email@example.com"), eq(expectedSummary), anyString(), anyString());
+        verify(emailService).sendInterviewUpdateEmail(
+                eq("candidate@example.com"), eq(expectedSummary), anyString(), anyString());
+    }
+
+    @Test
+    void deleteInterview_sendsCancellationEmailsToAttendees() {
+        UUID profileId = UUID.randomUUID();
+        Profile interviewer = new Profile(profileId, "del-email@example.com", Role.interviewer);
+        profileRepository.save(interviewer);
+
+        Candidate candidate = createTestCandidate();
+
+        Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
+        Instant end = start.plus(1, ChronoUnit.HOURS);
+
+        Interview created = interviewService.createInterview(
+                new CreateInterviewRequest(profileId, candidate.getId(), null, "Rust", start, end));
+
+        // Reset mock to ignore invite emails from createInterview
+        reset(emailService);
+
+        interviewService.deleteInterview(created.getId(), profileId);
+
+        String expectedSummary = "Rust Interview - Test Candidate";
+
+        verify(emailService).sendInterviewCancellationEmail(
+                eq("del-email@example.com"), eq(expectedSummary));
+        verify(emailService).sendInterviewCancellationEmail(
+                eq("candidate@example.com"), eq(expectedSummary));
+    }
+
+    @Test
     void createInterview_sendsInviteEmailsToAttendees() {
         UUID profileId = UUID.randomUUID();
         Profile interviewer = new Profile(profileId, "invite-test@example.com", Role.interviewer);
