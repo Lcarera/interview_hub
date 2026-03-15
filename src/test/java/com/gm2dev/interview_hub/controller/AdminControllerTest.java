@@ -75,7 +75,7 @@ class AdminControllerTest {
 
     @Test
     void createUser_asAdmin_returns201() throws Exception {
-        ProfileDto dto = new ProfileDto(UUID.randomUUID(), "new@gm2dev.com", Role.interviewer, "new@gm2dev.com");
+        ProfileDto dto = new ProfileDto(UUID.randomUUID(), "new@gm2dev.com", Role.interviewer);
 
         when(adminService.createUser(any(CreateUserRequest.class))).thenReturn(dto);
 

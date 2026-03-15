@@ -72,7 +72,6 @@ public class ShadowingRequestService {
         if (interview.getGoogleEventId() != null) {
             try {
                 googleCalendarService.addAttendee(
-                        interview.getInterviewer(),
                         interview.getGoogleEventId(),
                         request.getShadower().getEmail());
             } catch (Exception e) {

@@ -129,7 +129,7 @@ class CandidateServiceTest {
                 new CandidateRequest("Jane Doe", "jane@example.com", null, null, null)
         );
 
-        Profile interviewer = new Profile(UUID.randomUUID(), "interviewer@gm2dev.com", Role.interviewer, null);
+        Profile interviewer = new Profile(UUID.randomUUID(), "interviewer@gm2dev.com", Role.interviewer);
         profileRepository.save(interviewer);
         entityManager.flush();
 

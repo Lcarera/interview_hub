@@ -60,7 +60,7 @@ public class InterviewService {
         interview = interviewRepository.save(interview);
 
         try {
-            String googleEventId = googleCalendarService.createEvent(interviewer, interview);
+            String googleEventId = googleCalendarService.createEvent(interview);
             interview.setGoogleEventId(googleEventId);
             interview = interviewRepository.save(interview);
         } catch (Exception e) {
@@ -106,7 +106,7 @@ public class InterviewService {
 
         if (interview.getGoogleEventId() != null) {
             try {
-                googleCalendarService.updateEvent(interview.getInterviewer(), interview);
+                googleCalendarService.updateEvent(interview);
             } catch (Exception e) {
                 log.warn("Failed to update Google Calendar event {}: {}", interview.getGoogleEventId(), e.getMessage());
             }
@@ -124,7 +124,7 @@ public class InterviewService {
 
         if (interview.getGoogleEventId() != null) {
             try {
-                googleCalendarService.deleteEvent(interview.getInterviewer(), interview.getGoogleEventId());
+                googleCalendarService.deleteEvent(interview.getGoogleEventId());
             } catch (Exception e) {
                 log.warn("Failed to delete Google Calendar event {}: {}", interview.getGoogleEventId(), e.getMessage());
             }

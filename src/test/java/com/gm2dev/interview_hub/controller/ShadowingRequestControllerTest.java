@@ -55,8 +55,8 @@ class ShadowingRequestControllerTest {
     private JwtProperties jwtProperties;
 
     private ShadowingRequest buildShadowingRequest(ShadowingRequestStatus status) {
-        Profile shadower = new Profile(UUID.randomUUID(), "shadower@example.com", Role.interviewer, null);
-        Profile interviewer = new Profile(UUID.randomUUID(), "interviewer@example.com", Role.interviewer, null);
+        Profile shadower = new Profile(UUID.randomUUID(), "shadower@example.com", Role.interviewer);
+        Profile interviewer = new Profile(UUID.randomUUID(), "interviewer@example.com", Role.interviewer);
 
         Interview interview = new Interview();
         interview.setId(UUID.randomUUID());

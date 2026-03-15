@@ -66,7 +66,7 @@ class AdminServiceTest {
         profile.setEmail("user@gm2dev.com");
         profile.setRole(Role.interviewer);
 
-        ProfileDto dto = new ProfileDto(profile.getId(), profile.getEmail(), Role.interviewer, null);
+        ProfileDto dto = new ProfileDto(profile.getId(), profile.getEmail(), Role.interviewer);
 
         Pageable pageable = PageRequest.of(0, 20);
         when(profileRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(profile)));
@@ -85,11 +85,10 @@ class AdminServiceTest {
         Profile mappedProfile = new Profile();
         mappedProfile.setId(UUID.randomUUID());
         mappedProfile.setEmail("new@gm2dev.com");
-        mappedProfile.setCalendarEmail("new@gm2dev.com");
         mappedProfile.setRole(Role.interviewer);
         mappedProfile.setEmailVerified(true);
 
-        ProfileDto dto = new ProfileDto(mappedProfile.getId(), "new@gm2dev.com", Role.interviewer, "new@gm2dev.com");
+        ProfileDto dto = new ProfileDto(mappedProfile.getId(), "new@gm2dev.com", Role.interviewer);
 
         when(profileRepository.findByEmail("new@gm2dev.com")).thenReturn(Optional.empty());
         when(profileMapper.toProfileFromCreateUserRequest(request)).thenReturn(mappedProfile);
@@ -121,7 +120,7 @@ class AdminServiceTest {
         mappedProfile.setRole(Role.interviewer);
         mappedProfile.setEmailVerified(true);
 
-        ProfileDto dto = new ProfileDto(mappedProfile.getId(), "user@lcarera.dev", Role.interviewer, null);
+        ProfileDto dto = new ProfileDto(mappedProfile.getId(), "user@lcarera.dev", Role.interviewer);
 
         when(profileRepository.findByEmail("user@lcarera.dev")).thenReturn(Optional.empty());
         when(profileMapper.toProfileFromCreateUserRequest(request)).thenReturn(mappedProfile);
@@ -139,7 +138,6 @@ class AdminServiceTest {
         Profile mappedProfile = new Profile();
         mappedProfile.setId(UUID.randomUUID());
         mappedProfile.setEmail("new@gm2dev.com");
-        mappedProfile.setCalendarEmail("new@gm2dev.com");
         mappedProfile.setRole(Role.interviewer);
         mappedProfile.setEmailVerified(true);
 
@@ -244,11 +242,10 @@ class AdminServiceTest {
         Profile mappedProfile = new Profile();
         mappedProfile.setId(UUID.randomUUID());
         mappedProfile.setEmail("new@gm2dev.com");
-        mappedProfile.setCalendarEmail("new@gm2dev.com");
         mappedProfile.setRole(Role.interviewer);
         mappedProfile.setEmailVerified(true);
 
-        ProfileDto dto = new ProfileDto(mappedProfile.getId(), "new@gm2dev.com", Role.interviewer, "new@gm2dev.com");
+        ProfileDto dto = new ProfileDto(mappedProfile.getId(), "new@gm2dev.com", Role.interviewer);
 
         when(profileRepository.findByEmail("new@gm2dev.com")).thenReturn(Optional.empty());
         when(profileMapper.toProfileFromCreateUserRequest(request)).thenReturn(mappedProfile);

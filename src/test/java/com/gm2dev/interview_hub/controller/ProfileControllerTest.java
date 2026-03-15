@@ -47,7 +47,7 @@ class ProfileControllerTest {
     private JwtProperties jwtProperties;
 
     private Profile buildProfile(UUID id) {
-        return new Profile(id, "test@gm2dev.com", Role.interviewer, "test@gm2dev.com");
+        return new Profile(id, "test@gm2dev.com", Role.interviewer);
     }
 
     @Test
@@ -62,8 +62,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.id").value(profileId.toString()))
                 .andExpect(jsonPath("$.email").value("test@gm2dev.com"))
                 .andExpect(jsonPath("$.role").value("interviewer"))
-                .andExpect(jsonPath("$.googleSub").doesNotExist())
-                .andExpect(jsonPath("$.googleAccessToken").doesNotExist());
+                .andExpect(jsonPath("$.googleSub").doesNotExist());
     }
 
     @Test
@@ -79,8 +78,8 @@ class ProfileControllerTest {
 
     @Test
     void listProfiles_returns200WithList() throws Exception {
-        Profile p1 = new Profile(UUID.randomUUID(), "a@gm2dev.com", Role.interviewer, null);
-        Profile p2 = new Profile(UUID.randomUUID(), "b@gm2dev.com", Role.interviewer, null);
+        Profile p1 = new Profile(UUID.randomUUID(), "a@gm2dev.com", Role.interviewer);
+        Profile p2 = new Profile(UUID.randomUUID(), "b@gm2dev.com", Role.interviewer);
         when(profileService.findAll()).thenReturn(List.of(p1, p2));
 
         mockMvc.perform(get("/api/profiles")
