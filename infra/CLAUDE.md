@@ -17,7 +17,7 @@ pulumi stack output        # show exported values (registry_url, backend_url, fr
 - `__main__.py` — Entrypoint. Imports all modules for side effects and exports stack outputs.
 - `registry.py` — Artifact Registry repo (`interview-hub`) for Docker images.
 - `iam.py` — Cloud Run service account (`interview-hub-cloudrun`) with Secret Manager access.
-- `secrets.py` — GCP Secret Manager secrets (8 secrets: DB creds, Google OAuth, JWT, token encryption, mail password). Secret values are set manually via `gcloud`, not in code.
+- `secrets.py` — GCP Secret Manager secrets (8 secrets: DB creds, Google OAuth, JWT, mail password, service account key). Secret values are set manually via `gcloud`, not in code.
 - `cloudrun.py` — Two Cloud Run v2 services (`backend`, `frontend`) with env vars, health probes, and public invoker bindings.
 
 ## Config Values (`Pulumi.prod.yaml`)

@@ -4,7 +4,7 @@ import pulumi_gcp as gcp
 gcp_config = pulumi.Config("gcp")
 project = gcp_config.require("project")
 
-# These are the 8 env vars the backend needs (values set manually via gcloud)
+# These are the secrets the backend needs (values set manually via gcloud)
 _SECRET_NAMES = [
     "DB_URL",
     "DB_USERNAME",
@@ -13,6 +13,7 @@ _SECRET_NAMES = [
     "GOOGLE_CLIENT_SECRET",
     "JWT_SIGNING_SECRET",
     "MAIL_PASSWORD",
+    "GOOGLE_SERVICE_ACCOUNT_KEY",
 ]
 
 secrets: dict[str, gcp.secretmanager.Secret] = {}

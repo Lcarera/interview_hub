@@ -71,6 +71,10 @@ backend_service = gcp.cloudrunv2.Service(
                         name="MAIL_FROM",
                         value="noreply@lcarera.dev",
                     ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="GOOGLE_CALENDAR_ID",
+                        value="primary",
+                    ),
                 ],
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
                     limits={"memory": "1Gi", "cpu": "1000m"},
