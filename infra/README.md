@@ -47,7 +47,7 @@ Pulumi provisions the following GCP resources:
 |------------------|--------------------------------------------------------------|
 | `__main__.py`    | Pulumi entry point — imports all modules, exports stack outputs |
 | `iam.py`         | Creates `interview-hub-cloudrun` service account + secret accessor IAM binding |
-| `secrets.py`     | Creates 8 GCP Secret Manager secrets (DB, OAuth, JWT, mail password, service account key) |
+| `secrets.py`     | Creates 8 GCP Secret Manager secrets (DB, OAuth, JWT, Resend API key, service account key) |
 | `registry.py`    | Creates Artifact Registry Docker repository                  |
 | `cloudrun.py`    | Deploys backend and frontend Cloud Run services              |
 
@@ -68,7 +68,7 @@ Pulumi provisions the following GCP resources:
 | `interview-hub-google-client-id`           | `GOOGLE_CLIENT_ID`            |
 | `interview-hub-google-client-secret`       | `GOOGLE_CLIENT_SECRET`        |
 | `interview-hub-jwt-signing-secret`         | `JWT_SIGNING_SECRET`          |
-| `interview-hub-mail-password`              | `MAIL_PASSWORD`               |
+| `interview-hub-resend-api-key`             | `RESEND_API_KEY`              |
 | `interview-hub-google-service-account-key` | `GOOGLE_SERVICE_ACCOUNT_KEY`  |
 
 All secrets use auto-replication. Pulumi creates the secret containers — values must be set manually:
@@ -91,7 +91,7 @@ echo -n "your-secret-value" | gcloud secrets versions add interview-hub-db-url -
 - Resources: 1 GiB memory, 1000m CPU
 - Min instances: 0 (scales to zero)
 - Health check: startup probe to `/actuator/health`
-- Env vars: 8 secrets from Secret Manager + `APP_BASE_URL`, `FRONTEND_URL`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_FROM`, `GOOGLE_CALENDAR_ID`
+- Env vars: 8 secrets from Secret Manager + `APP_BASE_URL`, `FRONTEND_URL`, `MAIL_FROM`, `GOOGLE_CALENDAR_ID`
 - IAM: `allUsers` invoker (publicly accessible)
 
 **Frontend (`interview-hub-frontend`):**

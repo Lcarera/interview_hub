@@ -56,18 +56,6 @@ backend_service = gcp.cloudrunv2.Service(
                         value=pulumi.Output.concat("https://", domain),
                     ),
                     gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
-                        name="MAIL_HOST",
-                        value="smtp.resend.com",
-                    ),
-                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
-                        name="MAIL_PORT",
-                        value="587",
-                    ),
-                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
-                        name="MAIL_USERNAME",
-                        value="resend",
-                    ),
-                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
                         name="MAIL_FROM",
                         value="noreply@lcarera.dev",
                     ),
