@@ -138,7 +138,6 @@ class AdminServiceTest {
         Profile mappedProfile = new Profile();
         mappedProfile.setId(UUID.randomUUID());
         mappedProfile.setEmail("new@gm2dev.com");
-        mappedProfile.setCalendarEmail("new@gm2dev.com");
         mappedProfile.setRole(Role.interviewer);
         mappedProfile.setEmailVerified(true);
 
@@ -243,11 +242,10 @@ class AdminServiceTest {
         Profile mappedProfile = new Profile();
         mappedProfile.setId(UUID.randomUUID());
         mappedProfile.setEmail("new@gm2dev.com");
-        mappedProfile.setCalendarEmail("new@gm2dev.com");
         mappedProfile.setRole(Role.interviewer);
         mappedProfile.setEmailVerified(true);
 
-        ProfileDto dto = new ProfileDto(mappedProfile.getId(), "new@gm2dev.com", Role.interviewer, "new@gm2dev.com");
+        ProfileDto dto = new ProfileDto(mappedProfile.getId(), "new@gm2dev.com", Role.interviewer);
 
         when(profileRepository.findByEmail("new@gm2dev.com")).thenReturn(Optional.empty());
         when(profileMapper.toProfileFromCreateUserRequest(request)).thenReturn(mappedProfile);

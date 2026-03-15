@@ -454,7 +454,6 @@ class EmailPasswordAuthServiceTest {
         Profile mappedProfile = new Profile();
         mappedProfile.setId(UUID.randomUUID());
         mappedProfile.setEmail("user@gm2dev.com");
-        mappedProfile.setCalendarEmail("user@gm2dev.com");
         mappedProfile.setRole(Role.interviewer);
         mappedProfile.setEmailVerified(false);
 
