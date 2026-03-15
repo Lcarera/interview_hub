@@ -40,8 +40,8 @@ dependencies {
 	// Validation
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-	// Email
-	implementation 'org.springframework.boot:spring-boot-starter-mail'
+	// Email (Resend HTTP API)
+	implementation 'com.resend:resend-java:4.11.0'
 
 	// Actuator (health checks, metrics)
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
