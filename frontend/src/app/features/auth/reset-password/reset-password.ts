@@ -100,8 +100,9 @@ export class ResetPasswordComponent implements OnInit {
   private parseError(err: HttpErrorResponse): string {
     if (err.status === 400) {
       const body = err.error;
-      if (body?.errors?.length) {
-        return body.errors.map((e: { defaultMessage?: string }) => e.defaultMessage).join('. ');
+      if (body?.errors && typeof body.errors === 'object') {
+        const messages = Object.values(body.errors) as string[];
+        if (messages.length) return messages.join('. ');
       }
       if (body?.message) {
         return body.message;
