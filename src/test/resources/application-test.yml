@@ -21,6 +21,7 @@ app:
     location: us-central1
     queue-id: test-queue
     service-account-email: test@test.iam.gserviceaccount.com
+    worker-url: http://localhost:8080
     audience: http://localhost:8080
   google:
     client-id: test-client-id
