@@ -201,4 +201,51 @@ class EmailServiceTest {
 
         verify(resendEmails).send(any());
     }
+
+    @Test
+    void queuePasswordResetEmail_whenCloudTasksDisabled_sendsSynchronously() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any())).thenReturn(createEmailResponse);
+
+        emailService.queuePasswordResetEmail("user@gm2dev.com", "reset-token");
+
+        verify(resendEmails).send(any());
+    }
+
+    @Test
+    void queueTemporaryPasswordEmail_whenCloudTasksDisabled_sendsSynchronously() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any())).thenReturn(createEmailResponse);
+
+        emailService.queueTemporaryPasswordEmail("user@gm2dev.com", "TempPass123");
+
+        verify(resendEmails).send(any());
+    }
+
+    @Test
+    void queueVerificationEmail_whenPropsEnabledButNoQueueService_sendsSynchronously() throws ResendException {
+        CloudTasksProperties props = new CloudTasksProperties(
+                "proj", "loc", "queue", true, "sa@proj.iam.gserviceaccount.com"
+        );
+        EmailService serviceNoQueue = new EmailService(
+                resend, "from@gm2dev.com", "http://localhost:4200", props, null
+        );
+
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any())).thenReturn(createEmailResponse);
+
+        serviceNoQueue.queueVerificationEmail("user@gm2dev.com", "token");
+
+        verify(resendEmails).send(any());
+    }
+
+    @Test
+    void sendShadowingApprovedEmail_whenResendFails_doesNotThrow() throws ResendException {
+        when(resend.emails()).thenReturn(resendEmails);
+        when(resendEmails.send(any(CreateEmailOptions.class)))
+                .thenThrow(new ResendException("API error"));
+
+        assertDoesNotThrow(() -> emailService.sendShadowingApprovedEmail(
+                "shadower@gm2dev.com", "Java Interview", "2026-03-20T10:00:00Z", "2026-03-20T11:00:00Z"));
+    }
 }

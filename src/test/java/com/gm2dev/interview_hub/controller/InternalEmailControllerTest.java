@@ -45,7 +45,6 @@ class InternalEmailControllerTest {
             """;
 
         mockMvc.perform(post("/internal/email-worker")
-                        .header("X-CloudTasks-QueueName", "email-queue")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk());
@@ -60,7 +59,6 @@ class InternalEmailControllerTest {
             """;
 
         mockMvc.perform(post("/internal/email-worker")
-                        .header("X-CloudTasks-QueueName", "email-queue")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk());
@@ -75,7 +73,6 @@ class InternalEmailControllerTest {
             """;
 
         mockMvc.perform(post("/internal/email-worker")
-                        .header("X-CloudTasks-QueueName", "email-queue")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk());
@@ -90,7 +87,6 @@ class InternalEmailControllerTest {
             """;
 
         mockMvc.perform(post("/internal/email-worker")
-                        .header("X-CloudTasks-QueueName", "email-queue")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk());
@@ -104,30 +100,29 @@ class InternalEmailControllerTest {
     }
 
     @Test
-    void processEmailTask_withoutCloudTasksHeader_returns403() throws Exception {
+    void processEmailTask_withInvalidPayload_returnsBadRequest() throws Exception {
         String payload = """
-            {"type":"VERIFICATION","to":"user@gm2dev.com","token":"abc123"}
+            {"type":"VERIFICATION","to":"invalid-email","token":"abc123"}
             """;
 
         mockMvc.perform(post("/internal/email-worker")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isBadRequest());
 
         verifyNoInteractions(emailService);
     }
 
     @Test
-    void processEmailTask_withEmptyCloudTasksHeader_returns403() throws Exception {
+    void processEmailTask_withMissingRequiredField_returnsBadRequest() throws Exception {
         String payload = """
-            {"type":"VERIFICATION","to":"user@gm2dev.com","token":"abc123"}
+            {"type":"VERIFICATION","to":"user@gm2dev.com"}
             """;
 
         mockMvc.perform(post("/internal/email-worker")
-                        .header("X-CloudTasks-QueueName", "")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isBadRequest());
 
         verifyNoInteractions(emailService);
     }

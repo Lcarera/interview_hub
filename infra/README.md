@@ -59,10 +59,13 @@ Pulumi provisions the following GCP resources:
 
 ## GCP Resources
 
-### Service Account (`iam.py`)
+### Service Account (`iam.py`, `cloudtasks.py`)
 
 - **ID:** `interview-hub-cloudrun`
-- **Role:** `roles/secretmanager.secretAccessor` (reads secrets at runtime)
+- **Roles:**
+  - `roles/secretmanager.secretAccessor` — reads secrets at runtime
+  - `roles/cloudtasks.enqueuer` — creates tasks in the email queue
+  - `roles/iam.serviceAccountUser` (on itself) — generates OIDC tokens for Cloud Tasks callbacks
 
 ### Secret Manager (`secrets.py`)
 
@@ -97,7 +100,11 @@ echo -n "your-secret-value" | gcloud secrets versions add interview-hub-db-url -
 - **Retry config:** 5 attempts, 10s-300s exponential backoff
 - **IAM:** Cloud Run SA gets `roles/cloudtasks.enqueuer` + `roles/iam.serviceAccountUser`
 
-The queue handles async email sending to avoid Resend API rate limits (429). Tasks are created by the backend and target the `/internal/email-worker` endpoint.
+The queue handles async email sending to avoid Resend API rate limits (429). Tasks are created by the backend and target the `/internal/email-worker` endpoint with OIDC authentication.
+
+**Why `roles/iam.serviceAccountUser` on itself?**
+
+Cloud Tasks sends an OIDC token in the `Authorization` header when calling the worker endpoint. To generate this token, the service account creating the task must have permission to act as the service account specified in the OIDC config. Since we use the same Cloud Run SA for both creating tasks and authenticating callbacks, it needs `serviceAccountUser` permission on itself. This enables secure server-to-server authentication without exposing the endpoint to arbitrary callers.
 
 ### Cloud Run Services (`cloudrun.py`)
 

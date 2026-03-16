@@ -15,10 +15,4 @@ public class CloudTasksConfig {
     public CloudTasksClient cloudTasksClient() throws IOException {
         return CloudTasksClient.create();
     }
-
-    @Bean
-    @ConditionalOnProperty(name = "app.cloud-tasks.enabled", havingValue = "false", matchIfMissing = true)
-    public CloudTasksClient noOpCloudTasksClient() {
-        return null;
-    }
 }

@@ -17,16 +17,8 @@ public class InternalEmailController {
     private final EmailService emailService;
 
     @PostMapping("/email-worker")
-    public ResponseEntity<Void> processEmailTask(
-            @RequestHeader(value = "X-CloudTasks-QueueName", required = false) String queueName,
-            @RequestBody @Valid EmailTaskPayload payload
-    ) {
-        if (queueName == null || queueName.isBlank()) {
-            log.warn("Rejected email worker request without Cloud Tasks header");
-            return ResponseEntity.status(403).build();
-        }
-
-        log.info("Processing {} email for {}", payload.getClass().getSimpleName(), payload.to());
+    public ResponseEntity<Void> processEmailTask(@RequestBody @Valid EmailTaskPayload payload) {
+        log.debug("Processing {} email for {}", payload.getClass().getSimpleName(), payload.to());
 
         switch (payload) {
             case EmailTaskPayload.VerificationEmail e ->
