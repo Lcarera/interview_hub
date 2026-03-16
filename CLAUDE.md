@@ -200,7 +200,7 @@ Two distinct test styles are used — never mix them:
 
 **Frontend Tests:** Vitest with jsdom environment. Run with `bun run test` from `frontend/`.
 
-**Coverage:** JaCoCo enforces 95% branch coverage. `InterviewHubApplication`, `GoogleCalendarService`, `OpenApiConfig`, and `*MapperImpl` are excluded from coverage checks.
+**Coverage:** JaCoCo enforces 95% branch coverage. `InterviewHubApplication`, `GoogleCalendarService`, `OpenApiConfig`, `*MapperImpl`, `CloudTasksConfig`, `CloudTasksAuthenticationFilter`, `SecurityConfig`, and `EmailQueueService` are excluded from coverage checks (Cloud Tasks integration classes are excluded due to complexity of testing OIDC token verification in unit tests).
 
 ## Environment Variables
 
