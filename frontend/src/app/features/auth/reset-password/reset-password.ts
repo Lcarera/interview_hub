@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -89,10 +90,28 @@ export class ResetPasswordComponent implements OnInit {
     this.error.set(null);
     this.auth.resetPassword(this.token, this.newPassword).subscribe({
       next: () => { this.loading.set(false); this.success.set(true); },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.loading.set(false);
-        this.error.set('The reset link is invalid or has expired.');
+        this.error.set(this.parseError(err));
       },
     });
+  }
+
+  private parseError(err: HttpErrorResponse): string {
+    if (err.status === 400) {
+      const body = err.error;
+      if (body?.errors && typeof body.errors === 'object') {
+        const messages = Object.values(body.errors) as string[];
+        if (messages.length) return messages.join('. ');
+      }
+      if (body?.message) {
+        return body.message;
+      }
+      return 'Invalid request. Please check your password meets the requirements.';
+    }
+    if (err.status === 403) {
+      return 'The reset link is invalid or has expired.';
+    }
+    return 'Something went wrong. Please try again.';
   }
 }
