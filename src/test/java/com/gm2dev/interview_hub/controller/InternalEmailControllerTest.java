@@ -1,8 +1,14 @@
 package com.gm2dev.interview_hub.controller;
 
+import com.gm2dev.interview_hub.config.CloudTasksAuthFilter;
+import com.gm2dev.interview_hub.config.CloudTasksProperties;
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
 import com.gm2dev.interview_hub.service.EmailService;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -11,9 +17,11 @@ import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -21,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(InternalEmailController.class)
 @Import(SecurityConfig.class)
 @ActiveProfiles("test")
+@TestPropertySource(properties = "app.cloud-tasks.enabled=true")
 class InternalEmailControllerTest {
 
     @Autowired
@@ -37,6 +46,25 @@ class InternalEmailControllerTest {
 
     @MockitoBean
     private JwtProperties jwtProperties;
+
+    @MockitoBean
+    private CloudTasksProperties cloudTasksProperties;
+
+    @MockitoBean
+    private CloudTasksAuthFilter cloudTasksAuthFilter;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        doAnswer(invocation -> {
+            FilterChain chain = invocation.getArgument(2);
+            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
+            return null;
+        }).when(cloudTasksAuthFilter).doFilter(
+                any(HttpServletRequest.class),
+                any(HttpServletResponse.class),
+                any(FilterChain.class)
+        );
+    }
 
     @Test
     void processEmailTask_withValidVerificationPayload_sendsEmail() throws Exception {
