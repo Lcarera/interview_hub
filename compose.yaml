@@ -22,6 +22,8 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        NG_CONFIG: docker
     ports:
       - "80:80"
     depends_on:
