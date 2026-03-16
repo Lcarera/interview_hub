@@ -107,7 +107,7 @@ class AdminServiceTest {
         assertNotNull(saved.getPasswordHash());
         assertEquals(dto, result);
 
-        verify(emailService).sendTemporaryPasswordEmail(eq("new@gm2dev.com"), anyString());
+        verify(emailService).queueTemporaryPasswordEmail(eq("new@gm2dev.com"), anyString());
     }
 
     @Test
@@ -146,7 +146,7 @@ class AdminServiceTest {
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
         when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
         doThrow(new RuntimeException("Email delivery failed"))
-                .when(emailService).sendTemporaryPasswordEmail(anyString(), anyString());
+                .when(emailService).queueTemporaryPasswordEmail(anyString(), anyString());
 
         assertThrows(RuntimeException.class, () -> adminService.createUser(request));
     }
@@ -258,7 +258,7 @@ class AdminServiceTest {
         }
 
         ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
-        verify(emailService, times(20)).sendTemporaryPasswordEmail(eq("new@gm2dev.com"), passwordCaptor.capture());
+        verify(emailService, times(20)).queueTemporaryPasswordEmail(eq("new@gm2dev.com"), passwordCaptor.capture());
         List<String> passwords = passwordCaptor.getAllValues();
 
         boolean allMatchUnshuffledPattern = passwords.stream()

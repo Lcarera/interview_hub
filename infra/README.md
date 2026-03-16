@@ -35,8 +35,13 @@ Pulumi provisions the following GCP resources:
 │  └──────────────────┘                                       │
 │                                                             │
 │  ┌──────────────────┐                                       │
+│  │ Cloud Tasks      │                                       │
+│  │ email-queue      │ ◄── Async email sending (2 req/s)     │
+│  └──────────────────┘                                       │
+│                                                             │
+│  ┌──────────────────┐                                       │
 │  │ Service Account  │ roles/secretmanager.secretAccessor    │
-│  │ cloudrun-sa      │                                       │
+│  │ cloudrun-sa      │ roles/cloudtasks.enqueuer             │
 │  └──────────────────┘                                       │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -46,17 +51,21 @@ Pulumi provisions the following GCP resources:
 | File             | Purpose                                                      |
 |------------------|--------------------------------------------------------------|
 | `__main__.py`    | Pulumi entry point — imports all modules, exports stack outputs |
-| `iam.py`         | Creates `interview-hub-cloudrun` service account + secret accessor IAM binding |
+| `iam.py`         | Creates `interview-hub-cloudrun` service account + IAM bindings |
 | `secrets.py`     | Creates 8 GCP Secret Manager secrets (DB, OAuth, JWT, Resend API key, service account key) |
 | `registry.py`    | Creates Artifact Registry Docker repository                  |
+| `cloudtasks.py`  | Creates Cloud Tasks queue for async email with rate limiting |
 | `cloudrun.py`    | Deploys backend and frontend Cloud Run services              |
 
 ## GCP Resources
 
-### Service Account (`iam.py`)
+### Service Account (`iam.py`, `cloudtasks.py`)
 
 - **ID:** `interview-hub-cloudrun`
-- **Role:** `roles/secretmanager.secretAccessor` (reads secrets at runtime)
+- **Roles:**
+  - `roles/secretmanager.secretAccessor` — reads secrets at runtime
+  - `roles/cloudtasks.enqueuer` — creates tasks in the email queue
+  - `roles/iam.serviceAccountUser` (on itself) — generates OIDC tokens for Cloud Tasks callbacks
 
 ### Secret Manager (`secrets.py`)
 
@@ -83,6 +92,20 @@ echo -n "your-secret-value" | gcloud secrets versions add interview-hub-db-url -
 - **Location:** `southamerica-east1`
 - **URL:** `southamerica-east1-docker.pkg.dev/interview-hub-prod/interview-hub`
 
+### Cloud Tasks (`cloudtasks.py`)
+
+- **Queue:** `email-queue`
+- **Location:** `southamerica-east1`
+- **Rate limits:** 2 dispatches/sec, 2 concurrent
+- **Retry config:** 5 attempts, 10s-300s exponential backoff
+- **IAM:** Cloud Run SA gets `roles/cloudtasks.enqueuer` + `roles/iam.serviceAccountUser`
+
+The queue handles async email sending to avoid Resend API rate limits (429). Tasks are created by the backend and target the `/internal/email-worker` endpoint with OIDC authentication.
+
+**Why `roles/iam.serviceAccountUser` on itself?**
+
+Cloud Tasks sends an OIDC token in the `Authorization` header when calling the worker endpoint. To generate this token, the service account creating the task must have permission to act as the service account specified in the OIDC config. Since we use the same Cloud Run SA for both creating tasks and authenticating callbacks, it needs `serviceAccountUser` permission on itself. This enables secure server-to-server authentication without exposing the endpoint to arbitrary callers.
+
 ### Cloud Run Services (`cloudrun.py`)
 
 **Backend (`interview-hub-backend`):**
@@ -91,7 +114,7 @@ echo -n "your-secret-value" | gcloud secrets versions add interview-hub-db-url -
 - Resources: 1 GiB memory, 1000m CPU
 - Min instances: 0 (scales to zero)
 - Health check: startup probe to `/actuator/health`
-- Env vars: 8 secrets from Secret Manager + `APP_BASE_URL`, `FRONTEND_URL`, `MAIL_FROM`, `GOOGLE_CALENDAR_ID`
+- Env vars: 8 secrets from Secret Manager + `APP_BASE_URL`, `FRONTEND_URL`, `MAIL_FROM`, `GOOGLE_CALENDAR_ID`, `GCP_PROJECT_ID`, `GCP_LOCATION`, `CLOUD_TASKS_QUEUE_ID`, `CLOUD_TASKS_ENABLED`, `CLOUD_TASKS_SA_EMAIL`
 - IAM: `allUsers` invoker (publicly accessible)
 
 **Frontend (`interview-hub-frontend`):**

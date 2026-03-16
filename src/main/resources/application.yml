@@ -25,7 +25,14 @@ spring:
     show-sql: false
 
 app:
+  base-url: ${APP_BASE_URL:http://localhost:8080}
   frontend-url: ${FRONTEND_URL:http://localhost:4200}
+  cloud-tasks:
+    project-id: ${GCP_PROJECT_ID:}
+    location: ${GCP_LOCATION:us-central1}
+    queue-id: ${CLOUD_TASKS_QUEUE_ID:email-queue}
+    enabled: ${CLOUD_TASKS_ENABLED:false}
+    service-account-email: ${CLOUD_TASKS_SA_EMAIL:}
   google:
     client-id: ${GOOGLE_CLIENT_ID}
     client-secret: ${GOOGLE_CLIENT_SECRET}

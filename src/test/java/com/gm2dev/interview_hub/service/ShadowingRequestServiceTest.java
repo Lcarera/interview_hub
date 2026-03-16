@@ -217,7 +217,7 @@ class ShadowingRequestServiceTest {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
         shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
 
-        verify(emailService).sendShadowingApprovedEmail(
+        verify(emailService).queueShadowingApprovedEmail(
                 eq("shadower@example.com"),
                 eq("Java Interview - Unknown"),
                 any(),
@@ -234,7 +234,7 @@ class ShadowingRequestServiceTest {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
         shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
 
-        verify(emailService).sendShadowingApprovedEmail(
+        verify(emailService).queueShadowingApprovedEmail(
                 eq("shadower@example.com"),
                 eq("Java Interview - Jane Doe"),
                 any(),
@@ -247,7 +247,7 @@ class ShadowingRequestServiceTest {
 
         shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
 
-        verify(emailService).sendShadowingApprovedEmail(
+        verify(emailService).queueShadowingApprovedEmail(
                 eq("shadower@example.com"),
                 contains("Java"),
                 any(),

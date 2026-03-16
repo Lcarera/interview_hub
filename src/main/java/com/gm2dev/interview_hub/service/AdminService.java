@@ -61,7 +61,7 @@ public class AdminService {
         profile.setPasswordHash(passwordEncoder.encode(temporaryPassword));
 
         Profile saved = profileRepository.save(profile);
-        emailService.sendTemporaryPasswordEmail(request.email(), temporaryPassword);
+        emailService.queueTemporaryPasswordEmail(request.email(), temporaryPassword);
 
         log.debug("Admin created user: {}", request.email());
         return profileMapper.toDto(saved);

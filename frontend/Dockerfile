@@ -4,7 +4,8 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 COPY . .
-RUN bunx ng build --configuration production
+ARG NG_CONFIG=production
+RUN bunx ng build --configuration ${NG_CONFIG}
 
 # Stage 2 — serve with nginx
 # Use nginx.prod.conf for Cloud Run (no proxy_pass); nginx.conf for local Docker Compose

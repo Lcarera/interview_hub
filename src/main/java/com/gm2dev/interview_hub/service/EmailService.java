@@ -1,10 +1,13 @@
 package com.gm2dev.interview_hub.service;
 
+import com.gm2dev.interview_hub.config.CloudTasksProperties;
+import com.gm2dev.interview_hub.dto.EmailTaskPayload;
 import com.resend.Resend;
 import com.resend.core.exception.ResendException;
 import com.resend.services.emails.model.CreateEmailOptions;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
@@ -15,13 +18,55 @@ public class EmailService {
     private final Resend resend;
     private final String fromEmail;
     private final String appBaseUrl;
+    private final CloudTasksProperties cloudTasksProperties;
+    private final EmailQueueService emailQueueService;
 
     public EmailService(Resend resend,
                         @Value("${app.mail.from}") String fromEmail,
-                        @Value("${app.frontend-url}") String appBaseUrl) {
+                        @Value("${app.frontend-url}") String appBaseUrl,
+                        @Nullable CloudTasksProperties cloudTasksProperties,
+                        @Nullable EmailQueueService emailQueueService) {
         this.resend = resend;
         this.fromEmail = fromEmail;
         this.appBaseUrl = appBaseUrl;
+        this.cloudTasksProperties = cloudTasksProperties;
+        this.emailQueueService = emailQueueService;
+    }
+
+    public void queueVerificationEmail(String toEmail, String token) {
+        if (isCloudTasksEnabled()) {
+            emailQueueService.queueEmail(new EmailTaskPayload.VerificationEmail(toEmail, token));
+        } else {
+            sendVerificationEmail(toEmail, token);
+        }
+    }
+
+    public void queuePasswordResetEmail(String toEmail, String token) {
+        if (isCloudTasksEnabled()) {
+            emailQueueService.queueEmail(new EmailTaskPayload.PasswordResetEmail(toEmail, token));
+        } else {
+            sendPasswordResetEmail(toEmail, token);
+        }
+    }
+
+    public void queueTemporaryPasswordEmail(String toEmail, String temporaryPassword) {
+        if (isCloudTasksEnabled()) {
+            emailQueueService.queueEmail(new EmailTaskPayload.TemporaryPasswordEmail(toEmail, temporaryPassword));
+        } else {
+            sendTemporaryPasswordEmail(toEmail, temporaryPassword);
+        }
+    }
+
+    public void queueShadowingApprovedEmail(String toEmail, String summary, String startTime, String endTime) {
+        if (isCloudTasksEnabled()) {
+            emailQueueService.queueEmail(new EmailTaskPayload.ShadowingApprovedEmail(toEmail, summary, startTime, endTime));
+        } else {
+            sendShadowingApprovedEmail(toEmail, summary, startTime, endTime);
+        }
+    }
+
+    private boolean isCloudTasksEnabled() {
+        return cloudTasksProperties != null && cloudTasksProperties.enabled() && emailQueueService != null;
     }
 
     public void sendVerificationEmail(String toEmail, String token) {
@@ -53,37 +98,6 @@ public class EmailService {
         sendHtmlEmail(toEmail, subject, body);
     }
 
-    public void sendInterviewInviteEmail(String toEmail, String summary, String startTime, String endTime, String meetLink) {
-        String safeSummary = HtmlUtils.htmlEscape(summary);
-        String subject = "Interview Hub — Interview Scheduled: " + summary;
-        String body = "<h2>Interview Scheduled</h2>"
-                + "<p><strong>" + safeSummary + "</strong></p>"
-                + "<p>Start: " + HtmlUtils.htmlEscape(startTime) + "</p>"
-                + "<p>End: " + HtmlUtils.htmlEscape(endTime) + "</p>"
-                + (meetLink != null ? "<p>Google Meet: <a href=\"" + HtmlUtils.htmlEscape(meetLink) + "\">" + HtmlUtils.htmlEscape(meetLink) + "</a></p>" : "")
-                + "<p>This event has been added to the shared interview calendar.</p>";
-        sendHtmlEmailQuietly(toEmail, subject, body);
-    }
-
-    public void sendInterviewUpdateEmail(String toEmail, String summary, String startTime, String endTime) {
-        String safeSummary = HtmlUtils.htmlEscape(summary);
-        String subject = "Interview Hub — Interview Updated: " + summary;
-        String body = "<h2>Interview Updated</h2>"
-                + "<p><strong>" + safeSummary + "</strong></p>"
-                + "<p>New Start: " + HtmlUtils.htmlEscape(startTime) + "</p>"
-                + "<p>New End: " + HtmlUtils.htmlEscape(endTime) + "</p>"
-                + "<p>The calendar event has been updated.</p>";
-        sendHtmlEmailQuietly(toEmail, subject, body);
-    }
-
-    public void sendInterviewCancellationEmail(String toEmail, String summary) {
-        String safeSummary = HtmlUtils.htmlEscape(summary);
-        String subject = "Interview Hub — Interview Cancelled: " + summary;
-        String body = "<h2>Interview Cancelled</h2>"
-                + "<p><strong>" + safeSummary + "</strong></p>"
-                + "<p>This interview has been cancelled and removed from the calendar.</p>";
-        sendHtmlEmailQuietly(toEmail, subject, body);
-    }
 
     public void sendShadowingApprovedEmail(String toEmail, String summary, String startTime, String endTime) {
         String safeSummary = HtmlUtils.htmlEscape(summary);

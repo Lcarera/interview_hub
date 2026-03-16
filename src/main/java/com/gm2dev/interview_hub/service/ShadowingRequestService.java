@@ -1,5 +1,12 @@
 package com.gm2dev.interview_hub.service;
 
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.ShadowingRequest;
@@ -10,17 +17,15 @@ import com.gm2dev.interview_hub.repository.ShadowingRequestRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ShadowingRequestService {
+
+    private static final DateTimeFormatter EMAIL_DATE_FMT =
+            DateTimeFormatter.ofPattern("MMMM d, yyyy 'at' h:mm a z")
+                    .withZone(ZoneId.of("UTC"));
 
     private final ShadowingRequestRepository shadowingRequestRepository;
     private final InterviewRepository interviewRepository;
@@ -30,13 +35,14 @@ public class ShadowingRequestService {
 
     @Transactional
     public ShadowingRequest requestShadowing(UUID interviewId, UUID shadowerId) {
-        log.debug("Creating shadowing request for interview: {} by shadower: {}", interviewId, shadowerId);
+        log.debug("Creating shadowing request for interview: {} by shadower: {}", interviewId,
+                shadowerId);
 
-        Interview interview = interviewRepository.findById(interviewId)
-                .orElseThrow(() -> new EntityNotFoundException("Interview not found: " + interviewId));
+        Interview interview = interviewRepository.findById(interviewId).orElseThrow(
+                () -> new EntityNotFoundException("Interview not found: " + interviewId));
 
-        Profile shadower = profileRepository.findById(shadowerId)
-                .orElseThrow(() -> new EntityNotFoundException("Shadower not found: " + shadowerId));
+        Profile shadower = profileRepository.findById(shadowerId).orElseThrow(
+                () -> new EntityNotFoundException("Shadower not found: " + shadowerId));
 
         ShadowingRequest request = new ShadowingRequest();
         request.setInterview(interview);
@@ -72,22 +78,20 @@ public class ShadowingRequestService {
         Interview interview = request.getInterview();
         if (interview.getGoogleEventId() != null) {
             try {
-                googleCalendarService.addAttendee(
-                        interview.getGoogleEventId(),
+                googleCalendarService.addAttendee(interview.getGoogleEventId(),
                         request.getShadower().getEmail());
             } catch (Exception e) {
                 log.warn("Failed to add shadower {} to Calendar event {}: {}",
-                        request.getShadower().getEmail(), interview.getGoogleEventId(), e.getMessage());
+                        request.getShadower().getEmail(), interview.getGoogleEventId(),
+                        e.getMessage());
             }
         }
 
         String summary = InterviewService.buildSummary(interview);
 
-        emailService.sendShadowingApprovedEmail(
-                request.getShadower().getEmail(),
-                summary,
-                InterviewService.EMAIL_DATE_FMT.format(interview.getStartTime()),
-                InterviewService.EMAIL_DATE_FMT.format(interview.getEndTime()));
+        emailService.queueShadowingApprovedEmail(request.getShadower().getEmail(), summary,
+                EMAIL_DATE_FMT.format(interview.getStartTime()),
+                EMAIL_DATE_FMT.format(interview.getEndTime()));
 
         return saved;
     }
@@ -116,14 +120,15 @@ public class ShadowingRequestService {
     }
 
     private ShadowingRequest findById(UUID id) {
-        return shadowingRequestRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Shadowing request not found: " + id));
+        return shadowingRequestRepository.findById(id).orElseThrow(
+                () -> new EntityNotFoundException("Shadowing request not found: " + id));
     }
 
     private void requirePendingStatus(ShadowingRequest request) {
         if (request.getStatus() != ShadowingRequestStatus.PENDING) {
             throw new IllegalStateException(
-                    "Shadowing request is not in PENDING status. Current status: " + request.getStatus());
+                    "Shadowing request is not in PENDING status. Current status: "
+                            + request.getStatus());
         }
     }
 }

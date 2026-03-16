@@ -72,7 +72,7 @@ public class EmailPasswordAuthService {
 
         String rawToken = UUID.randomUUID().toString();
         createVerificationToken(profile, TokenType.EMAIL_VERIFICATION, 24, rawToken);
-        emailService.sendVerificationEmail(request.email(), rawToken);
+        emailService.queueVerificationEmail(request.email(), rawToken);
 
         log.debug("Registered new email/password user: {}", request.email());
     }
@@ -132,7 +132,7 @@ public class EmailPasswordAuthService {
                 String rawToken = UUID.randomUUID().toString();
                 createVerificationToken(profile, TokenType.EMAIL_VERIFICATION, 24, rawToken);
                 // Propagates on failure — rolls back the new verification token
-                emailService.sendVerificationEmail(email, rawToken);
+                emailService.queueVerificationEmail(email, rawToken);
             }
         });
     }
@@ -145,7 +145,7 @@ public class EmailPasswordAuthService {
                 String rawToken = UUID.randomUUID().toString();
                 createVerificationToken(profile, TokenType.PASSWORD_RESET, 1, rawToken);
                 // Silent on failure — token is committed regardless (password-reset never leaks email existence)
-                emailService.sendPasswordResetEmail(email, rawToken);
+                emailService.queuePasswordResetEmail(email, rawToken);
             }
         });
     }
