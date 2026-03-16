@@ -8,9 +8,18 @@ public record CloudTasksProperties(
         String location,
         String queueId,
         boolean enabled,
-        String serviceAccountEmail
+        String serviceAccountEmail,
+        String audience
 ) {
     public String queuePath() {
         return String.format("projects/%s/locations/%s/queues/%s", projectId, location, queueId);
+    }
+
+    public boolean hasValidServiceAccountEmail() {
+        return serviceAccountEmail != null && !serviceAccountEmail.isBlank();
+    }
+
+    public boolean hasValidAudience() {
+        return audience != null && !audience.isBlank();
     }
 }

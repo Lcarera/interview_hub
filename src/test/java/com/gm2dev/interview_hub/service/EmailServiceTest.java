@@ -117,7 +117,7 @@ class EmailServiceTest {
     @Test
     void queueVerificationEmail_whenCloudTasksEnabled_queuesTask() {
         CloudTasksProperties props = new CloudTasksProperties(
-                "proj", "loc", "queue", true, "sa@proj.iam.gserviceaccount.com"
+                "proj", "loc", "queue", true, "sa@proj.iam.gserviceaccount.com", "http://localhost:8080"
         );
         EmailService serviceWithQueue = new EmailService(
                 resend, "from@gm2dev.com", "http://localhost:4200", props, emailQueueService
@@ -132,7 +132,7 @@ class EmailServiceTest {
     @Test
     void queueVerificationEmail_whenCloudTasksDisabled_sendsSynchronously() throws ResendException {
         CloudTasksProperties props = new CloudTasksProperties(
-                null, null, null, false, null
+                null, null, null, false, null, null
         );
         EmailService serviceNoQueue = new EmailService(
                 resend, "from@gm2dev.com", "http://localhost:4200", props, null
@@ -149,7 +149,7 @@ class EmailServiceTest {
     @Test
     void queuePasswordResetEmail_whenCloudTasksEnabled_queuesTask() {
         CloudTasksProperties props = new CloudTasksProperties(
-                "proj", "loc", "queue", true, "sa@proj.iam.gserviceaccount.com"
+                "proj", "loc", "queue", true, "sa@proj.iam.gserviceaccount.com", "http://localhost:8080"
         );
         EmailService serviceWithQueue = new EmailService(
                 resend, "from@gm2dev.com", "http://localhost:4200", props, emailQueueService
@@ -163,7 +163,7 @@ class EmailServiceTest {
     @Test
     void queueTemporaryPasswordEmail_whenCloudTasksEnabled_queuesTask() {
         CloudTasksProperties props = new CloudTasksProperties(
-                "proj", "loc", "queue", true, "sa@proj.iam.gserviceaccount.com"
+                "proj", "loc", "queue", true, "sa@proj.iam.gserviceaccount.com", "http://localhost:8080"
         );
         EmailService serviceWithQueue = new EmailService(
                 resend, "from@gm2dev.com", "http://localhost:4200", props, emailQueueService
@@ -177,7 +177,7 @@ class EmailServiceTest {
     @Test
     void queueShadowingApprovedEmail_whenCloudTasksEnabled_queuesTask() {
         CloudTasksProperties props = new CloudTasksProperties(
-                "proj", "loc", "queue", true, "sa@proj.iam.gserviceaccount.com"
+                "proj", "loc", "queue", true, "sa@proj.iam.gserviceaccount.com", "http://localhost:8080"
         );
         EmailService serviceWithQueue = new EmailService(
                 resend, "from@gm2dev.com", "http://localhost:4200", props, emailQueueService
@@ -225,7 +225,7 @@ class EmailServiceTest {
     @Test
     void queueVerificationEmail_whenPropsEnabledButNoQueueService_sendsSynchronously() throws ResendException {
         CloudTasksProperties props = new CloudTasksProperties(
-                "proj", "loc", "queue", true, "sa@proj.iam.gserviceaccount.com"
+                "proj", "loc", "queue", true, "sa@proj.iam.gserviceaccount.com", "http://localhost:8080"
         );
         EmailService serviceNoQueue = new EmailService(
                 resend, "from@gm2dev.com", "http://localhost:4200", props, null

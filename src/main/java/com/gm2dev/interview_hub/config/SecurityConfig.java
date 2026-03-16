@@ -72,8 +72,18 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         if (cloudTasksEnabled) {
+            if (!cloudTasksProperties.hasValidServiceAccountEmail()) {
+                throw new IllegalStateException(
+                        "Cloud Tasks is enabled but service-account-email is not configured");
+            }
+            if (!cloudTasksProperties.hasValidAudience()) {
+                throw new IllegalStateException(
+                        "Cloud Tasks is enabled but audience is not configured");
+            }
             http.addFilterBefore(
-                    new CloudTasksAuthenticationFilter(cloudTasksProperties.serviceAccountEmail()),
+                    new CloudTasksAuthenticationFilter(
+                            cloudTasksProperties.serviceAccountEmail(),
+                            cloudTasksProperties.audience()),
                     UsernamePasswordAuthenticationFilter.class
             );
         }
