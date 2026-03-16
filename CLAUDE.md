@@ -61,11 +61,11 @@ All under `src/main/java/com/gm2dev/interview_hub/`:
 
 - `domain/` - JPA entities (Candidate, Interview, Profile, ShadowingRequest) and enums (InterviewStatus, ShadowingRequestStatus)
 - `repository/` - Spring Data JPA repositories (CandidateRepository, InterviewRepository, ProfileRepository, ShadowingRequestRepository)
-- `service/` - Business logic (CandidateService, InterviewService, ShadowingRequestService, AuthService, GoogleCalendarService)
+- `service/` - Business logic (CandidateService, InterviewService, ShadowingRequestService, AuthService, GoogleCalendarService, EmailQueueService)
 - `dto/` - Data transfer objects (AuthResponse, CandidateDto, CandidateRequest, CreateInterviewRequest, UpdateInterviewRequest, InterviewDto, ProfileDto, RejectShadowingRequest, etc.)
 - `mapper/` - MapStruct mappers (CandidateMapper, InterviewMapper, ProfileMapper, ShadowingRequestMapper)
-- `controller/` - REST controllers (CandidateController, InterviewController, ShadowingRequestController, AuthController, GlobalExceptionHandler)
-- `config/` - Spring configuration (SecurityConfig, GoogleOAuthProperties, JwtProperties, AllowedDomains)
+- `controller/` - REST controllers (CandidateController, InterviewController, ShadowingRequestController, AuthController, InternalEmailController, GlobalExceptionHandler)
+- `config/` - Spring configuration (SecurityConfig, GoogleOAuthProperties, JwtProperties, AllowedDomains, CloudTasksConfig, CloudTasksProperties)
 
 ### Frontend Structure
 
@@ -133,7 +133,7 @@ The application models a four-entity system:
 - OAuth2 Resource Server with HMAC-SHA256 JWT validation (app-issued tokens)
 - Custom JWT converter extracts "role" claim and prefixes with "ROLE_"
 - Stateless sessions (no server-side session management)
-- Public endpoints: `/actuator/health`, `/auth/**`
+- Public endpoints: `/actuator/health`, `/auth/**`, `/internal/**` (Cloud Tasks worker — guarded by `X-CloudTasks-QueueName` header check, not JWT)
 - `/admin/**` endpoints require `ROLE_admin`
 - All other endpoints require `Authorization: Bearer <token>`
 
@@ -146,6 +146,14 @@ The application models a four-entity system:
 - Deleting an interview → cancels the Calendar event
 - Approving a shadowing request → adds shadower as attendee to the Calendar event
 - Calendar failures are logged but don't block the primary operation
+
+**Email Queue (Cloud Tasks):**
+- Email sending is async via Google Cloud Tasks when `CLOUD_TASKS_ENABLED=true`; falls back to synchronous Resend calls when disabled
+- Flow: callers use `EmailService.queue*()` methods → `EmailQueueService` enqueues to Cloud Tasks → Cloud Tasks calls `POST /internal/email-worker` → `InternalEmailController` dispatches to `EmailService.send*()` methods
+- `EmailTaskPayload` is a sealed interface with Jackson `@JsonTypeInfo` polymorphism (discriminator: `"type"` field with values `VERIFICATION`, `PASSWORD_RESET`, `TEMPORARY_PASSWORD`, `SHADOWING_APPROVED`)
+- `EmailQueueService` is `@ConditionalOnProperty(name = "app.cloud-tasks.enabled", havingValue = "true")` — not created when Cloud Tasks is disabled
+- `InternalEmailController` validates `X-CloudTasks-QueueName` header presence (returns 403 without it)
+- In production, nginx must NOT proxy `/internal/*` to prevent external access; Cloud Run receives the request directly from Cloud Tasks
 
 **Error Handling:**
 - `GlobalExceptionHandler` (`@RestControllerAdvice`) maps `EntityNotFoundException` → 404, `IllegalStateException` → 409 Conflict
@@ -186,7 +194,7 @@ Two distinct test styles are used — never mix them:
 **Service Tests (`@SpringBootTest`):**
 - `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback` — full Spring context with H2
 - `GoogleCalendarService` is always `@MockitoBean`'d since it makes real HTTP calls
-- `AuthServiceTest` and `GoogleCalendarServiceTest` use pure `@ExtendWith(MockitoExtension.class)` (no Spring context)
+- `AuthServiceTest`, `GoogleCalendarServiceTest`, and `EmailQueueServiceTest` use pure `@ExtendWith(MockitoExtension.class)` (no Spring context)
 - These two services have package-private methods (`exchangeCodeForTokens`, `buildCalendarClient`) specifically to enable `spy()`-based interception without reflection
 
 **Frontend Tests:** Vitest with jsdom environment. Run with `bun run test` from `frontend/`.
@@ -208,6 +216,11 @@ Required for runtime:
 - `MAIL_FROM` - From email address (default: noreply@lcarera.dev)
 - `GOOGLE_SERVICE_ACCOUNT_KEY` - Service account JSON key for calendar integration
 - `GOOGLE_CALENDAR_ID` - Google Calendar ID for shared event calendar (default: `primary`)
+- `GCP_PROJECT_ID` - GCP project ID for Cloud Tasks queue path
+- `GCP_LOCATION` - GCP region for Cloud Tasks (default: us-central1)
+- `CLOUD_TASKS_QUEUE_ID` - Cloud Tasks queue name (default: email-queue)
+- `CLOUD_TASKS_ENABLED` - Enable async email via Cloud Tasks (default: false)
+- `CLOUD_TASKS_SA_EMAIL` - Service account email for OIDC token on Cloud Tasks HTTP requests
 
 Required for CI/CD (GitHub Actions secrets):
 - `SUPABASE_DB_URL` - PostgreSQL connection string for running migrations in the deploy pipeline (format: `postgresql://user:pass@host:port/dbname`)
@@ -226,6 +239,7 @@ Required for CI/CD (GitHub Actions secrets):
 - Lombok (code generation)
 - MapStruct (DTO mapping)
 - Jackson (JSON processing)
+- Google Cloud Tasks client (async email queue)
 - H2 (test database)
 
 **Frontend:**
