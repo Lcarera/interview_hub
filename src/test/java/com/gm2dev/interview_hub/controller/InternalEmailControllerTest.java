@@ -14,6 +14,12 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Unlike other controller tests, this class intentionally does NOT use @Import(SecurityConfig.class).
+ * When Cloud Tasks is enabled, SecurityConfig creates an internalEndpointsFilterChain bean that
+ * instantiates a real GoogleIdTokenVerifier, which makes network calls to fetch Google's public keys.
+ * Testing controller logic in isolation avoids this external dependency.
+ */
 @WebMvcTest(InternalEmailController.class)
 @ActiveProfiles("test")
 @TestPropertySource(properties = "app.cloud-tasks.enabled=true")
