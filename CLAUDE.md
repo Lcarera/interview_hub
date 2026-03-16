@@ -221,7 +221,8 @@ Required for runtime:
 - `GCP_LOCATION` - GCP region for Cloud Tasks (default: us-central1)
 - `CLOUD_TASKS_QUEUE_ID` - Cloud Tasks queue name (default: email-queue)
 - `CLOUD_TASKS_ENABLED` - Enable async email via Cloud Tasks (default: false)
-- `CLOUD_TASKS_SA_EMAIL` - Service account email for OIDC token on Cloud Tasks HTTP requests
+- `CLOUD_TASKS_SA_EMAIL` - Service account email for OIDC token on Cloud Tasks HTTP requests (required when Cloud Tasks is enabled)
+- `CLOUD_TASKS_AUDIENCE` - Expected audience for OIDC tokens from Cloud Tasks (defaults to APP_BASE_URL; required when Cloud Tasks is enabled)
 
 Required for CI/CD (GitHub Actions secrets):
 - `SUPABASE_DB_URL` - PostgreSQL connection string for running migrations in the deploy pipeline (format: `postgresql://user:pass@host:port/dbname`)
