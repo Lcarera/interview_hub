@@ -6,7 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.lang.Nullable;
+import org.springframework.core.annotation.Order;
+import jakarta.annotation.Nullable;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -46,6 +47,42 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Order(1)
+    @ConditionalOnProperty(name = "app.cloud-tasks.enabled", havingValue = "true")
+    public SecurityFilterChain internalEndpointsFilterChain(HttpSecurity http) throws Exception {
+        if (!cloudTasksProperties.hasValidWorkerUrl()) {
+            throw new IllegalStateException(
+                    "Cloud Tasks is enabled but worker-url is not configured");
+        }
+        if (!cloudTasksProperties.hasValidServiceAccountEmail()) {
+            throw new IllegalStateException(
+                    "Cloud Tasks is enabled but service-account-email is not configured");
+        }
+        if (!cloudTasksProperties.hasValidAudience()) {
+            throw new IllegalStateException(
+                    "Cloud Tasks is enabled but audience is not configured");
+        }
+
+        http
+                .securityMatcher("/internal/**")
+                .cors(cors -> cors.disable())
+                .authorizeHttpRequests(authorize -> authorize
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(
+                        new CloudTasksAuthenticationFilter(
+                                cloudTasksProperties.serviceAccountEmail(),
+                                cloudTasksProperties.audience()),
+                        UsernamePasswordAuthenticationFilter.class
+                )
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         boolean cloudTasksEnabled = cloudTasksProperties != null && cloudTasksProperties.enabled();
         
@@ -57,13 +94,7 @@ public class SecurityConfig {
                             .requestMatchers("/auth/**").permitAll()
                             .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll();
                     
-                    if (cloudTasksEnabled) {
-                        if (!cloudTasksProperties.hasValidWorkerUrl()) {
-                            throw new IllegalStateException(
-                                    "Cloud Tasks is enabled but worker-url is not configured");
-                        }
-                        authorize.requestMatchers("/internal/**").authenticated();
-                    } else {
+                    if (!cloudTasksEnabled) {
                         authorize.requestMatchers("/internal/**").permitAll();
                     }
                     
@@ -74,23 +105,6 @@ public class SecurityConfig {
                 )
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        if (cloudTasksEnabled) {
-            if (!cloudTasksProperties.hasValidServiceAccountEmail()) {
-                throw new IllegalStateException(
-                        "Cloud Tasks is enabled but service-account-email is not configured");
-            }
-            if (!cloudTasksProperties.hasValidAudience()) {
-                throw new IllegalStateException(
-                        "Cloud Tasks is enabled but audience is not configured");
-            }
-            http.addFilterBefore(
-                    new CloudTasksAuthenticationFilter(
-                            cloudTasksProperties.serviceAccountEmail(),
-                            cloudTasksProperties.audience()),
-                    UsernamePasswordAuthenticationFilter.class
-            );
-        }
 
         return http.build();
     }

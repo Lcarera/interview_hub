@@ -1,16 +1,10 @@
 package com.gm2dev.interview_hub.controller;
 
-import com.gm2dev.interview_hub.config.CloudTasksProperties;
-import com.gm2dev.interview_hub.config.JwtProperties;
-import com.gm2dev.interview_hub.config.SecurityConfig;
 import com.gm2dev.interview_hub.service.EmailService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -20,8 +14,13 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * Unlike other controller tests, this class intentionally does NOT use @Import(SecurityConfig.class).
+ * When Cloud Tasks is enabled, SecurityConfig creates an internalEndpointsFilterChain bean that
+ * instantiates a real GoogleIdTokenVerifier, which makes network calls to fetch Google's public keys.
+ * Testing controller logic in isolation avoids this external dependency.
+ */
 @WebMvcTest(InternalEmailController.class)
-@Import(SecurityConfig.class)
 @ActiveProfiles("test")
 @TestPropertySource(properties = "app.cloud-tasks.enabled=true")
 class InternalEmailControllerTest {
@@ -31,18 +30,6 @@ class InternalEmailControllerTest {
 
     @MockitoBean
     private EmailService emailService;
-
-    @MockitoBean
-    private JwtDecoder jwtDecoder;
-
-    @MockitoBean
-    private JwtEncoder jwtEncoder;
-
-    @MockitoBean
-    private JwtProperties jwtProperties;
-
-    @MockitoBean
-    private CloudTasksProperties cloudTasksProperties;
 
     @Test
     void processEmailTask_withValidVerificationPayload_sendsEmail() throws Exception {
