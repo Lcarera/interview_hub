@@ -101,7 +101,7 @@ jacocoTestReport {
 				'**/OpenApiConfig.class',
 				'**/*MapperImpl.class',
 				'**/CloudTasksConfig.class',
-				'**/CloudTasksAuthFilter.class',
+				'**/CloudTasksAuthenticationFilter.class',
 				'**/EmailQueueService.class'
 			])
 		}))
@@ -117,6 +117,8 @@ jacocoTestCoverageVerification {
 				'**/OpenApiConfig.class',
 				'**/*MapperImpl.class',
 				'**/CloudTasksConfig.class',
+				'**/CloudTasksAuthenticationFilter.class',
+				'**/EmailQueueService.class',
 				'**/CloudTasksAuthFilter.class',
 				'**/EmailQueueService.class'
 			])

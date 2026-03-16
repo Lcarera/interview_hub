@@ -57,25 +57,6 @@ class EmailQueueServiceTest {
     }
 
     @Test
-    void queueEmail_whenDisabled_doesNotCreateTask() {
-        CloudTasksProperties disabledProps = new CloudTasksProperties(
-                "test-project", "us-central1", "email-queue",
-                false, null
-        );
-        EmailQueueService disabledService = new EmailQueueService(
-                cloudTasksClient, disabledProps, new ObjectMapper(), "http://localhost:8080"
-        );
-
-        EmailTaskPayload payload = new EmailTaskPayload.VerificationEmail(
-                "user@gm2dev.com", "token123"
-        );
-
-        disabledService.queueEmail(payload);
-
-        verifyNoInteractions(cloudTasksClient);
-    }
-
-    @Test
     void queueEmail_includesOidcToken_whenServiceAccountConfigured() {
         when(cloudTasksClient.createTask(any(String.class), any(Task.class)))
                 .thenReturn(Task.getDefaultInstance());

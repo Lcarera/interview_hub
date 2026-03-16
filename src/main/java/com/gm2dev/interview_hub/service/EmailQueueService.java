@@ -40,11 +40,6 @@ public class EmailQueueService {
     }
 
     public void queueEmail(EmailTaskPayload payload) {
-        if (!properties.enabled()) {
-            log.debug("Cloud Tasks disabled, skipping queue for email to {}", payload.to());
-            return;
-        }
-
         try {
             String jsonPayload = objectMapper.writeValueAsString(payload);
 

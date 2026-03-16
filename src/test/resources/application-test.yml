@@ -17,6 +17,10 @@ app:
   frontend-url: http://localhost:4200
   cloud-tasks:
     enabled: false
+    project-id: test-project
+    location: us-central1
+    queue-id: test-queue
+    service-account-email: test@test.iam.gserviceaccount.com
   google:
     client-id: test-client-id
     client-secret: test-client-secret

@@ -6,7 +6,6 @@ import com.resend.Resend;
 import com.resend.core.exception.ResendException;
 import com.resend.services.emails.model.CreateEmailOptions;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
@@ -26,7 +25,7 @@ public class EmailService {
                         @Value("${app.mail.from}") String fromEmail,
                         @Value("${app.frontend-url}") String appBaseUrl,
                         @Nullable CloudTasksProperties cloudTasksProperties,
-                        @Nullable @Autowired(required = false) EmailQueueService emailQueueService) {
+                        @Nullable EmailQueueService emailQueueService) {
         this.resend = resend;
         this.fromEmail = fromEmail;
         this.appBaseUrl = appBaseUrl;
