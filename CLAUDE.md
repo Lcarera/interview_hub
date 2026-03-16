@@ -61,7 +61,7 @@ All under `src/main/java/com/gm2dev/interview_hub/`:
 
 - `domain/` - JPA entities (Candidate, Interview, Profile, ShadowingRequest) and enums (InterviewStatus, ShadowingRequestStatus)
 - `repository/` - Spring Data JPA repositories (CandidateRepository, InterviewRepository, ProfileRepository, ShadowingRequestRepository)
-- `service/` - Business logic (CandidateService, InterviewService, ShadowingRequestService, AuthService, GoogleCalendarService, EmailQueueService)
+- `service/` - Business logic (CandidateService, InterviewService, ShadowingRequestService, AuthService, EmailPasswordAuthService, EmailService, EmailQueueService, GoogleCalendarService)
 - `dto/` - Data transfer objects (AuthResponse, CandidateDto, CandidateRequest, CreateInterviewRequest, UpdateInterviewRequest, InterviewDto, ProfileDto, RejectShadowingRequest, etc.)
 - `mapper/` - MapStruct mappers (CandidateMapper, InterviewMapper, ProfileMapper, ShadowingRequestMapper)
 - `controller/` - REST controllers (CandidateController, InterviewController, ShadowingRequestController, AuthController, InternalEmailController, GlobalExceptionHandler)
@@ -177,6 +177,7 @@ The application models a four-entity system:
 **Nginx** (`frontend/nginx.conf`) acts as reverse proxy:
 - Routes `/api/*`, `/auth/*`, `/admin/*`, `/actuator` → `http://app:8080`
 - All other paths → Angular SPA (`try_files $uri $uri/ /index.html`)
+- `/internal/*` is intentionally NOT proxied — Cloud Tasks calls Cloud Run directly
 
 In production the frontend uses same-origin requests (empty `apiUrl`), so all API calls go through nginx. In dev mode (`bun run start`), the frontend calls `http://localhost:8080` directly.
 
@@ -195,7 +196,7 @@ Two distinct test styles are used — never mix them:
 - `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback` — full Spring context with H2
 - `GoogleCalendarService` is always `@MockitoBean`'d since it makes real HTTP calls
 - `AuthServiceTest`, `GoogleCalendarServiceTest`, and `EmailQueueServiceTest` use pure `@ExtendWith(MockitoExtension.class)` (no Spring context)
-- These two services have package-private methods (`exchangeCodeForTokens`, `buildCalendarClient`) specifically to enable `spy()`-based interception without reflection
+- `AuthService` and `GoogleCalendarService` have package-private methods (`exchangeCodeForTokens`, `buildCalendarClient`) specifically to enable `spy()`-based interception without reflection
 
 **Frontend Tests:** Vitest with jsdom environment. Run with `bun run test` from `frontend/`.
 
