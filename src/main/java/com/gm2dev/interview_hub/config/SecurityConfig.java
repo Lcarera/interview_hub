@@ -92,7 +92,8 @@ public class SecurityConfig {
                     authorize
                             .requestMatchers("/actuator/health").permitAll()
                             .requestMatchers("/auth/**").permitAll()
-                            .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll();
+                            .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                            .requestMatchers("/error").permitAll();
                     
                     if (!cloudTasksEnabled) {
                         authorize.requestMatchers("/internal/**").permitAll();
