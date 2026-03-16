@@ -9,6 +9,7 @@ public record CloudTasksProperties(
         String queueId,
         boolean enabled,
         String serviceAccountEmail,
+        String workerUrl,
         String audience
 ) {
     public String queuePath() {
@@ -17,6 +18,10 @@ public record CloudTasksProperties(
 
     public boolean hasValidServiceAccountEmail() {
         return serviceAccountEmail != null && !serviceAccountEmail.isBlank();
+    }
+
+    public boolean hasValidWorkerUrl() {
+        return workerUrl != null && !workerUrl.isBlank();
     }
 
     public boolean hasValidAudience() {

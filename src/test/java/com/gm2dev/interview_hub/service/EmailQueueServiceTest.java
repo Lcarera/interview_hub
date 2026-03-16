@@ -30,10 +30,10 @@ class EmailQueueServiceTest {
     void setUp() {
         properties = new CloudTasksProperties(
                 "test-project", "us-central1", "email-queue",
-                true, "sa@test-project.iam.gserviceaccount.com", "http://localhost:8080"
+                true, "sa@test-project.iam.gserviceaccount.com", "http://localhost:8080", "http://localhost:8080"
         );
         emailQueueService = new EmailQueueService(
-                cloudTasksClient, properties, new ObjectMapper(), "http://localhost:8080"
+                cloudTasksClient, properties, new ObjectMapper()
         );
     }
 
@@ -81,10 +81,10 @@ class EmailQueueServiceTest {
     void queueEmail_omitsOidcToken_whenNoServiceAccount() {
         CloudTasksProperties noSaProps = new CloudTasksProperties(
                 "test-project", "us-central1", "email-queue",
-                true, null, "http://localhost:8080"
+                true, null, "http://localhost:8080", "http://localhost:8080"
         );
         EmailQueueService noSaService = new EmailQueueService(
-                cloudTasksClient, noSaProps, new ObjectMapper(), "http://localhost:8080"
+                cloudTasksClient, noSaProps, new ObjectMapper()
         );
 
         when(cloudTasksClient.createTask(any(String.class), any(Task.class)))

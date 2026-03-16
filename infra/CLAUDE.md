@@ -26,6 +26,7 @@ pulumi stack output        # show exported values (registry_url, backend_url, fr
 - `gcp:project` / `gcp:region` — GCP project and region
 - `interview-hub-infra:domain` — Frontend custom domain
 - `interview-hub-infra:backend_domain` — Backend custom domain
+- `interview-hub-infra:cloudtasks_worker_url` — Cloud Run service URL for Cloud Tasks HTTP targets (bypasses Cloudflare, ensures OIDC audience matches)
 - `interview-hub-infra:backend_image` / `frontend_image` — Set by CI at deploy time; fallback to `"placeholder"` for secrets-only `pulumi up`
 
 ## Key Design Decisions

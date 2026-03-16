@@ -3,5 +3,6 @@ config:
   gcp:region: southamerica-east1
   interview-hub-infra:domain: interview-hub.lcarera.dev
   interview-hub-infra:backend_domain: i-hub-be.lcarera.dev
+  interview-hub-infra:cloudtasks_worker_url: https://interview-hub-backend-qeczodae3q-rj.a.run.app
   interview-hub-infra:backend_image: southamerica-east1-docker.pkg.dev/interview-hub-prod/interview-hub/backend@sha256:75e3686c50337c3ae09a5b9bb267933d12d5eafd170d28c961ac7e639b5fdc49
   interview-hub-infra:frontend_image: southamerica-east1-docker.pkg.dev/interview-hub-prod/interview-hub/frontend@sha256:f0ba8cc630d200004bee956cc07fe5066297d172344f0cc691452a9b5d8a0b69

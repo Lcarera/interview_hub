@@ -58,6 +58,10 @@ public class SecurityConfig {
                             .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll();
                     
                     if (cloudTasksEnabled) {
+                        if (!cloudTasksProperties.hasValidWorkerUrl()) {
+                            throw new IllegalStateException(
+                                    "Cloud Tasks is enabled but worker-url is not configured");
+                        }
                         authorize.requestMatchers("/internal/**").authenticated();
                     } else {
                         authorize.requestMatchers("/internal/**").permitAll();
