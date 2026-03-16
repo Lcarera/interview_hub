@@ -84,6 +84,10 @@ backend_service = gcp.cloudrunv2.Service(
                         name="CLOUD_TASKS_SA_EMAIL",
                         value=cloudrun_sa.email,
                     ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="CLOUD_TASKS_AUDIENCE",
+                        value=pulumi.Output.concat("https://", backend_domain),
+                    ),
                 ],
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
                     limits={"memory": "1Gi", "cpu": "1000m"},

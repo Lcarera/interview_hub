@@ -1,7 +1,7 @@
 package com.gm2dev.interview_hub.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.gm2dev.interview_hub.config.CloudTasksProperties;
 import com.gm2dev.interview_hub.dto.EmailTaskPayload;
 import com.google.cloud.tasks.v2.CloudTasksClient;
@@ -49,12 +49,13 @@ public class EmailQueueService {
                     .putHeaders("Content-Type", "application/json")
                     .setBody(ByteString.copyFrom(jsonPayload, StandardCharsets.UTF_8));
 
-            if (properties.serviceAccountEmail() != null && !properties.serviceAccountEmail().isBlank()) {
-                httpRequestBuilder.setOidcToken(
-                        OidcToken.newBuilder()
-                                .setServiceAccountEmail(properties.serviceAccountEmail())
-                                .build()
-                );
+            if (properties.hasValidServiceAccountEmail()) {
+                OidcToken.Builder oidcBuilder = OidcToken.newBuilder()
+                        .setServiceAccountEmail(properties.serviceAccountEmail());
+                if (properties.hasValidAudience()) {
+                    oidcBuilder.setAudience(properties.audience());
+                }
+                httpRequestBuilder.setOidcToken(oidcBuilder.build());
             }
 
             Task task = Task.newBuilder()
@@ -64,7 +65,7 @@ public class EmailQueueService {
             Task created = cloudTasksClient.createTask(properties.queuePath(), task);
             log.debug("Queued email task {} for {}", created.getName(), payload.to());
 
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("Failed to serialize email payload for {}", payload.to(), e);
             throw new RuntimeException("Failed to queue email", e);
         }

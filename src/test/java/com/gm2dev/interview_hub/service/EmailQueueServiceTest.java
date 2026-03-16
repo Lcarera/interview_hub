@@ -1,6 +1,6 @@
 package com.gm2dev.interview_hub.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.gm2dev.interview_hub.config.CloudTasksProperties;
 import com.gm2dev.interview_hub.dto.EmailTaskPayload;
 import com.google.cloud.tasks.v2.CloudTasksClient;
@@ -73,6 +73,8 @@ class EmailQueueServiceTest {
         Task task = taskCaptor.getValue();
         assertThat(task.getHttpRequest().getOidcToken().getServiceAccountEmail())
                 .isEqualTo("sa@test-project.iam.gserviceaccount.com");
+        assertThat(task.getHttpRequest().getOidcToken().getAudience())
+                .isEqualTo("http://localhost:8080");
     }
 
     @Test
