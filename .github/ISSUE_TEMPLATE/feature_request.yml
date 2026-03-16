@@ -20,6 +20,16 @@ body:
     validations:
       required: true
   - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - backend
+        - frontend
+        - both
+    validations:
+      required: true
+  - type: dropdown
     id: priority
     attributes:
       label: Priority

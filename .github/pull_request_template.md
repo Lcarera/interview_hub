@@ -12,3 +12,8 @@ Closes #
 <!-- How was this tested? -->
 
 -
+
+## Checklist
+- [ ] Tests pass (`./gradlew test` / `bun run test`)
+- [ ] Migration added (if schema changed)
+- [ ] No secrets committed
