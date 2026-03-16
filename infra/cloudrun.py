@@ -2,6 +2,7 @@ import pulumi
 import pulumi_gcp as gcp
 from iam import cloudrun_sa, secret_access_binding
 from secrets import secrets
+from cloudtasks import email_queue, cloudtasks_enqueuer
 
 gcp_config = pulumi.Config("gcp")
 config = pulumi.Config("interview-hub-infra")
@@ -35,7 +36,7 @@ backend_service = gcp.cloudrunv2.Service(
     project=project,
     ingress="INGRESS_TRAFFIC_ALL",
     scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=0),
-    opts=pulumi.ResourceOptions(depends_on=[secret_access_binding]),
+    opts=pulumi.ResourceOptions(depends_on=[secret_access_binding, cloudtasks_enqueuer]),
     template=gcp.cloudrunv2.ServiceTemplateArgs(
         service_account=cloudrun_sa.email,
         containers=[
@@ -62,6 +63,26 @@ backend_service = gcp.cloudrunv2.Service(
                     gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
                         name="GOOGLE_CALENDAR_ID",
                         value="0cae724ce3870858a6213c7f351107891bd3c1265b336d3bfef5693c3a3cdc9d@group.calendar.google.com",
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="GCP_PROJECT_ID",
+                        value=project,
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="GCP_LOCATION",
+                        value=region,
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="CLOUD_TASKS_QUEUE_ID",
+                        value=email_queue.name,
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="CLOUD_TASKS_ENABLED",
+                        value="true",
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="CLOUD_TASKS_SA_EMAIL",
+                        value=cloudrun_sa.email,
                     ),
                 ],
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(

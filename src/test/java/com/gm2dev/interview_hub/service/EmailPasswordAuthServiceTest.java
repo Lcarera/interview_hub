@@ -103,7 +103,7 @@ class EmailPasswordAuthServiceTest {
         assertEquals(Role.interviewer, saved.getRole());
         assertFalse(saved.isEmailVerified());
 
-        verify(emailService).sendVerificationEmail(eq("user@gm2dev.com"), anyString());
+        verify(emailService).queueVerificationEmail(eq("user@gm2dev.com"), anyString());
 
         // Verify token is stored as SHA-256 hash (not raw UUID)
         ArgumentCaptor<VerificationToken> tokenCaptor = ArgumentCaptor.forClass(VerificationToken.class);
@@ -309,7 +309,7 @@ class EmailPasswordAuthServiceTest {
         service.resendVerification("user@gm2dev.com");
 
         assertTrue(oldToken.isUsed());
-        verify(emailService).sendVerificationEmail(eq("user@gm2dev.com"), anyString());
+        verify(emailService).queueVerificationEmail(eq("user@gm2dev.com"), anyString());
     }
 
     @Test
@@ -324,7 +324,7 @@ class EmailPasswordAuthServiceTest {
 
         service.resendVerification("user@gm2dev.com");
 
-        verify(emailService, never()).sendVerificationEmail(anyString(), anyString());
+        verify(emailService, never()).queueVerificationEmail(anyString(), anyString());
     }
 
     @Test
@@ -332,7 +332,7 @@ class EmailPasswordAuthServiceTest {
         when(profileRepository.findByEmail("nobody@gm2dev.com")).thenReturn(Optional.empty());
 
         assertDoesNotThrow(() -> service.resendVerification("nobody@gm2dev.com"));
-        verify(emailService, never()).sendVerificationEmail(anyString(), anyString());
+        verify(emailService, never()).queueVerificationEmail(anyString(), anyString());
     }
 
     @Test
@@ -347,7 +347,7 @@ class EmailPasswordAuthServiceTest {
 
         service.resendVerification("user@gm2dev.com");
 
-        verify(emailService, never()).sendVerificationEmail(anyString(), anyString());
+        verify(emailService, never()).queueVerificationEmail(anyString(), anyString());
     }
 
     // --- Forgot password tests ---
@@ -371,7 +371,7 @@ class EmailPasswordAuthServiceTest {
         service.forgotPassword("user@gm2dev.com");
 
         assertTrue(oldToken.isUsed());
-        verify(emailService).sendPasswordResetEmail(eq("user@gm2dev.com"), anyString());
+        verify(emailService).queuePasswordResetEmail(eq("user@gm2dev.com"), anyString());
     }
 
     @Test
@@ -379,7 +379,7 @@ class EmailPasswordAuthServiceTest {
         when(profileRepository.findByEmail("nobody@gm2dev.com")).thenReturn(Optional.empty());
 
         assertDoesNotThrow(() -> service.forgotPassword("nobody@gm2dev.com"));
-        verify(emailService, never()).sendPasswordResetEmail(anyString(), anyString());
+        verify(emailService, never()).queuePasswordResetEmail(anyString(), anyString());
     }
 
     @Test
@@ -393,7 +393,7 @@ class EmailPasswordAuthServiceTest {
 
         service.forgotPassword("user@gm2dev.com");
 
-        verify(emailService, never()).sendPasswordResetEmail(anyString(), anyString());
+        verify(emailService, never()).queuePasswordResetEmail(anyString(), anyString());
     }
 
     // --- Reset password tests ---
@@ -463,7 +463,7 @@ class EmailPasswordAuthServiceTest {
         when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
         when(verificationTokenRepository.save(any(VerificationToken.class))).thenAnswer(inv -> inv.getArgument(0));
         doThrow(new RuntimeException("Email delivery failed"))
-                .when(emailService).sendVerificationEmail(anyString(), anyString());
+                .when(emailService).queueVerificationEmail(anyString(), anyString());
 
         assertThrows(RuntimeException.class, () -> service.register(request));
     }

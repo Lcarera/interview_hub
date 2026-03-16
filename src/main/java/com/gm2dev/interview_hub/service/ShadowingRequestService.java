@@ -89,7 +89,7 @@ public class ShadowingRequestService {
 
         String summary = InterviewService.buildSummary(interview);
 
-        emailService.sendShadowingApprovedEmail(request.getShadower().getEmail(), summary,
+        emailService.queueShadowingApprovedEmail(request.getShadower().getEmail(), summary,
                 EMAIL_DATE_FMT.format(interview.getStartTime()),
                 EMAIL_DATE_FMT.format(interview.getEndTime()));
 
