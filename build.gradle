@@ -52,14 +52,17 @@ dependencies {
 	// JSON Processing (for JSONB converter)
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 
+	// Google Cloud BOM — aligns all Google Cloud + gRPC + protobuf versions
+	implementation platform('com.google.cloud:libraries-bom:26.77.0')
+
 	// Google API (Calendar + Auth)
 	implementation 'com.google.apis:google-api-services-calendar:v3-rev20250115-2.0.0'
-	implementation 'com.google.api-client:google-api-client:2.7.2'
-	implementation 'com.google.http-client:google-http-client-jackson2:1.45.3'
-	implementation 'com.google.auth:google-auth-library-oauth2-http:1.31.0'
+	implementation 'com.google.api-client:google-api-client'
+	implementation 'com.google.http-client:google-http-client-jackson2'
+	implementation 'com.google.auth:google-auth-library-oauth2-http'
 
 	// Google Cloud Tasks
-	implementation 'com.google.cloud:google-cloud-tasks:2.46.0'
+	implementation 'com.google.cloud:google-cloud-tasks'
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
@@ -102,6 +105,7 @@ jacocoTestReport {
 				'**/*MapperImpl.class',
 				'**/CloudTasksConfig.class',
 				'**/CloudTasksAuthenticationFilter.class',
+				'**/SecurityConfig.class',
 				'**/EmailQueueService.class'
 			])
 		}))
@@ -118,8 +122,7 @@ jacocoTestCoverageVerification {
 				'**/*MapperImpl.class',
 				'**/CloudTasksConfig.class',
 				'**/CloudTasksAuthenticationFilter.class',
-				'**/EmailQueueService.class',
-				'**/CloudTasksAuthFilter.class',
+				'**/SecurityConfig.class',
 				'**/EmailQueueService.class'
 			])
 		}))

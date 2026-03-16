@@ -24,10 +24,29 @@ public class CloudTasksAuthenticationFilter extends OncePerRequestFilter {
     private final GoogleIdTokenVerifier tokenVerifier;
     private final String expectedServiceAccountEmail;
 
-    public CloudTasksAuthenticationFilter(String expectedServiceAccountEmail) {
+    public CloudTasksAuthenticationFilter(String expectedServiceAccountEmail, String expectedAudience) {
+        if (expectedServiceAccountEmail == null || expectedServiceAccountEmail.isBlank()) {
+            throw new IllegalArgumentException("expectedServiceAccountEmail must not be null or blank");
+        }
+        if (expectedAudience == null || expectedAudience.isBlank()) {
+            throw new IllegalArgumentException("expectedAudience must not be null or blank");
+        }
         this.expectedServiceAccountEmail = expectedServiceAccountEmail;
         this.tokenVerifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                .setAudience(Collections.singletonList(expectedAudience))
                 .build();
+    }
+
+    CloudTasksAuthenticationFilter(String expectedServiceAccountEmail, String expectedAudience, 
+                                   GoogleIdTokenVerifier tokenVerifier) {
+        if (expectedServiceAccountEmail == null || expectedServiceAccountEmail.isBlank()) {
+            throw new IllegalArgumentException("expectedServiceAccountEmail must not be null or blank");
+        }
+        if (expectedAudience == null || expectedAudience.isBlank()) {
+            throw new IllegalArgumentException("expectedAudience must not be null or blank");
+        }
+        this.expectedServiceAccountEmail = expectedServiceAccountEmail;
+        this.tokenVerifier = tokenVerifier;
     }
 
     @Override
@@ -56,7 +75,7 @@ public class CloudTasksAuthenticationFilter extends OncePerRequestFilter {
             }
 
             String email = idToken.getPayload().getEmail();
-            if (expectedServiceAccountEmail != null && !expectedServiceAccountEmail.equals(email)) {
+            if (!expectedServiceAccountEmail.equals(email)) {
                 log.warn("OIDC token email {} does not match expected service account {}", 
                         email, expectedServiceAccountEmail);
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, 
