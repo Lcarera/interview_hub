@@ -53,37 +53,6 @@ public class EmailService {
         sendHtmlEmail(toEmail, subject, body);
     }
 
-    public void sendInterviewInviteEmail(String toEmail, String summary, String startTime, String endTime, String meetLink) {
-        String safeSummary = HtmlUtils.htmlEscape(summary);
-        String subject = "Interview Hub — Interview Scheduled: " + summary;
-        String body = "<h2>Interview Scheduled</h2>"
-                + "<p><strong>" + safeSummary + "</strong></p>"
-                + "<p>Start: " + HtmlUtils.htmlEscape(startTime) + "</p>"
-                + "<p>End: " + HtmlUtils.htmlEscape(endTime) + "</p>"
-                + (meetLink != null ? "<p>Google Meet: <a href=\"" + HtmlUtils.htmlEscape(meetLink) + "\">" + HtmlUtils.htmlEscape(meetLink) + "</a></p>" : "")
-                + "<p>This event has been added to the shared interview calendar.</p>";
-        sendHtmlEmailQuietly(toEmail, subject, body);
-    }
-
-    public void sendInterviewUpdateEmail(String toEmail, String summary, String startTime, String endTime) {
-        String safeSummary = HtmlUtils.htmlEscape(summary);
-        String subject = "Interview Hub — Interview Updated: " + summary;
-        String body = "<h2>Interview Updated</h2>"
-                + "<p><strong>" + safeSummary + "</strong></p>"
-                + "<p>New Start: " + HtmlUtils.htmlEscape(startTime) + "</p>"
-                + "<p>New End: " + HtmlUtils.htmlEscape(endTime) + "</p>"
-                + "<p>The calendar event has been updated.</p>";
-        sendHtmlEmailQuietly(toEmail, subject, body);
-    }
-
-    public void sendInterviewCancellationEmail(String toEmail, String summary) {
-        String safeSummary = HtmlUtils.htmlEscape(summary);
-        String subject = "Interview Hub — Interview Cancelled: " + summary;
-        String body = "<h2>Interview Cancelled</h2>"
-                + "<p><strong>" + safeSummary + "</strong></p>"
-                + "<p>This interview has been cancelled and removed from the calendar.</p>";
-        sendHtmlEmailQuietly(toEmail, subject, body);
-    }
 
     public void sendShadowingApprovedEmail(String toEmail, String summary, String startTime, String endTime) {
         String safeSummary = HtmlUtils.htmlEscape(summary);

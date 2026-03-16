@@ -20,9 +20,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Service
@@ -30,15 +27,10 @@ import java.util.UUID;
 @Slf4j
 public class InterviewService {
 
-    static final DateTimeFormatter EMAIL_DATE_FMT =
-            DateTimeFormatter.ofPattern("MMMM d, yyyy 'at' h:mm a z")
-                    .withZone(ZoneId.of("UTC"));
-
     private final InterviewRepository interviewRepository;
     private final ProfileRepository profileRepository;
     private final CandidateRepository candidateRepository;
     private final GoogleCalendarService googleCalendarService;
-    private final EmailService emailService;
     private final InterviewMapper interviewMapper;
 
     @Transactional
@@ -67,17 +59,13 @@ public class InterviewService {
 
         interview = interviewRepository.save(interview);
 
-        String meetLink = null;
         try {
             GoogleCalendarService.CalendarEventResult calendarResult = googleCalendarService.createEvent(interview);
             interview.setGoogleEventId(calendarResult.eventId());
-            meetLink = calendarResult.meetLink();
             interview = interviewRepository.save(interview);
         } catch (Exception e) {
             log.warn("Failed to create Google Calendar event for interview {}: {}", interview.getId(), e.getMessage());
         }
-
-        sendInviteEmails(interview, meetLink);
 
         return interview;
     }
@@ -124,8 +112,6 @@ public class InterviewService {
             }
         }
 
-        sendUpdateEmails(interview);
-
         return interview;
     }
 
@@ -144,8 +130,6 @@ public class InterviewService {
             }
         }
 
-        sendCancellationEmails(interview);
-
         interviewRepository.delete(interview);
     }
 
@@ -153,51 +137,5 @@ public class InterviewService {
         String candidateName = interview.getCandidate() != null && interview.getCandidate().getName() != null
                 ? interview.getCandidate().getName() : "Unknown";
         return interview.getTechStack() + " Interview - " + candidateName;
-    }
-
-    private void sendInviteEmails(Interview interview, String meetLink) {
-        String summary = buildSummary(interview);
-        String start = EMAIL_DATE_FMT.format(interview.getStartTime());
-        String end = EMAIL_DATE_FMT.format(interview.getEndTime());
-
-        emailService.sendInterviewInviteEmail(interview.getInterviewer().getEmail(), summary, start, end, meetLink);
-
-        if (interview.getCandidate().getEmail() != null) {
-            emailService.sendInterviewInviteEmail(interview.getCandidate().getEmail(), summary, start, end, meetLink);
-        }
-
-        if (interview.getTalentAcquisition() != null) {
-            emailService.sendInterviewInviteEmail(interview.getTalentAcquisition().getEmail(), summary, start, end, meetLink);
-        }
-    }
-
-    private void sendUpdateEmails(Interview interview) {
-        String summary = buildSummary(interview);
-        String start = EMAIL_DATE_FMT.format(interview.getStartTime());
-        String end = EMAIL_DATE_FMT.format(interview.getEndTime());
-
-        emailService.sendInterviewUpdateEmail(interview.getInterviewer().getEmail(), summary, start, end);
-
-        if (interview.getCandidate().getEmail() != null) {
-            emailService.sendInterviewUpdateEmail(interview.getCandidate().getEmail(), summary, start, end);
-        }
-
-        if (interview.getTalentAcquisition() != null) {
-            emailService.sendInterviewUpdateEmail(interview.getTalentAcquisition().getEmail(), summary, start, end);
-        }
-    }
-
-    private void sendCancellationEmails(Interview interview) {
-        String summary = buildSummary(interview);
-
-        emailService.sendInterviewCancellationEmail(interview.getInterviewer().getEmail(), summary);
-
-        if (interview.getCandidate().getEmail() != null) {
-            emailService.sendInterviewCancellationEmail(interview.getCandidate().getEmail(), summary);
-        }
-
-        if (interview.getTalentAcquisition() != null) {
-            emailService.sendInterviewCancellationEmail(interview.getTalentAcquisition().getEmail(), summary);
-        }
     }
 }
