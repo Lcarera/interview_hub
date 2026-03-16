@@ -65,7 +65,7 @@ public class SecurityConfig {
 
         http
                 .securityMatcher("/internal/**")
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(cors -> cors.disable())
                 .authorizeHttpRequests(authorize -> authorize
                         .anyRequest().authenticated()
                 )
