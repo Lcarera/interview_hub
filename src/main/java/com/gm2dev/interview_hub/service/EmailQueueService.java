@@ -11,7 +11,6 @@ import com.google.cloud.tasks.v2.OidcToken;
 import com.google.cloud.tasks.v2.Task;
 import com.google.protobuf.ByteString;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -30,13 +29,12 @@ public class EmailQueueService {
     public EmailQueueService(
             CloudTasksClient cloudTasksClient,
             CloudTasksProperties properties,
-            ObjectMapper objectMapper,
-            @Value("${app.base-url}") String appBaseUrl
+            ObjectMapper objectMapper
     ) {
         this.cloudTasksClient = cloudTasksClient;
         this.properties = properties;
         this.objectMapper = objectMapper;
-        this.workerUrl = appBaseUrl + "/internal/email-worker";
+        this.workerUrl = properties.workerUrl() + "/internal/email-worker";
     }
 
     public void queueEmail(EmailTaskPayload payload) {

@@ -13,7 +13,7 @@ class CloudTasksPropertiesTest {
     void queuePath_formatsCorrectly() {
         CloudTasksProperties props = new CloudTasksProperties(
                 "my-project", "us-central1", "email-queue",
-                true, "sa@project.iam.gserviceaccount.com", "https://app.example.com"
+                true, "sa@project.iam.gserviceaccount.com", "https://app.example.com", "https://app.example.com"
         );
 
         assertThat(props.queuePath())
@@ -23,7 +23,7 @@ class CloudTasksPropertiesTest {
     @Test
     void hasValidServiceAccountEmail_returnsTrueForValidEmail() {
         CloudTasksProperties props = new CloudTasksProperties(
-                "proj", "loc", "queue", true, "sa@project.iam.gserviceaccount.com", "https://app.example.com"
+                "proj", "loc", "queue", true, "sa@project.iam.gserviceaccount.com", "https://app.example.com", "https://app.example.com"
         );
 
         assertThat(props.hasValidServiceAccountEmail()).isTrue();
@@ -34,16 +34,36 @@ class CloudTasksPropertiesTest {
     @ValueSource(strings = {"  ", "\t", "\n"})
     void hasValidServiceAccountEmail_returnsFalseForNullOrBlank(String email) {
         CloudTasksProperties props = new CloudTasksProperties(
-                "proj", "loc", "queue", true, email, "https://app.example.com"
+                "proj", "loc", "queue", true, email, "https://app.example.com", "https://app.example.com"
         );
 
         assertThat(props.hasValidServiceAccountEmail()).isFalse();
     }
 
     @Test
+    void hasValidWorkerUrl_returnsTrueForValidUrl() {
+        CloudTasksProperties props = new CloudTasksProperties(
+                "proj", "loc", "queue", true, "sa@project.iam.gserviceaccount.com", "https://app.example.com", "https://app.example.com"
+        );
+
+        assertThat(props.hasValidWorkerUrl()).isTrue();
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"  ", "\t", "\n"})
+    void hasValidWorkerUrl_returnsFalseForNullOrBlank(String workerUrl) {
+        CloudTasksProperties props = new CloudTasksProperties(
+                "proj", "loc", "queue", true, "sa@project.iam.gserviceaccount.com", workerUrl, "https://app.example.com"
+        );
+
+        assertThat(props.hasValidWorkerUrl()).isFalse();
+    }
+
+    @Test
     void hasValidAudience_returnsTrueForValidAudience() {
         CloudTasksProperties props = new CloudTasksProperties(
-                "proj", "loc", "queue", true, "sa@project.iam.gserviceaccount.com", "https://app.example.com"
+                "proj", "loc", "queue", true, "sa@project.iam.gserviceaccount.com", "https://app.example.com", "https://app.example.com"
         );
 
         assertThat(props.hasValidAudience()).isTrue();
@@ -54,7 +74,7 @@ class CloudTasksPropertiesTest {
     @ValueSource(strings = {"  ", "\t", "\n"})
     void hasValidAudience_returnsFalseForNullOrBlank(String audience) {
         CloudTasksProperties props = new CloudTasksProperties(
-                "proj", "loc", "queue", true, "sa@project.iam.gserviceaccount.com", audience
+                "proj", "loc", "queue", true, "sa@project.iam.gserviceaccount.com", "https://app.example.com", audience
         );
 
         assertThat(props.hasValidAudience()).isFalse();

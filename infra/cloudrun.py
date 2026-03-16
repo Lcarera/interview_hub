@@ -29,6 +29,10 @@ _secret_envs = [
     for name, secret in secrets.items()
 ]
 
+# Cloud Tasks worker URL - use the actual Cloud Run URL (not custom domain) for direct GCP-to-GCP communication
+# This avoids routing through Cloudflare and ensures OIDC token audience matches the actual target
+cloudtasks_worker_url = config.get("cloudtasks_worker_url")
+
 backend_service = gcp.cloudrunv2.Service(
     "backend",
     name="interview-hub-backend",
@@ -85,8 +89,12 @@ backend_service = gcp.cloudrunv2.Service(
                         value=cloudrun_sa.email,
                     ),
                     gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="CLOUD_TASKS_WORKER_URL",
+                        value=cloudtasks_worker_url,
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
                         name="CLOUD_TASKS_AUDIENCE",
-                        value=pulumi.Output.concat("https://", backend_domain),
+                        value=cloudtasks_worker_url,
                     ),
                 ],
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(

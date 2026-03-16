@@ -222,7 +222,8 @@ Required for runtime:
 - `CLOUD_TASKS_QUEUE_ID` - Cloud Tasks queue name (default: email-queue)
 - `CLOUD_TASKS_ENABLED` - Enable async email via Cloud Tasks (default: false)
 - `CLOUD_TASKS_SA_EMAIL` - Service account email for OIDC token on Cloud Tasks HTTP requests (required when Cloud Tasks is enabled)
-- `CLOUD_TASKS_AUDIENCE` - Expected audience for OIDC tokens from Cloud Tasks (defaults to APP_BASE_URL; required when Cloud Tasks is enabled)
+- `CLOUD_TASKS_WORKER_URL` - Base URL for Cloud Tasks HTTP target (defaults to APP_BASE_URL; in production, set to the Cloud Run service URL for direct GCP-to-GCP communication)
+- `CLOUD_TASKS_AUDIENCE` - Expected audience for OIDC tokens from Cloud Tasks (defaults to APP_BASE_URL; must match CLOUD_TASKS_WORKER_URL in production)
 
 Required for CI/CD (GitHub Actions secrets):
 - `SUPABASE_DB_URL` - PostgreSQL connection string for running migrations in the deploy pipeline (format: `postgresql://user:pass@host:port/dbname`)
