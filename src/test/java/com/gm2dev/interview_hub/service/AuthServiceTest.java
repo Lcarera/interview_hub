@@ -1,7 +1,6 @@
 package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
-import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.AuthResponse;
@@ -14,17 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import com.nimbusds.jose.jwk.OctetSequenceKey;
-import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
-import com.nimbusds.jose.jwk.JWKSet;
 
-import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,13 +28,13 @@ import static org.mockito.Mockito.lenient;
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
-    private static final String SIGNING_SECRET = "test-signing-secret-that-is-at-least-32-bytes-long";
-
     @Mock
     private ProfileRepository profileRepository;
 
+    @Mock
+    private JwtService jwtService;
+
     private AuthService authService;
-    private JwtDecoder jwtDecoder;
 
     @BeforeEach
     void setUp() {
@@ -54,18 +43,7 @@ class AuthServiceTest {
         googleProps.setClientSecret("test-client-secret");
         googleProps.setRedirectUri("http://localhost:8080/auth/google/callback");
 
-        JwtProperties jwtProps = new JwtProperties();
-        jwtProps.setSigningSecret(SIGNING_SECRET);
-        jwtProps.setExpirationSeconds(3600);
-
-        byte[] keyBytes = SIGNING_SECRET.getBytes();
-        SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
-        OctetSequenceKey jwk = new OctetSequenceKey.Builder(secretKey).build();
-        JwtEncoder jwtEncoder = new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(jwk)));
-
-        authService = spy(new AuthService(googleProps, jwtProps, profileRepository, jwtEncoder));
-
-        jwtDecoder = NimbusJwtDecoder.withSecretKey(secretKey).macAlgorithm(MacAlgorithm.HS256).build();
+        authService = spy(new AuthService(googleProps, profileRepository, jwtService));
     }
 
     @Test
@@ -88,17 +66,16 @@ class AuthServiceTest {
         when(profileRepository.findByGoogleSub("sub-123")).thenReturn(Optional.empty());
         when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        AuthResponse expectedResponse = new AuthResponse("test-token", 3600, "user@gm2dev.com");
+        when(jwtService.issueToken(any(Profile.class))).thenReturn(expectedResponse);
+
         AuthResponse response = authService.handleCallback("valid-code");
 
         assertNotNull(response.token());
         assertEquals("user@gm2dev.com", response.email());
         assertEquals(3600, response.expiresIn());
 
-        // Verify JWT contains correct claims
-        Jwt jwt = jwtDecoder.decode(response.token());
-        assertEquals("user@gm2dev.com", jwt.getClaimAsString("email"));
-        assertEquals("interviewer", jwt.getClaimAsString("role"));
-        assertNotNull(jwt.getSubject());
+        verify(jwtService).issueToken(any(Profile.class));
     }
 
     @Test
@@ -108,6 +85,7 @@ class AuthServiceTest {
 
         assertThrows(SecurityException.class, () -> authService.handleCallback("bad-code"));
         verify(profileRepository, never()).save(any());
+        verify(jwtService, never()).issueToken(any());
     }
 
     @Test
@@ -117,6 +95,7 @@ class AuthServiceTest {
 
         assertThrows(SecurityException.class, () -> authService.handleCallback("personal-code"));
         verify(profileRepository, never()).save(any());
+        verify(jwtService, never()).issueToken(any());
     }
 
     @Test
@@ -131,6 +110,9 @@ class AuthServiceTest {
         doReturn(tokenResponse).when(authService).exchangeCodeForTokens(eq("returning-code"), anyString());
         when(profileRepository.findByGoogleSub("sub-existing")).thenReturn(Optional.of(existingProfile));
         when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AuthResponse expectedResponse = new AuthResponse("test-token", 3600, "updated@gm2dev.com");
+        when(jwtService.issueToken(any(Profile.class))).thenReturn(expectedResponse);
 
         AuthResponse response = authService.handleCallback("returning-code");
 
@@ -149,6 +131,9 @@ class AuthServiceTest {
         doReturn(tokenResponse).when(authService).exchangeCodeForTokens(eq("new-code"), anyString());
         when(profileRepository.findByGoogleSub("sub-new")).thenReturn(Optional.empty());
         when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AuthResponse expectedResponse = new AuthResponse("test-token", 3600, "new@gm2dev.com");
+        when(jwtService.issueToken(any(Profile.class))).thenReturn(expectedResponse);
 
         authService.handleCallback("new-code");
 
