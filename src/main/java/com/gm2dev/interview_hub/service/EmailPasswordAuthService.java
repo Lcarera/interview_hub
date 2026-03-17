@@ -1,6 +1,5 @@
 package com.gm2dev.interview_hub.service;
 
-import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.TokenType;
 import com.gm2dev.interview_hub.domain.VerificationToken;
@@ -13,13 +12,9 @@ import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.gm2dev.interview_hub.repository.VerificationTokenRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.JwsHeader;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -38,24 +33,21 @@ public class EmailPasswordAuthService {
     private final VerificationTokenRepository verificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    private final JwtProperties jwtProperties;
     private final ProfileMapper profileMapper;
-    private final JwtEncoder jwtEncoder;
+    private final JwtService jwtService;
 
     public EmailPasswordAuthService(ProfileRepository profileRepository,
                                      VerificationTokenRepository verificationTokenRepository,
                                      PasswordEncoder passwordEncoder,
                                      EmailService emailService,
-                                     JwtProperties jwtProperties,
                                      ProfileMapper profileMapper,
-                                     JwtEncoder jwtEncoder) {
+                                     JwtService jwtService) {
         this.profileRepository = profileRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
-        this.jwtProperties = jwtProperties;
         this.profileMapper = profileMapper;
-        this.jwtEncoder = jwtEncoder;
+        this.jwtService = jwtService;
     }
 
     @Transactional
@@ -120,8 +112,7 @@ public class EmailPasswordAuthService {
             throw new SecurityException(LOGIN_FAILURE_MESSAGE);
         }
 
-        String jwt = issueJwt(profile);
-        return new AuthResponse(jwt, jwtProperties.getExpirationSeconds(), profile.getEmail());
+        return jwtService.issueToken(profile);
     }
 
     @Transactional
@@ -131,7 +122,6 @@ public class EmailPasswordAuthService {
                 invalidateActiveTokens(profile, TokenType.EMAIL_VERIFICATION);
                 String rawToken = UUID.randomUUID().toString();
                 createVerificationToken(profile, TokenType.EMAIL_VERIFICATION, 24, rawToken);
-                // Propagates on failure — rolls back the new verification token
                 emailService.queueVerificationEmail(email, rawToken);
             }
         });
@@ -144,7 +134,6 @@ public class EmailPasswordAuthService {
                 invalidateActiveTokens(profile, TokenType.PASSWORD_RESET);
                 String rawToken = UUID.randomUUID().toString();
                 createVerificationToken(profile, TokenType.PASSWORD_RESET, 1, rawToken);
-                // Silent on failure — token is committed regardless (password-reset never leaks email existence)
                 emailService.queuePasswordResetEmail(email, rawToken);
             }
         });
@@ -207,18 +196,5 @@ public class EmailPasswordAuthService {
         if (!ALLOWED_DOMAINS.contains(domain)) {
             throw new SecurityException("Registration is restricted to allowed email domains");
         }
-    }
-
-    private String issueJwt(Profile profile) {
-        Instant now = Instant.now();
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-                .subject(profile.getId().toString())
-                .claim("email", profile.getEmail())
-                .claim("role", profile.getRole().name())
-                .issuedAt(now)
-                .expiresAt(now.plusSeconds(jwtProperties.getExpirationSeconds()))
-                .build();
-        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
-        return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }
 }
