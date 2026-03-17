@@ -1,6 +1,7 @@
 package com.gm2dev.interview_hub.controller;
 
 import com.gm2dev.interview_hub.dto.CreateInterviewRequest;
+import com.gm2dev.interview_hub.dto.CurrentUser;
 import com.gm2dev.interview_hub.dto.InterviewDto;
 import com.gm2dev.interview_hub.dto.UpdateInterviewRequest;
 import com.gm2dev.interview_hub.mapper.InterviewMapper;
@@ -15,8 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -62,9 +61,8 @@ public class InterviewController {
     @PutMapping("/{id}")
     public InterviewDto updateInterview(@PathVariable UUID id,
                                         @Valid @RequestBody UpdateInterviewRequest request,
-                                        @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
-        UUID requesterId = UUID.fromString(jwt.getSubject());
-        return interviewMapper.toDto(interviewService.updateInterview(id, request, requesterId));
+                                        CurrentUser currentUser) {
+        return interviewMapper.toDto(interviewService.updateInterview(id, request, currentUser.id()));
     }
 
     @Operation(summary = "Delete an interview", description = "Deletes an interview and cancels the Google Calendar event.",
@@ -73,9 +71,7 @@ public class InterviewController {
                     @ApiResponse(responseCode = "404", description = "Interview not found")})
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteInterview(@PathVariable UUID id,
-                                @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
-        UUID requesterId = UUID.fromString(jwt.getSubject());
-        interviewService.deleteInterview(id, requesterId);
+    public void deleteInterview(@PathVariable UUID id, CurrentUser currentUser) {
+        interviewService.deleteInterview(id, currentUser.id());
     }
 }
