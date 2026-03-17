@@ -1,18 +1,16 @@
 package com.gm2dev.interview_hub.controller;
 
+import com.gm2dev.interview_hub.dto.CurrentUser;
 import com.gm2dev.interview_hub.dto.RejectShadowingRequest;
 import com.gm2dev.interview_hub.dto.ShadowingRequestDto;
 import com.gm2dev.interview_hub.mapper.ShadowingRequestMapper;
 import com.gm2dev.interview_hub.service.ShadowingRequestService;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,9 +34,8 @@ public class ShadowingRequestController {
 
     @Operation(summary = "List my shadowing requests", description = "Returns shadowing requests for the authenticated user.")
     @GetMapping("/api/shadowing-requests/my")
-    public List<ShadowingRequestDto> listMyShadowingRequests(@Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
-        UUID shadowerId = UUID.fromString(jwt.getSubject());
-        return shadowingRequestService.findByShadowerId(shadowerId).stream()
+    public List<ShadowingRequestDto> listMyShadowingRequests(CurrentUser currentUser) {
+        return shadowingRequestService.findByShadowerId(currentUser.id()).stream()
                 .map(shadowingRequestMapper::toDto)
                 .toList();
     }
@@ -49,21 +46,17 @@ public class ShadowingRequestController {
                     @ApiResponse(responseCode = "404", description = "Interview not found")})
     @PostMapping("/api/interviews/{interviewId}/shadowing-requests")
     @ResponseStatus(HttpStatus.CREATED)
-    public ShadowingRequestDto requestShadowing(@PathVariable UUID interviewId,
-                                                @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
-        UUID shadowerId = UUID.fromString(jwt.getSubject());
+    public ShadowingRequestDto requestShadowing(@PathVariable UUID interviewId, CurrentUser currentUser) {
         return shadowingRequestMapper.toDto(
-                shadowingRequestService.requestShadowing(interviewId, shadowerId));
+                shadowingRequestService.requestShadowing(interviewId, currentUser.id()));
     }
 
     @Operation(summary = "Cancel a shadowing request", responses = {
             @ApiResponse(responseCode = "200", description = "Request cancelled"),
             @ApiResponse(responseCode = "404", description = "Request not found")})
     @PostMapping("/api/shadowing-requests/{id}/cancel")
-    public ShadowingRequestDto cancelShadowingRequest(@PathVariable UUID id,
-                                                       @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
-        UUID requesterId = UUID.fromString(jwt.getSubject());
-        return shadowingRequestMapper.toDto(shadowingRequestService.cancelShadowingRequest(id, requesterId));
+    public ShadowingRequestDto cancelShadowingRequest(@PathVariable UUID id, CurrentUser currentUser) {
+        return shadowingRequestMapper.toDto(shadowingRequestService.cancelShadowingRequest(id, currentUser.id()));
     }
 
     @Operation(summary = "Approve a shadowing request", description = "Adds the shadower as an attendee to the Google Calendar event.",
@@ -71,10 +64,8 @@ public class ShadowingRequestController {
                     @ApiResponse(responseCode = "200", description = "Request approved"),
                     @ApiResponse(responseCode = "404", description = "Request not found")})
     @PostMapping("/api/shadowing-requests/{id}/approve")
-    public ShadowingRequestDto approveShadowingRequest(@PathVariable UUID id,
-                                                        @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
-        UUID requesterId = UUID.fromString(jwt.getSubject());
-        return shadowingRequestMapper.toDto(shadowingRequestService.approveShadowingRequest(id, requesterId));
+    public ShadowingRequestDto approveShadowingRequest(@PathVariable UUID id, CurrentUser currentUser) {
+        return shadowingRequestMapper.toDto(shadowingRequestService.approveShadowingRequest(id, currentUser.id()));
     }
 
     @Operation(summary = "Reject a shadowing request", responses = {
@@ -83,9 +74,8 @@ public class ShadowingRequestController {
     @PostMapping("/api/shadowing-requests/{id}/reject")
     public ShadowingRequestDto rejectShadowingRequest(@PathVariable UUID id,
                                                        @RequestBody RejectShadowingRequest request,
-                                                       @Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) {
-        UUID requesterId = UUID.fromString(jwt.getSubject());
+                                                       CurrentUser currentUser) {
         return shadowingRequestMapper.toDto(
-                shadowingRequestService.rejectShadowingRequest(id, request.getReason(), requesterId));
+                shadowingRequestService.rejectShadowingRequest(id, request.getReason(), currentUser.id()));
     }
 }
