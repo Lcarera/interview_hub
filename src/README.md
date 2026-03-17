@@ -10,7 +10,9 @@ src/main/java/com/gm2dev/interview_hub/
 ├── config/
 │   ├── SecurityConfig.java             # OAuth2 Resource Server, JWT, CORS
 │   ├── GoogleOAuthProperties.java      # Google OAuth config binding
-│   └── JwtProperties.java             # JWT signing config binding
+│   ├── JwtProperties.java              # JWT signing config binding
+│   ├── WebConfig.java                  # WebMvc configuration (argument resolvers)
+│   └── CurrentUserArgumentResolver.java # Resolves CurrentUser from JWT in SecurityContext
 ├── controller/
 │   ├── AuthController.java             # OAuth login flow, token issuance
 │   ├── InterviewController.java        # Interview CRUD
@@ -29,10 +31,11 @@ src/main/java/com/gm2dev/interview_hub/
 │   ├── UpdateInterviewRequest.java    # Interview update payload
 │   ├── InterviewDto.java              # Interview response DTO
 │   ├── InterviewSummaryDto.java       # Lightweight interview summary
-│   ├── ProfileDto.java               # Profile response DTO
+│   ├── ProfileDto.java                # Profile response DTO
 │   ├── ShadowingRequestDto.java       # Shadowing request response DTO
 │   ├── ShadowingRequestSummaryDto.java # Lightweight shadowing summary
-│   └── RejectShadowingRequest.java    # {reason} payload
+│   ├── RejectShadowingRequest.java    # {reason} payload
+│   └── CurrentUser.java               # Authenticated user ID (resolved by CurrentUserArgumentResolver)
 ├── mapper/
 │   ├── InterviewMapper.java           # MapStruct: Interview <-> DTOs
 │   ├── ProfileMapper.java            # MapStruct: Profile <-> DTOs
@@ -42,10 +45,13 @@ src/main/java/com/gm2dev/interview_hub/
 │   ├── ProfileRepository.java         # Spring Data JPA
 │   └── ShadowingRequestRepository.java # Spring Data JPA
 ├── service/
-│   ├── AuthService.java               # OAuth flow, JWT issuance
+│   ├── AuthService.java               # OAuth flow, delegates JWT issuance to JwtService
+│   ├── EmailPasswordAuthService.java  # Email/password auth, delegates JWT issuance to JwtService
+│   ├── JwtService.java                # Interface for JWT token issuance
+│   ├── HmacJwtService.java            # HMAC-SHA256 JWT implementation
 │   ├── InterviewService.java          # Interview business logic
 │   ├── ShadowingRequestService.java   # Shadowing request business logic
-│   ├── ProfileService.java           # Profile business logic
+│   ├── ProfileService.java            # Profile business logic
 │   └── GoogleCalendarService.java     # Calendar API integration (service account)
 ```
 
@@ -123,10 +129,20 @@ src/main/java/com/gm2dev/interview_hub/
 2. Backend redirects to Google OAuth consent (scopes: openid, email, profile)
 3. Google redirects back to `GET /auth/google/callback` with an authorization code
 4. Backend exchanges code for Google tokens, validates domain allowlist, creates/updates Profile
-5. Backend issues an HMAC-SHA256 JWT (1-hour expiry) and redirects to the frontend with the token in the URL hash fragment
+5. Backend issues an HMAC-SHA256 JWT (1-hour expiry) via `JwtService` and redirects to the frontend with the token in the URL hash fragment
 6. Frontend stores the token in localStorage and attaches it as `Authorization: Bearer <token>` on all API calls
 
 Only `@gm2dev.com` and `@lcarera.dev` accounts are allowed (configured in `AllowedDomains.ALLOWED_DOMAINS`).
+
+**JWT Issuance Architecture:**
+- `JwtService` interface centralizes token creation logic
+- `HmacJwtService` implements JWT issuance using HMAC-SHA256
+- Both `AuthService` (OAuth) and `EmailPasswordAuthService` (email/password) delegate to `JwtService`
+
+**CurrentUser Resolution:**
+- Controllers use `CurrentUser currentUser` parameter instead of `@AuthenticationPrincipal Jwt jwt`
+- `CurrentUserArgumentResolver` automatically extracts the user ID from the JWT in the SecurityContext
+- Eliminates repetitive `UUID.fromString(jwt.getSubject())` boilerplate
 
 ## Google Calendar Integration
 
@@ -198,7 +214,8 @@ Two test styles are used — never mix them:
 - `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback`
 - Full Spring context with H2 in-memory database (`ddl-auto: create-drop`)
 - `GoogleCalendarService` is always `@MockitoBean`'d (makes real HTTP calls)
-- `AuthServiceTest` and `GoogleCalendarServiceTest` use `@ExtendWith(MockitoExtension.class)` without Spring context
+- `AuthServiceTest`, `GoogleCalendarServiceTest`, `HmacJwtServiceTest`, and `CurrentUserArgumentResolverTest` use `@ExtendWith(MockitoExtension.class)` without Spring context
+- `AuthService` and `EmailPasswordAuthService` tests mock `JwtService` instead of `JwtEncoder`/`JwtProperties`
 
 ### Code Coverage
 

@@ -61,11 +61,11 @@ All under `src/main/java/com/gm2dev/interview_hub/`:
 
 - `domain/` - JPA entities (Candidate, Interview, Profile, ShadowingRequest) and enums (InterviewStatus, ShadowingRequestStatus)
 - `repository/` - Spring Data JPA repositories (CandidateRepository, InterviewRepository, ProfileRepository, ShadowingRequestRepository)
-- `service/` - Business logic (CandidateService, InterviewService, ShadowingRequestService, AuthService, EmailPasswordAuthService, EmailService, EmailQueueService, GoogleCalendarService)
-- `dto/` - Data transfer objects (AuthResponse, CandidateDto, CandidateRequest, CreateInterviewRequest, UpdateInterviewRequest, InterviewDto, ProfileDto, RejectShadowingRequest, etc.)
+- `service/` - Business logic (CandidateService, InterviewService, ShadowingRequestService, AuthService, EmailPasswordAuthService, EmailService, EmailQueueService, GoogleCalendarService, JwtService, HmacJwtService)
+- `dto/` - Data transfer objects (AuthResponse, CandidateDto, CandidateRequest, CreateInterviewRequest, UpdateInterviewRequest, InterviewDto, ProfileDto, RejectShadowingRequest, CurrentUser, etc.)
 - `mapper/` - MapStruct mappers (CandidateMapper, InterviewMapper, ProfileMapper, ShadowingRequestMapper)
 - `controller/` - REST controllers (CandidateController, InterviewController, ShadowingRequestController, AuthController, InternalEmailController, GlobalExceptionHandler)
-- `config/` - Spring configuration (SecurityConfig, GoogleOAuthProperties, JwtProperties, AllowedDomains, CloudTasksConfig, CloudTasksProperties)
+- `config/` - Spring configuration (SecurityConfig, GoogleOAuthProperties, JwtProperties, AllowedDomains, CloudTasksConfig, CloudTasksProperties, WebConfig, CurrentUserArgumentResolver)
 
 ### Frontend Structure
 
@@ -114,9 +114,11 @@ The application models a four-entity system:
 - Login flow: `GET /auth/google` → Google consent → `GET /auth/google/callback` → redirects to frontend with token in URL hash fragment
 - `POST /auth/token` is a Postman-compatible endpoint: accepts `code` + `redirect_uri` form params and returns `{access_token, token_type, expires_in}`
 - `@gm2dev.com` and `@lcarera.dev` accounts are allowed — configured in `AllowedDomains.ALLOWED_DOMAINS` (single source of truth used by AuthService, AdminService, EmailPasswordAuthService)
-- App issues its own HMAC-SHA256 JWTs (1-hour expiry); the `NimbusJwtEncoder` is constructed inside `AuthService`, not a Spring bean
+- App issues its own HMAC-SHA256 JWTs (1-hour expiry) via `JwtService` interface (`HmacJwtService` implementation)
+- JWT issuance is centralized in `JwtService` — both `AuthService` and `EmailPasswordAuthService` delegate to it
 - Scopes requested: openid, email, profile
 - Frontend stores token, email, and expiry in localStorage (keys: `ih_token`, `ih_email`, `ih_expires_at`)
+- Controllers use `CurrentUser` parameter (resolved by `CurrentUserArgumentResolver`) instead of manual `@AuthenticationPrincipal Jwt` extraction
 
 **Email/Password Authentication:**
 - Additional endpoints: `POST /auth/register`, `GET /auth/verify`, `POST /auth/login`, `POST /auth/forgot-password`, `POST /auth/reset-password`
@@ -136,6 +138,7 @@ The application models a four-entity system:
 - Public endpoints: `/actuator/health`, `/auth/**`, `/internal/**` (Cloud Tasks worker — guarded by `X-CloudTasks-QueueName` header check, not JWT)
 - `/admin/**` endpoints require `ROLE_admin`
 - All other endpoints require `Authorization: Bearer <token>`
+- `CurrentUserArgumentResolver` automatically resolves `CurrentUser` record from JWT claims in controller method parameters
 
 **Google Calendar Integration:**
 - Uses a Google Service Account to create all events on a single shared calendar (configurable via `GOOGLE_CALENDAR_ID`, defaults to `"primary"`)
@@ -195,8 +198,9 @@ Two distinct test styles are used — never mix them:
 **Service Tests (`@SpringBootTest`):**
 - `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback` — full Spring context with H2
 - `GoogleCalendarService` is always `@MockitoBean`'d since it makes real HTTP calls
-- `AuthServiceTest`, `GoogleCalendarServiceTest`, and `EmailQueueServiceTest` use pure `@ExtendWith(MockitoExtension.class)` (no Spring context)
+- `AuthServiceTest`, `GoogleCalendarServiceTest`, `EmailQueueServiceTest`, `HmacJwtServiceTest`, and `CurrentUserArgumentResolverTest` use pure `@ExtendWith(MockitoExtension.class)` (no Spring context)
 - `AuthService` and `GoogleCalendarService` have package-private methods (`exchangeCodeForTokens`, `buildCalendarClient`) specifically to enable `spy()`-based interception without reflection
+- `AuthService` and `EmailPasswordAuthService` tests mock `JwtService` instead of `JwtEncoder`/`JwtProperties`
 
 **Frontend Tests:** Vitest with jsdom environment. Run with `bun run test` from `frontend/`.
 
