@@ -93,7 +93,7 @@ class EmailPasswordAuthServiceTest {
         ArgumentCaptor<VerificationToken> tokenCaptor = ArgumentCaptor.forClass(VerificationToken.class);
         verify(verificationTokenRepository).save(tokenCaptor.capture());
         VerificationToken savedToken = tokenCaptor.getValue();
-        assertEquals(64, savedToken.getToken().length());
+        assertEquals(64, savedToken.getToken().length()); // SHA-256 hex is 64 chars
     }
 
     @Test
@@ -468,7 +468,7 @@ class EmailPasswordAuthServiceTest {
         String hash1 = service.hashToken(token);
         String hash2 = service.hashToken(token);
         assertEquals(hash1, hash2);
-        assertEquals(64, hash1.length());
+        assertEquals(64, hash1.length()); // SHA-256 hex = 64 chars
     }
 
     @Test

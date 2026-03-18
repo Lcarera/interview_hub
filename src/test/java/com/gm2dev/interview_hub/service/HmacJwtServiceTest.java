@@ -73,9 +73,4 @@ class HmacJwtServiceTest {
         assertNotNull(jwt.getIssuedAt());
         assertNotNull(jwt.getExpiresAt());
     }
-
-    @Test
-    void expirationSeconds_returnsConfiguredValue() {
-        assertEquals(3600, jwtService.expirationSeconds());
-    }
 }

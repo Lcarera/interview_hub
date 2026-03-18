@@ -2,6 +2,7 @@ package com.gm2dev.interview_hub.controller;
 
 import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.config.SecurityConfig;
+import com.gm2dev.interview_hub.config.WebConfig;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.mapper.ProfileMapperImpl;
@@ -27,7 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ProfileController.class)
-@Import({SecurityConfig.class, ProfileMapperImpl.class})
+@Import({SecurityConfig.class, ProfileMapperImpl.class, WebConfig.class})
 @ActiveProfiles("test")
 class ProfileControllerTest {
 

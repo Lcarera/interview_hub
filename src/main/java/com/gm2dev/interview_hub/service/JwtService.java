@@ -5,5 +5,4 @@ import com.gm2dev.interview_hub.dto.AuthResponse;
 
 public interface JwtService {
     AuthResponse issueToken(Profile profile);
-    long expirationSeconds();
 }

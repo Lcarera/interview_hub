@@ -38,9 +38,4 @@ public class HmacJwtService implements JwtService {
         String token = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
         return new AuthResponse(token, jwtProperties.getExpirationSeconds(), profile.getEmail());
     }
-
-    @Override
-    public long expirationSeconds() {
-        return jwtProperties.getExpirationSeconds();
-    }
 }

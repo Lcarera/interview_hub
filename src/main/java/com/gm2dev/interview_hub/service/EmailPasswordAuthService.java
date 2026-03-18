@@ -122,6 +122,7 @@ public class EmailPasswordAuthService {
                 invalidateActiveTokens(profile, TokenType.EMAIL_VERIFICATION);
                 String rawToken = UUID.randomUUID().toString();
                 createVerificationToken(profile, TokenType.EMAIL_VERIFICATION, 24, rawToken);
+                // Propagates on failure — rolls back the new verification token
                 emailService.queueVerificationEmail(email, rawToken);
             }
         });
@@ -134,6 +135,7 @@ public class EmailPasswordAuthService {
                 invalidateActiveTokens(profile, TokenType.PASSWORD_RESET);
                 String rawToken = UUID.randomUUID().toString();
                 createVerificationToken(profile, TokenType.PASSWORD_RESET, 1, rawToken);
+                // Silent on failure — token is committed regardless (password-reset never leaks email existence)
                 emailService.queuePasswordResetEmail(email, rawToken);
             }
         });

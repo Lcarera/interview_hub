@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.MethodParameter;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -75,8 +76,8 @@ class CurrentUserArgumentResolverTest {
     }
 
     @Test
-    void resolveArgument_withNoAuthentication_throwsIllegalStateException() {
-        assertThrows(IllegalStateException.class, () ->
+    void resolveArgument_withNoAuthentication_throwsAuthenticationCredentialsNotFoundException() {
+        assertThrows(AuthenticationCredentialsNotFoundException.class, () ->
                 resolver.resolveArgument(mock(MethodParameter.class), null, mock(NativeWebRequest.class), null));
     }
 
