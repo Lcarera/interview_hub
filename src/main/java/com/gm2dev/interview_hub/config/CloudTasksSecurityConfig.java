@@ -1,5 +1,6 @@
 package com.gm2dev.interview_hub.config;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,22 @@ public class CloudTasksSecurityConfig {
 
     public CloudTasksSecurityConfig(CloudTasksProperties cloudTasksProperties) {
         this.cloudTasksProperties = cloudTasksProperties;
+    }
+
+    @PostConstruct
+    void validateProperties() {
+        if (cloudTasksProperties.workerUrl() == null || cloudTasksProperties.workerUrl().isBlank()) {
+            throw new IllegalStateException(
+                    "Cloud Tasks is enabled but worker-url is not configured");
+        }
+        if (cloudTasksProperties.serviceAccountEmail() == null || cloudTasksProperties.serviceAccountEmail().isBlank()) {
+            throw new IllegalStateException(
+                    "Cloud Tasks is enabled but service-account-email is not configured");
+        }
+        if (cloudTasksProperties.audience() == null || cloudTasksProperties.audience().isBlank()) {
+            throw new IllegalStateException(
+                    "Cloud Tasks is enabled but audience is not configured");
+        }
     }
 
     @Bean
