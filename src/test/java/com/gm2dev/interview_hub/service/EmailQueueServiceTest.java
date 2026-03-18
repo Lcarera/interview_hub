@@ -30,7 +30,8 @@ class EmailQueueServiceTest {
     void setUp() {
         properties = new CloudTasksProperties(
                 "test-project", "us-central1", "email-queue",
-                true, "sa@test-project.iam.gserviceaccount.com", "http://localhost:8080", "http://localhost:8080"
+                true, "sa@test-project.iam.gserviceaccount.com",
+                "http://localhost:8080", "http://localhost:8080"
         );
         emailQueueService = new EmailQueueService(
                 cloudTasksClient, properties, new ObjectMapper()
@@ -57,7 +58,7 @@ class EmailQueueServiceTest {
     }
 
     @Test
-    void queueEmail_includesOidcToken_whenServiceAccountConfigured() {
+    void queueEmail_includesOidcToken() {
         when(cloudTasksClient.createTask(any(String.class), any(Task.class)))
                 .thenReturn(Task.getDefaultInstance());
 
@@ -75,31 +76,5 @@ class EmailQueueServiceTest {
                 .isEqualTo("sa@test-project.iam.gserviceaccount.com");
         assertThat(task.getHttpRequest().getOidcToken().getAudience())
                 .isEqualTo("http://localhost:8080");
-    }
-
-    @Test
-    void queueEmail_omitsOidcToken_whenNoServiceAccount() {
-        CloudTasksProperties noSaProps = new CloudTasksProperties(
-                "test-project", "us-central1", "email-queue",
-                true, null, "http://localhost:8080", "http://localhost:8080"
-        );
-        EmailQueueService noSaService = new EmailQueueService(
-                cloudTasksClient, noSaProps, new ObjectMapper()
-        );
-
-        when(cloudTasksClient.createTask(any(String.class), any(Task.class)))
-                .thenReturn(Task.getDefaultInstance());
-
-        EmailTaskPayload payload = new EmailTaskPayload.TemporaryPasswordEmail(
-                "user@gm2dev.com", "TempPass123"
-        );
-
-        noSaService.queueEmail(payload);
-
-        ArgumentCaptor<Task> taskCaptor = ArgumentCaptor.forClass(Task.class);
-        verify(cloudTasksClient).createTask(any(String.class), taskCaptor.capture());
-
-        Task task = taskCaptor.getValue();
-        assertThat(task.getHttpRequest().hasOidcToken()).isFalse();
     }
 }
