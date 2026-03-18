@@ -3,6 +3,7 @@ package com.gm2dev.interview_hub.service;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.CreateUserRequest;
+import com.gm2dev.interview_hub.dto.EmailTaskPayload;
 import com.gm2dev.interview_hub.dto.ProfileDto;
 import com.gm2dev.interview_hub.mapper.ProfileMapper;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
@@ -34,7 +35,7 @@ public class AdminService {
 
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
-    private final EmailService emailService;
+    private final EmailSender emailSender;
     private final ProfileMapper profileMapper;
     private final InterviewRepository interviewRepository;
     private final ShadowingRequestRepository shadowingRequestRepository;
@@ -61,7 +62,7 @@ public class AdminService {
         profile.setPasswordHash(passwordEncoder.encode(temporaryPassword));
 
         Profile saved = profileRepository.save(profile);
-        emailService.queueTemporaryPasswordEmail(request.email(), temporaryPassword);
+        emailSender.send(new EmailTaskPayload.TemporaryPasswordEmail(request.email(), temporaryPassword));
 
         log.debug("Admin created user: {}", request.email());
         return profileMapper.toDto(saved);
@@ -100,7 +101,6 @@ public class AdminService {
         for (int i = 3; i < 12; i++) {
             password[i] = CHARS.charAt(RANDOM.nextInt(CHARS.length()));
         }
-        // Fisher-Yates shuffle to remove predictable [A-Z][a-z][0-9] prefix
         for (int i = password.length - 1; i > 0; i--) {
             int j = RANDOM.nextInt(i + 1);
             char temp = password[i];
