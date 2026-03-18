@@ -1,6 +1,5 @@
 package com.gm2dev.interview_hub.service;
 
-import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.domain.TokenType;
@@ -20,9 +19,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 
 import java.time.Instant;
 import java.util.List;
@@ -31,8 +27,6 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,10 +48,7 @@ class EmailPasswordAuthServiceTest {
     private ProfileMapper profileMapper;
 
     @Mock
-    private JwtProperties jwtProperties;
-
-    @Mock
-    private JwtEncoder jwtEncoder;
+    private JwtService jwtService;
 
     private EmailPasswordAuthService service;
 
@@ -65,7 +56,7 @@ class EmailPasswordAuthServiceTest {
     void setUp() {
         service = new EmailPasswordAuthService(
                 profileRepository, verificationTokenRepository,
-                passwordEncoder, emailSender, jwtProperties, profileMapper, jwtEncoder);
+                passwordEncoder, emailSender, profileMapper, jwtService);
     }
 
     // --- Register tests ---
@@ -222,18 +213,18 @@ class EmailPasswordAuthServiceTest {
         profile.setPasswordHash("hashed");
         profile.setEmailVerified(true);
 
+        AuthResponse expectedResponse = new AuthResponse("test-token", 3600, "user@gm2dev.com");
+
         when(profileRepository.findByEmail("user@gm2dev.com")).thenReturn(Optional.of(profile));
         when(passwordEncoder.matches("Password1", "hashed")).thenReturn(true);
-        when(jwtProperties.getExpirationSeconds()).thenReturn(3600);
-        Jwt mockJwt = mock(Jwt.class);
-        when(mockJwt.getTokenValue()).thenReturn("test-token");
-        when(jwtEncoder.encode(any(JwtEncoderParameters.class))).thenReturn(mockJwt);
+        when(jwtService.issueToken(profile)).thenReturn(expectedResponse);
 
         LoginRequest request = new LoginRequest("user@gm2dev.com", "Password1");
         AuthResponse response = service.login(request);
 
         assertNotNull(response.token());
         assertEquals("user@gm2dev.com", response.email());
+        verify(jwtService).issueToken(profile);
     }
 
     @Test
@@ -249,7 +240,7 @@ class EmailPasswordAuthServiceTest {
 
         LoginRequest request = new LoginRequest("user@gm2dev.com", "WrongPass1");
         assertThrows(SecurityException.class, () -> service.login(request));
-        verify(jwtEncoder, never()).encode(any());
+        verify(jwtService, never()).issueToken(any());
     }
 
     @Test
@@ -264,7 +255,7 @@ class EmailPasswordAuthServiceTest {
 
         LoginRequest request = new LoginRequest("user@gm2dev.com", "Password1");
         assertThrows(SecurityException.class, () -> service.login(request));
-        verify(jwtEncoder, never()).encode(any());
+        verify(jwtService, never()).issueToken(any());
     }
 
     @Test
@@ -279,7 +270,7 @@ class EmailPasswordAuthServiceTest {
 
         LoginRequest request = new LoginRequest("user@gm2dev.com", "Password1");
         assertThrows(SecurityException.class, () -> service.login(request));
-        verify(jwtEncoder, never()).encode(any());
+        verify(jwtService, never()).issueToken(any());
     }
 
     @Test
@@ -288,7 +279,7 @@ class EmailPasswordAuthServiceTest {
 
         LoginRequest request = new LoginRequest("nobody@gm2dev.com", "Password1");
         assertThrows(SecurityException.class, () -> service.login(request));
-        verify(jwtEncoder, never()).encode(any());
+        verify(jwtService, never()).issueToken(any());
     }
 
     // --- Resend verification tests ---

@@ -101,6 +101,7 @@ public class AdminService {
         for (int i = 3; i < 12; i++) {
             password[i] = CHARS.charAt(RANDOM.nextInt(CHARS.length()));
         }
+        // Fisher-Yates shuffle to remove predictable [A-Z][a-z][0-9] prefix
         for (int i = password.length - 1; i > 0; i--) {
             int j = RANDOM.nextInt(i + 1);
             char temp = password[i];
