@@ -1,6 +1,5 @@
 package com.gm2dev.interview_hub.service;
 
-import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.domain.TokenType;
@@ -19,12 +18,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
-import com.nimbusds.jose.jwk.OctetSequenceKey;
-import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
-import com.nimbusds.jose.jwk.JWKSet;
-import javax.crypto.spec.SecretKeySpec;
 
 import java.time.Instant;
 import java.util.List;
@@ -39,8 +32,6 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class EmailPasswordAuthServiceTest {
-
-    private static final String SIGNING_SECRET = "test-signing-secret-that-is-at-least-32-bytes-long";
 
     @Mock
     private ProfileRepository profileRepository;
@@ -57,22 +48,16 @@ class EmailPasswordAuthServiceTest {
     @Mock
     private ProfileMapper profileMapper;
 
+    @Mock
+    private JwtService jwtService;
+
     private EmailPasswordAuthService service;
 
     @BeforeEach
     void setUp() {
-        JwtProperties jwtProps = new JwtProperties();
-        jwtProps.setSigningSecret(SIGNING_SECRET);
-        jwtProps.setExpirationSeconds(3600);
-
-        byte[] keyBytes = SIGNING_SECRET.getBytes();
-        SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
-        OctetSequenceKey jwk = new OctetSequenceKey.Builder(secretKey).build();
-        JwtEncoder jwtEncoder = new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(jwk)));
-
         service = new EmailPasswordAuthService(
                 profileRepository, verificationTokenRepository,
-                passwordEncoder, emailService, jwtProps, profileMapper, jwtEncoder);
+                passwordEncoder, emailService, profileMapper, jwtService);
     }
 
     // --- Register tests ---
@@ -105,7 +90,6 @@ class EmailPasswordAuthServiceTest {
 
         verify(emailService).queueVerificationEmail(eq("user@gm2dev.com"), anyString());
 
-        // Verify token is stored as SHA-256 hash (not raw UUID)
         ArgumentCaptor<VerificationToken> tokenCaptor = ArgumentCaptor.forClass(VerificationToken.class);
         verify(verificationTokenRepository).save(tokenCaptor.capture());
         VerificationToken savedToken = tokenCaptor.getValue();
@@ -229,11 +213,15 @@ class EmailPasswordAuthServiceTest {
         when(profileRepository.findByEmail("user@gm2dev.com")).thenReturn(Optional.of(profile));
         when(passwordEncoder.matches("Password1", "hashed")).thenReturn(true);
 
+        AuthResponse expectedResponse = new AuthResponse("test-token", 3600, "user@gm2dev.com");
+        when(jwtService.issueToken(profile)).thenReturn(expectedResponse);
+
         LoginRequest request = new LoginRequest("user@gm2dev.com", "Password1");
         AuthResponse response = service.login(request);
 
         assertNotNull(response.token());
         assertEquals("user@gm2dev.com", response.email());
+        verify(jwtService).issueToken(profile);
     }
 
     @Test
@@ -249,6 +237,7 @@ class EmailPasswordAuthServiceTest {
 
         LoginRequest request = new LoginRequest("user@gm2dev.com", "WrongPass1");
         assertThrows(SecurityException.class, () -> service.login(request));
+        verify(jwtService, never()).issueToken(any());
     }
 
     @Test
@@ -263,6 +252,7 @@ class EmailPasswordAuthServiceTest {
 
         LoginRequest request = new LoginRequest("user@gm2dev.com", "Password1");
         assertThrows(SecurityException.class, () -> service.login(request));
+        verify(jwtService, never()).issueToken(any());
     }
 
     @Test
@@ -277,6 +267,7 @@ class EmailPasswordAuthServiceTest {
 
         LoginRequest request = new LoginRequest("user@gm2dev.com", "Password1");
         assertThrows(SecurityException.class, () -> service.login(request));
+        verify(jwtService, never()).issueToken(any());
     }
 
     @Test
@@ -285,6 +276,7 @@ class EmailPasswordAuthServiceTest {
 
         LoginRequest request = new LoginRequest("nobody@gm2dev.com", "Password1");
         assertThrows(SecurityException.class, () -> service.login(request));
+        verify(jwtService, never()).issueToken(any());
     }
 
     // --- Resend verification tests ---
