@@ -5,6 +5,7 @@ import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.domain.TokenType;
 import com.gm2dev.interview_hub.domain.VerificationToken;
 import com.gm2dev.interview_hub.dto.AuthResponse;
+import com.gm2dev.interview_hub.dto.EmailTaskPayload;
 import com.gm2dev.interview_hub.dto.LoginRequest;
 import com.gm2dev.interview_hub.dto.RegisterRequest;
 import com.gm2dev.interview_hub.dto.ResetPasswordRequest;
@@ -26,8 +27,6 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,7 +42,7 @@ class EmailPasswordAuthServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private EmailService emailService;
+    private EmailSender emailSender;
 
     @Mock
     private ProfileMapper profileMapper;
@@ -57,7 +56,7 @@ class EmailPasswordAuthServiceTest {
     void setUp() {
         service = new EmailPasswordAuthService(
                 profileRepository, verificationTokenRepository,
-                passwordEncoder, emailService, profileMapper, jwtService);
+                passwordEncoder, emailSender, profileMapper, jwtService);
     }
 
     // --- Register tests ---
@@ -88,12 +87,16 @@ class EmailPasswordAuthServiceTest {
         assertEquals(Role.interviewer, saved.getRole());
         assertFalse(saved.isEmailVerified());
 
-        verify(emailService).queueVerificationEmail(eq("user@gm2dev.com"), anyString());
+        ArgumentCaptor<EmailTaskPayload> emailCaptor = ArgumentCaptor.forClass(EmailTaskPayload.class);
+        verify(emailSender).send(emailCaptor.capture());
+        EmailTaskPayload.VerificationEmail email = (EmailTaskPayload.VerificationEmail) emailCaptor.getValue();
+        assertEquals("user@gm2dev.com", email.to());
+        assertNotNull(email.token());
 
         ArgumentCaptor<VerificationToken> tokenCaptor = ArgumentCaptor.forClass(VerificationToken.class);
         verify(verificationTokenRepository).save(tokenCaptor.capture());
         VerificationToken savedToken = tokenCaptor.getValue();
-        assertEquals(64, savedToken.getToken().length()); // SHA-256 hex is 64 chars
+        assertEquals(64, savedToken.getToken().length());
     }
 
     @Test
@@ -210,10 +213,10 @@ class EmailPasswordAuthServiceTest {
         profile.setPasswordHash("hashed");
         profile.setEmailVerified(true);
 
+        AuthResponse expectedResponse = new AuthResponse("test-token", 3600, "user@gm2dev.com");
+
         when(profileRepository.findByEmail("user@gm2dev.com")).thenReturn(Optional.of(profile));
         when(passwordEncoder.matches("Password1", "hashed")).thenReturn(true);
-
-        AuthResponse expectedResponse = new AuthResponse("test-token", 3600, "user@gm2dev.com");
         when(jwtService.issueToken(profile)).thenReturn(expectedResponse);
 
         LoginRequest request = new LoginRequest("user@gm2dev.com", "Password1");
@@ -301,7 +304,10 @@ class EmailPasswordAuthServiceTest {
         service.resendVerification("user@gm2dev.com");
 
         assertTrue(oldToken.isUsed());
-        verify(emailService).queueVerificationEmail(eq("user@gm2dev.com"), anyString());
+        ArgumentCaptor<EmailTaskPayload> emailCaptor = ArgumentCaptor.forClass(EmailTaskPayload.class);
+        verify(emailSender).send(emailCaptor.capture());
+        assertInstanceOf(EmailTaskPayload.VerificationEmail.class, emailCaptor.getValue());
+        assertEquals("user@gm2dev.com", emailCaptor.getValue().to());
     }
 
     @Test
@@ -316,7 +322,7 @@ class EmailPasswordAuthServiceTest {
 
         service.resendVerification("user@gm2dev.com");
 
-        verify(emailService, never()).queueVerificationEmail(anyString(), anyString());
+        verify(emailSender, never()).send(any());
     }
 
     @Test
@@ -324,7 +330,7 @@ class EmailPasswordAuthServiceTest {
         when(profileRepository.findByEmail("nobody@gm2dev.com")).thenReturn(Optional.empty());
 
         assertDoesNotThrow(() -> service.resendVerification("nobody@gm2dev.com"));
-        verify(emailService, never()).queueVerificationEmail(anyString(), anyString());
+        verify(emailSender, never()).send(any());
     }
 
     @Test
@@ -339,7 +345,7 @@ class EmailPasswordAuthServiceTest {
 
         service.resendVerification("user@gm2dev.com");
 
-        verify(emailService, never()).queueVerificationEmail(anyString(), anyString());
+        verify(emailSender, never()).send(any());
     }
 
     // --- Forgot password tests ---
@@ -363,7 +369,10 @@ class EmailPasswordAuthServiceTest {
         service.forgotPassword("user@gm2dev.com");
 
         assertTrue(oldToken.isUsed());
-        verify(emailService).queuePasswordResetEmail(eq("user@gm2dev.com"), anyString());
+        ArgumentCaptor<EmailTaskPayload> emailCaptor = ArgumentCaptor.forClass(EmailTaskPayload.class);
+        verify(emailSender).send(emailCaptor.capture());
+        assertInstanceOf(EmailTaskPayload.PasswordResetEmail.class, emailCaptor.getValue());
+        assertEquals("user@gm2dev.com", emailCaptor.getValue().to());
     }
 
     @Test
@@ -371,7 +380,7 @@ class EmailPasswordAuthServiceTest {
         when(profileRepository.findByEmail("nobody@gm2dev.com")).thenReturn(Optional.empty());
 
         assertDoesNotThrow(() -> service.forgotPassword("nobody@gm2dev.com"));
-        verify(emailService, never()).queuePasswordResetEmail(anyString(), anyString());
+        verify(emailSender, never()).send(any());
     }
 
     @Test
@@ -385,7 +394,7 @@ class EmailPasswordAuthServiceTest {
 
         service.forgotPassword("user@gm2dev.com");
 
-        verify(emailService, never()).queuePasswordResetEmail(anyString(), anyString());
+        verify(emailSender, never()).send(any());
     }
 
     // --- Reset password tests ---
@@ -455,7 +464,7 @@ class EmailPasswordAuthServiceTest {
         when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
         when(verificationTokenRepository.save(any(VerificationToken.class))).thenAnswer(inv -> inv.getArgument(0));
         doThrow(new RuntimeException("Email delivery failed"))
-                .when(emailService).queueVerificationEmail(anyString(), anyString());
+                .when(emailSender).send(any(EmailTaskPayload.class));
 
         assertThrows(RuntimeException.class, () -> service.register(request));
     }
@@ -468,7 +477,7 @@ class EmailPasswordAuthServiceTest {
         String hash1 = service.hashToken(token);
         String hash2 = service.hashToken(token);
         assertEquals(hash1, hash2);
-        assertEquals(64, hash1.length()); // SHA-256 hex = 64 chars
+        assertEquals(64, hash1.length());
     }
 
     @Test
