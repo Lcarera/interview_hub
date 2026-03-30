@@ -59,10 +59,25 @@ public class ShadowingRequestService {
         if (!request.getShadower().getId().equals(requesterId)) {
             throw new AccessDeniedException("Only the shadower can cancel this request");
         }
-        requirePendingStatus(request);
+        requireActionableStatus(request);
 
+        boolean wasApproved = request.getStatus() == ShadowingRequestStatus.APPROVED;
         request.setStatus(ShadowingRequestStatus.CANCELLED);
-        return shadowingRequestRepository.save(request);
+        ShadowingRequest saved = shadowingRequestRepository.save(request);
+
+        if (wasApproved) {
+            Interview interview = request.getInterview();
+            if (interview.getGoogleEventId() != null) {
+                try {
+                    googleCalendarService.removeAttendee(interview.getGoogleEventId(), request.getShadower().getEmail());
+                } catch (Exception e) {
+                    log.warn("Failed to remove shadower {} from Calendar event {}: {}",
+                            request.getShadower().getEmail(), interview.getGoogleEventId(), e.getMessage());
+                }
+            }
+        }
+
+        return saved;
     }
 
     @Transactional
@@ -71,7 +86,10 @@ public class ShadowingRequestService {
         if (!request.getInterview().getInterviewer().getId().equals(requesterId)) {
             throw new AccessDeniedException("Only the interviewer can approve this request");
         }
-        requirePendingStatus(request);
+        if (request.getStatus() != ShadowingRequestStatus.PENDING) {
+            throw new IllegalStateException(
+                    "Shadowing request is not in PENDING status. Current status: " + request.getStatus());
+        }
 
         request.setStatus(ShadowingRequestStatus.APPROVED);
         ShadowingRequest saved = shadowingRequestRepository.save(request);
@@ -105,11 +123,26 @@ public class ShadowingRequestService {
         if (!request.getInterview().getInterviewer().getId().equals(requesterId)) {
             throw new AccessDeniedException("Only the interviewer can reject this request");
         }
-        requirePendingStatus(request);
+        requireActionableStatus(request);
 
+        boolean wasApproved = request.getStatus() == ShadowingRequestStatus.APPROVED;
         request.setStatus(ShadowingRequestStatus.REJECTED);
         request.setReason(reason);
-        return shadowingRequestRepository.save(request);
+        ShadowingRequest saved = shadowingRequestRepository.save(request);
+
+        if (wasApproved) {
+            Interview interview = request.getInterview();
+            if (interview.getGoogleEventId() != null) {
+                try {
+                    googleCalendarService.removeAttendee(interview.getGoogleEventId(), request.getShadower().getEmail());
+                } catch (Exception e) {
+                    log.warn("Failed to remove shadower {} from Calendar event {}: {}",
+                            request.getShadower().getEmail(), interview.getGoogleEventId(), e.getMessage());
+                }
+            }
+        }
+
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -127,11 +160,11 @@ public class ShadowingRequestService {
                 () -> new EntityNotFoundException("Shadowing request not found: " + id));
     }
 
-    private void requirePendingStatus(ShadowingRequest request) {
-        if (request.getStatus() != ShadowingRequestStatus.PENDING) {
+    private void requireActionableStatus(ShadowingRequest request) {
+        if (request.getStatus() != ShadowingRequestStatus.PENDING
+                && request.getStatus() != ShadowingRequestStatus.APPROVED) {
             throw new IllegalStateException(
-                    "Shadowing request is not in PENDING status. Current status: "
-                            + request.getStatus());
+                    "Shadowing request cannot be modified. Current status: " + request.getStatus());
         }
     }
 }

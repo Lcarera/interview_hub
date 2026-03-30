@@ -32,11 +32,11 @@ app:
     expiration-seconds: 3600
   mail:
     from: test@gm2dev.com
+    calendar:
+      id: primary
+      refresh-token: test-refresh-token
   resend:
     api-key: test-resend-api-key
-  google-service-account:
-    key-json: ""
-    calendar-id: primary
 
 logging:
   level:

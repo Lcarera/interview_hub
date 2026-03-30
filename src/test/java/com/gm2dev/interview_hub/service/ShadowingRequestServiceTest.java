@@ -109,9 +109,9 @@ class ShadowingRequestServiceTest {
     }
 
     @Test
-    void cancelShadowingRequest_whenNotPending_throwsIllegalStateException() {
+    void cancelShadowingRequest_whenAlreadyCancelled_throwsIllegalStateException() {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
-        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
+        shadowingRequestService.cancelShadowingRequest(request.getId(), shadower.getId()); // now CANCELLED
 
         assertThrows(IllegalStateException.class,
                 () -> shadowingRequestService.cancelShadowingRequest(request.getId(), shadower.getId()));
@@ -156,9 +156,9 @@ class ShadowingRequestServiceTest {
     }
 
     @Test
-    void rejectShadowingRequest_whenNotPending_throwsIllegalStateException() {
+    void rejectShadowingRequest_whenAlreadyRejected_throwsIllegalStateException() {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
-        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
+        shadowingRequestService.rejectShadowingRequest(request.getId(), null, interviewer.getId()); // now REJECTED
 
         assertThrows(IllegalStateException.class,
                 () -> shadowingRequestService.rejectShadowingRequest(request.getId(), "Too late", interviewer.getId()));
@@ -254,5 +254,52 @@ class ShadowingRequestServiceTest {
         EmailTaskPayload.ShadowingApprovedEmail email3 = (EmailTaskPayload.ShadowingApprovedEmail) captor3.getValue();
         assertEquals("shadower@example.com", email3.to());
         assertTrue(email3.summary().contains("Java"));
+    }
+
+    @Test
+    void cancelShadowingRequest_whenApproved_setsStatusToCancelled() {
+        ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
+        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
+
+        ShadowingRequest cancelled = shadowingRequestService.cancelShadowingRequest(request.getId(), shadower.getId());
+
+        assertEquals(ShadowingRequestStatus.CANCELLED, cancelled.getStatus());
+    }
+
+    @Test
+    void cancelShadowingRequest_whenApprovedWithGoogleEventId_callsRemoveAttendee() throws Exception {
+        interview.setGoogleEventId("gcal-cancel-approved");
+        interview = interviewRepository.save(interview);
+
+        ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
+        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
+
+        shadowingRequestService.cancelShadowingRequest(request.getId(), shadower.getId());
+
+        verify(googleCalendarService).removeAttendee("gcal-cancel-approved", "shadower@example.com");
+    }
+
+    @Test
+    void rejectShadowingRequest_whenApproved_setsStatusToRejected() {
+        ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
+        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
+
+        ShadowingRequest rejected = shadowingRequestService.rejectShadowingRequest(request.getId(), "No longer needed", interviewer.getId());
+
+        assertEquals(ShadowingRequestStatus.REJECTED, rejected.getStatus());
+        assertEquals("No longer needed", rejected.getReason());
+    }
+
+    @Test
+    void rejectShadowingRequest_whenApprovedWithGoogleEventId_callsRemoveAttendee() throws Exception {
+        interview.setGoogleEventId("gcal-reject-approved");
+        interview = interviewRepository.save(interview);
+
+        ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
+        shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
+
+        shadowingRequestService.rejectShadowingRequest(request.getId(), "reason", interviewer.getId());
+
+        verify(googleCalendarService).removeAttendee("gcal-reject-approved", "shadower@example.com");
     }
 }

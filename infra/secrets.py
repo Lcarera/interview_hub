@@ -13,7 +13,7 @@ _SECRET_NAMES = [
     "GOOGLE_CLIENT_SECRET",
     "JWT_SIGNING_SECRET",
     "RESEND_API_KEY",
-    "GOOGLE_SERVICE_ACCOUNT_KEY",
+    "GOOGLE_CALENDAR_REFRESH_TOKEN",
 ]
 
 secrets: dict[str, gcp.secretmanager.Secret] = {}

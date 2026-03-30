@@ -6,8 +6,8 @@ import org.springframework.stereotype.Component;
 
 @Data
 @Component
-@ConfigurationProperties(prefix = "app.google-service-account")
-public class GoogleServiceAccountProperties {
-    private String keyJson;
-    private String calendarId = "primary";
+@ConfigurationProperties(prefix = "app.google.calendar")
+public class GoogleCalendarProperties {
+    private String id = "primary";
+    private String refreshToken;
 }

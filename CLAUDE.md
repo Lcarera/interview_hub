@@ -141,13 +141,14 @@ The application models a four-entity system:
 - `CurrentUserArgumentResolver` automatically resolves `CurrentUser` record from JWT claims in controller method parameters
 
 **Google Calendar Integration:**
-- Uses a Google Service Account to create all events on a single shared calendar (configurable via `GOOGLE_CALENDAR_ID`, defaults to `"primary"`)
-- No domain-wide delegation — the service account owns the calendar directly
-- Interviewers, candidates, and shadowers are added as attendees and receive email invitations
+- Uses OAuth2 user credentials (`GOOGLE_CALENDAR_REFRESH_TOKEN`) to manage events on a shared calendar (configurable via `GOOGLE_CALENDAR_ID`, defaults to `"primary"`)
+- `GoogleCalendarService.buildCalendarClient()` builds a `UserCredentials` instance from `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALENDAR_REFRESH_TOKEN`; obtain the refresh token via `scripts/get-calendar-token.ts`
+- Interviewers, candidates, and approved shadowers are added as attendees and receive email invitations (`sendUpdates="all"`)
 - Creating an interview → creates a Google Calendar event with interviewer and candidate as attendees
-- Updating an interview → updates the Calendar event
+- Updating an interview → updates the Calendar event (preserves approved shadowers as attendees)
 - Deleting an interview → cancels the Calendar event
 - Approving a shadowing request → adds shadower as attendee to the Calendar event
+- Cancelling or rejecting an approved shadowing request → removes shadower from the Calendar event
 - Calendar failures are logged but don't block the primary operation
 
 **Email Queue (Cloud Tasks):**
@@ -197,6 +198,7 @@ Two distinct test styles are used — never mix them:
 
 **Service Tests (`@SpringBootTest`):**
 - `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback` — full Spring context with H2
+- **`application-test.yml` must stay in sync with `application.yml`** — when adding/removing `@ConfigurationProperties` classes, update both files; Spring Boot silently ignores unrecognized YAML keys, so stale test config never fails
 - `GoogleCalendarService` is always `@MockitoBean`'d since it makes real HTTP calls
 - `AuthServiceTest`, `GoogleCalendarServiceTest`, `EmailQueueServiceTest`, `HmacJwtServiceTest`, and `CurrentUserArgumentResolverTest` use pure `@ExtendWith(MockitoExtension.class)` (no Spring context)
 - `AuthService` and `GoogleCalendarService` have package-private methods (`exchangeCodeForTokens`, `buildCalendarClient`) specifically to enable `spy()`-based interception without reflection
@@ -219,7 +221,7 @@ Required for runtime:
 - `FRONTEND_URL` - Frontend URL for OAuth callback redirects (default in compose: http://localhost)
 - `RESEND_API_KEY` - Resend API key for sending emails
 - `MAIL_FROM` - From email address (default: noreply@lcarera.dev)
-- `GOOGLE_SERVICE_ACCOUNT_KEY` - Service account JSON key for calendar integration
+- `GOOGLE_CALENDAR_REFRESH_TOKEN` - OAuth2 refresh token for Google Calendar access (obtained via `scripts/get-calendar-token.ts`)
 - `GOOGLE_CALENDAR_ID` - Google Calendar ID for shared event calendar (default: `primary`)
 - `GCP_PROJECT_ID` - GCP project ID for Cloud Tasks queue path
 - `GCP_LOCATION` - GCP region for Cloud Tasks (default: us-central1)
@@ -231,7 +233,6 @@ Required for runtime:
 
 Required for CI/CD (GitHub Actions secrets):
 - `SUPABASE_DB_URL` - PostgreSQL connection string for running migrations in the deploy pipeline (format: `postgresql://user:pass@host:port/dbname`)
-- `GOOGLE_SERVICE_ACCOUNT_KEY` - Service account JSON key (same value as runtime, needed for calendar integration in deployed environments)
 
 ## Dependencies
 
@@ -287,3 +288,8 @@ For frontend-only development: `cd frontend && bun install && bun run start` (as
 ## API Testing
 
 A Postman collection and environment file are available in `postman/` for manual API testing.
+
+## Keeping Docs in Sync
+
+- **`AGENTS.md` line 39** lists required secrets for agentic workers — update it whenever `CLAUDE.md`'s Environment Variables section changes.
+- **When deleting a `@ConfigurationProperties` class**, grep all usages before deleting (not just imports); also update `application-test.yml` alongside `application.yml`.
