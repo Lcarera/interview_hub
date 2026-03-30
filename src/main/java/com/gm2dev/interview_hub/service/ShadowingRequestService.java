@@ -86,7 +86,10 @@ public class ShadowingRequestService {
         if (!request.getInterview().getInterviewer().getId().equals(requesterId)) {
             throw new AccessDeniedException("Only the interviewer can approve this request");
         }
-        requireActionableStatus(request);
+        if (request.getStatus() != ShadowingRequestStatus.PENDING) {
+            throw new IllegalStateException(
+                    "Shadowing request is not in PENDING status. Current status: " + request.getStatus());
+        }
 
         request.setStatus(ShadowingRequestStatus.APPROVED);
         ShadowingRequest saved = shadowingRequestRepository.save(request);
