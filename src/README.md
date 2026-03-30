@@ -52,7 +52,7 @@ src/main/java/com/gm2dev/interview_hub/
 │   ├── InterviewService.java          # Interview business logic
 │   ├── ShadowingRequestService.java   # Shadowing request business logic
 │   ├── ProfileService.java            # Profile business logic
-│   └── GoogleCalendarService.java     # Calendar API integration (service account)
+│   └── GoogleCalendarService.java     # Calendar API integration (OAuth2 user credentials)
 ```
 
 ## Domain Model

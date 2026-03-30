@@ -153,7 +153,7 @@ The application models a four-entity system:
 
 **Email Queue (Cloud Tasks):**
 - Email sending is async via Google Cloud Tasks when `CLOUD_TASKS_ENABLED=true`; falls back to synchronous Resend calls when disabled
-- Flow: callers use `EmailService.queue*()` methods → `EmailQueueService` enqueues to Cloud Tasks → Cloud Tasks calls `POST /internal/email-worker` → `InternalEmailController` dispatches to `EmailService.send*()` methods
+- Flow: callers inject `EmailSender` and call `emailSender.send(payload)` → `EmailService.send()` either enqueues to Cloud Tasks (via `EmailQueueService`) or calls `sendDirectly()` synchronously → Cloud Tasks calls `POST /internal/email-worker` → `InternalEmailController` calls `emailService.sendDirectly(payload)` (no switch dispatch — polymorphism on the payload handles rendering via `payload.subject()` / `payload.htmlBody()`)
 - `EmailTaskPayload` is a sealed interface with Jackson `@JsonTypeInfo` polymorphism (discriminator: `"type"` field with values `VERIFICATION`, `PASSWORD_RESET`, `TEMPORARY_PASSWORD`, `SHADOWING_APPROVED`)
 - `EmailQueueService` is `@ConditionalOnProperty(name = "app.cloud-tasks.enabled", havingValue = "true")` — not created when Cloud Tasks is disabled
 - `InternalEmailController` validates `X-CloudTasks-QueueName` header presence (returns 403 without it)
