@@ -39,6 +39,9 @@ app:
     client-id: ${GOOGLE_CLIENT_ID}
     client-secret: ${GOOGLE_CLIENT_SECRET}
     redirect-uri: ${APP_BASE_URL:http://localhost:8080}/auth/google/callback
+    calendar:
+      id: ${GOOGLE_CALENDAR_ID:primary}
+      refresh-token: ${GOOGLE_CALENDAR_REFRESH_TOKEN:}
   jwt:
     signing-secret: ${JWT_SIGNING_SECRET}
     expiration-seconds: 3600
@@ -46,9 +49,6 @@ app:
     from: ${MAIL_FROM:noreply@lcarera.dev}
   resend:
     api-key: ${RESEND_API_KEY:}
-  google-service-account:
-    key-json: ${GOOGLE_SERVICE_ACCOUNT_KEY:}
-    calendar-id: ${GOOGLE_CALENDAR_ID:primary}
 
 logging:
   level:

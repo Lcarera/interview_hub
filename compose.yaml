@@ -14,7 +14,7 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-noreply@lcarera.dev}
-      GOOGLE_SERVICE_ACCOUNT_KEY: ${GOOGLE_SERVICE_ACCOUNT_KEY}
+      GOOGLE_CALENDAR_REFRESH_TOKEN: ${GOOGLE_CALENDAR_REFRESH_TOKEN}
       GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-primary}
     env_file:
       - path: .env

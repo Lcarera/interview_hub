@@ -219,7 +219,7 @@ Required for runtime:
 - `FRONTEND_URL` - Frontend URL for OAuth callback redirects (default in compose: http://localhost)
 - `RESEND_API_KEY` - Resend API key for sending emails
 - `MAIL_FROM` - From email address (default: noreply@lcarera.dev)
-- `GOOGLE_SERVICE_ACCOUNT_KEY` - Service account JSON key for calendar integration
+- `GOOGLE_CALENDAR_REFRESH_TOKEN` - OAuth2 refresh token for Google Calendar access (obtained via `scripts/get-calendar-token.ts`)
 - `GOOGLE_CALENDAR_ID` - Google Calendar ID for shared event calendar (default: `primary`)
 - `GCP_PROJECT_ID` - GCP project ID for Cloud Tasks queue path
 - `GCP_LOCATION` - GCP region for Cloud Tasks (default: us-central1)
@@ -231,7 +231,6 @@ Required for runtime:
 
 Required for CI/CD (GitHub Actions secrets):
 - `SUPABASE_DB_URL` - PostgreSQL connection string for running migrations in the deploy pipeline (format: `postgresql://user:pass@host:port/dbname`)
-- `GOOGLE_SERVICE_ACCOUNT_KEY` - Service account JSON key (same value as runtime, needed for calendar integration in deployed environments)
 
 ## Dependencies
 
