@@ -34,9 +34,9 @@ app:
     from: test@gm2dev.com
   resend:
     api-key: test-resend-api-key
-  google-service-account:
-    key-json: ""
-    calendar-id: primary
+    calendar:
+      id: primary
+      refresh-token: test-refresh-token
 
 logging:
   level:

@@ -141,13 +141,14 @@ The application models a four-entity system:
 - `CurrentUserArgumentResolver` automatically resolves `CurrentUser` record from JWT claims in controller method parameters
 
 **Google Calendar Integration:**
-- Uses a Google Service Account to create all events on a single shared calendar (configurable via `GOOGLE_CALENDAR_ID`, defaults to `"primary"`)
-- No domain-wide delegation — the service account owns the calendar directly
-- Interviewers, candidates, and shadowers are added as attendees and receive email invitations
+- Uses OAuth2 user credentials (`GOOGLE_CALENDAR_REFRESH_TOKEN`) to manage events on a shared calendar (configurable via `GOOGLE_CALENDAR_ID`, defaults to `"primary"`)
+- `GoogleCalendarService.buildCalendarClient()` builds a `UserCredentials` instance from `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALENDAR_REFRESH_TOKEN`; obtain the refresh token via `scripts/get-calendar-token.ts`
+- Interviewers, candidates, and approved shadowers are added as attendees and receive email invitations (`sendUpdates="all"`)
 - Creating an interview → creates a Google Calendar event with interviewer and candidate as attendees
-- Updating an interview → updates the Calendar event
+- Updating an interview → updates the Calendar event (preserves approved shadowers as attendees)
 - Deleting an interview → cancels the Calendar event
 - Approving a shadowing request → adds shadower as attendee to the Calendar event
+- Cancelling or rejecting an approved shadowing request → removes shadower from the Calendar event
 - Calendar failures are logged but don't block the primary operation
 
 **Email Queue (Cloud Tasks):**

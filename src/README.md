@@ -170,7 +170,8 @@ Key properties from `application.yml`:
 | `app.jwt.expiration-seconds`     | -                      | JWT expiry (default: 3600)          |
 | `app.frontend-url`               | `FRONTEND_URL`         | Frontend URL for OAuth redirects    |
 | `app.google.redirect-uri`        | `APP_BASE_URL`         | Backend URL + `/auth/google/callback` |
-| `app.google-service-account.calendar-id` | `GOOGLE_CALENDAR_ID` | Shared calendar ID (default: `primary`) |
+| `app.google.calendar.id`         | `GOOGLE_CALENDAR_ID`   | Shared calendar ID (default: `primary`) |
+| `app.google.calendar.refresh-token` | `GOOGLE_CALENDAR_REFRESH_TOKEN` | OAuth2 refresh token for calendar access |
 
 Hibernate uses `ddl-auto: validate` — it will not modify the schema.
 
