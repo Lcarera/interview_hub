@@ -37,6 +37,8 @@ Docker must be started before building: `sudo dockerd &` (and `sudo chmod 666 /v
 - Frontend has a duplicate `@angular/material` entry in `package.json` (dependencies + devDependencies); `bun install` warns but works fine.
 - JaCoCo coverage threshold is 95% branch coverage (excludes `InterviewHubApplication`, `GoogleCalendarService`, and MapStruct-generated `*MapperImpl` classes).
 - Running the full application requires external secrets (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `JWT_SIGNING_SECRET`, `GOOGLE_CALENDAR_REFRESH_TOKEN`) — see `CLAUDE.md` for the full list.
+- **This line and `CLAUDE.md` Environment Variables must stay in sync** — if env vars change, update both files.
+- **Config class deletions** — when removing a `@ConfigurationProperties` class, grep all usages (not just imports) before deleting; also update `application-test.yml` alongside `application.yml`.
 - Login requires a Google account with a domain in the `AllowedDomains.ALLOWED_DOMAINS` allowlist (`@gm2dev.com`, `@lcarera.dev`).
 
 ### Standard Commands

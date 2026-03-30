@@ -198,6 +198,7 @@ Two distinct test styles are used — never mix them:
 
 **Service Tests (`@SpringBootTest`):**
 - `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback` — full Spring context with H2
+- **`application-test.yml` must stay in sync with `application.yml`** — when adding/removing `@ConfigurationProperties` classes, update both files; Spring Boot silently ignores unrecognized YAML keys, so stale test config never fails
 - `GoogleCalendarService` is always `@MockitoBean`'d since it makes real HTTP calls
 - `AuthServiceTest`, `GoogleCalendarServiceTest`, `EmailQueueServiceTest`, `HmacJwtServiceTest`, and `CurrentUserArgumentResolverTest` use pure `@ExtendWith(MockitoExtension.class)` (no Spring context)
 - `AuthService` and `GoogleCalendarService` have package-private methods (`exchangeCodeForTokens`, `buildCalendarClient`) specifically to enable `spy()`-based interception without reflection
@@ -287,3 +288,8 @@ For frontend-only development: `cd frontend && bun install && bun run start` (as
 ## API Testing
 
 A Postman collection and environment file are available in `postman/` for manual API testing.
+
+## Keeping Docs in Sync
+
+- **`AGENTS.md` line 39** lists required secrets for agentic workers — update it whenever `CLAUDE.md`'s Environment Variables section changes.
+- **When deleting a `@ConfigurationProperties` class**, grep all usages before deleting (not just imports); also update `application-test.yml` alongside `application.yml`.
