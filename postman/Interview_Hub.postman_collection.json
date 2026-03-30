@@ -1,7 +1,7 @@
 {
 	"info": {
 		"name": "Interview Hub",
-		"description": "Interview Hub API collection.\n\n## Authentication\n1. Open `{{base_url}}/auth/google` in your **browser**\n2. Sign in with your @gm2dev.com Google account\n3. Copy the `token` from the JSON response\n4. Paste it into the `jwt_token` environment variable\n\nThe pre-request script will auto-check expiration and extract your profile ID.",
+		"description": "Interview Hub API collection.\n\n## Authentication\n1. Open `{{base_url}}/auth/google` in your **browser**\n2. Sign in with your @gm2dev.com Google account\n3. Copy the `token` from the JSON response\n4. Paste it into the `jwt_token` environment variable\n\nAlternatively, use `POST /auth/login` for email/password authentication.\n\nThe pre-request script will auto-check expiration and extract your profile ID.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
@@ -245,7 +245,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "interviews"]
 						},
-						"description": "Creates a new interview and a Google Calendar event on the interviewer's calendar. The `interview_id` environment variable is auto-set from the response."
+						"description": "Creates a new interview and a Google Calendar event on the shared calendar. The `interview_id` environment variable is auto-set from the response."
 					},
 					"response": [
 						{
@@ -255,7 +255,7 @@
 							"header": [
 								{ "key": "Content-Type", "value": "application/json" }
 							],
-							"body": "{\n    \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n    \"interviewer\": {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"email\": \"user@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"user@gm2dev.com\"\n    },\n    \"candidate\": {\n        \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n        \"name\": \"Jane Doe\",\n        \"email\": \"jane.doe@example.com\",\n        \"linkedinUrl\": null,\n        \"primaryArea\": \"Backend\",\n        \"feedbackLink\": null\n    },\n    \"talentAcquisition\": null,\n    \"techStack\": \"Java/Spring\",\n    \"startTime\": \"2026-04-20T15:00:00Z\",\n    \"endTime\": \"2026-04-20T16:00:00Z\",\n    \"status\": \"SCHEDULED\",\n    \"shadowingRequests\": []\n}"
+							"body": "{\n    \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n    \"interviewer\": {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"email\": \"user@gm2dev.com\",\n        \"role\": \"interviewer\"\n    },\n    \"candidate\": {\n        \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n        \"name\": \"Jane Doe\",\n        \"email\": \"jane.doe@example.com\",\n        \"linkedinUrl\": null,\n        \"primaryArea\": \"Backend\",\n        \"feedbackLink\": null\n    },\n    \"talentAcquisition\": null,\n    \"techStack\": \"Java/Spring\",\n    \"startTime\": \"2026-04-20T15:00:00Z\",\n    \"endTime\": \"2026-04-20T16:00:00Z\",\n    \"status\": \"SCHEDULED\",\n    \"shadowingRequests\": []\n}"
 						}
 					]
 				},
@@ -308,7 +308,7 @@
 							"header": [
 								{ "key": "Content-Type", "value": "application/json" }
 							],
-							"body": "{\n    \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n    \"interviewer\": {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"email\": \"user@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"user@gm2dev.com\"\n    },\n    \"candidate\": {\n        \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n        \"name\": \"Jane Doe\",\n        \"email\": \"jane.doe@example.com\",\n        \"linkedinUrl\": null,\n        \"primaryArea\": \"Backend\",\n        \"feedbackLink\": null\n    },\n    \"talentAcquisition\": null,\n    \"techStack\": \"Java/Spring\",\n    \"startTime\": \"2026-04-20T15:00:00Z\",\n    \"endTime\": \"2026-04-20T16:00:00Z\",\n    \"status\": \"SCHEDULED\",\n    \"shadowingRequests\": []\n}"
+							"body": "{\n    \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n    \"interviewer\": {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"email\": \"user@gm2dev.com\",\n        \"role\": \"interviewer\"\n    },\n    \"candidate\": {\n        \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n        \"name\": \"Jane Doe\",\n        \"email\": \"jane.doe@example.com\",\n        \"linkedinUrl\": null,\n        \"primaryArea\": \"Backend\",\n        \"feedbackLink\": null\n    },\n    \"talentAcquisition\": null,\n    \"techStack\": \"Java/Spring\",\n    \"startTime\": \"2026-04-20T15:00:00Z\",\n    \"endTime\": \"2026-04-20T16:00:00Z\",\n    \"status\": \"SCHEDULED\",\n    \"shadowingRequests\": []\n}"
 						}
 					]
 				},
@@ -341,7 +341,7 @@
 							"header": [
 								{ "key": "Content-Type", "value": "application/json" }
 							],
-							"body": "{\n    \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n    \"interviewer\": {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"email\": \"user@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"user@gm2dev.com\"\n    },\n    \"candidate\": {\n        \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n        \"name\": \"Jane Doe\",\n        \"email\": \"jane.doe@example.com\",\n        \"linkedinUrl\": null,\n        \"primaryArea\": \"Backend\",\n        \"feedbackLink\": null\n    },\n    \"talentAcquisition\": null,\n    \"techStack\": \"Java/Spring/Hibernate\",\n    \"startTime\": \"2026-04-20T16:00:00Z\",\n    \"endTime\": \"2026-04-20T17:00:00Z\",\n    \"status\": \"SCHEDULED\",\n    \"shadowingRequests\": []\n}"
+							"body": "{\n    \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n    \"interviewer\": {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"email\": \"user@gm2dev.com\",\n        \"role\": \"interviewer\"\n    },\n    \"candidate\": {\n        \"id\": \"660e8400-e29b-41d4-a716-446655440001\",\n        \"name\": \"Jane Doe\",\n        \"email\": \"jane.doe@example.com\",\n        \"linkedinUrl\": null,\n        \"primaryArea\": \"Backend\",\n        \"feedbackLink\": null\n    },\n    \"talentAcquisition\": null,\n    \"techStack\": \"Java/Spring/Hibernate\",\n    \"startTime\": \"2026-04-20T16:00:00Z\",\n    \"endTime\": \"2026-04-20T17:00:00Z\",\n    \"status\": \"SCHEDULED\",\n    \"shadowingRequests\": []\n}"
 						}
 					]
 				},
@@ -393,7 +393,7 @@
 							"header": [
 								{ "key": "Content-Type", "value": "application/json" }
 							],
-							"body": "[\n    {\n        \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n        \"interview\": {\n            \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n            \"techStack\": \"Java/Spring\",\n            \"startTime\": \"2026-04-20T15:00:00Z\",\n            \"endTime\": \"2026-04-20T16:00:00Z\",\n            \"status\": \"SCHEDULED\"\n        },\n        \"shadower\": {\n            \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n            \"email\": \"shadower@gm2dev.com\",\n            \"role\": \"interviewer\",\n            \"calendarEmail\": \"shadower@gm2dev.com\"\n        },\n        \"status\": \"PENDING\",\n        \"reason\": null\n    }\n]"
+							"body": "[\n    {\n        \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n        \"interview\": {\n            \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n            \"techStack\": \"Java/Spring\",\n            \"startTime\": \"2026-04-20T15:00:00Z\",\n            \"endTime\": \"2026-04-20T16:00:00Z\",\n            \"status\": \"SCHEDULED\"\n        },\n        \"shadower\": {\n            \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n            \"email\": \"shadower@gm2dev.com\",\n            \"role\": \"interviewer\"\n        },\n        \"status\": \"PENDING\",\n        \"reason\": null\n    }\n]"
 						}
 					]
 				},
@@ -456,7 +456,7 @@
 							"header": [
 								{ "key": "Content-Type", "value": "application/json" }
 							],
-							"body": "{\n    \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n    \"interview\": {\n        \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n        \"techStack\": \"Java/Spring\",\n        \"startTime\": \"2026-04-20T15:00:00Z\",\n        \"endTime\": \"2026-04-20T16:00:00Z\",\n        \"status\": \"SCHEDULED\"\n    },\n    \"shadower\": {\n        \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n        \"email\": \"shadower@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"shadower@gm2dev.com\"\n    },\n    \"status\": \"PENDING\",\n    \"reason\": null\n}"
+							"body": "{\n    \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n    \"interview\": {\n        \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n        \"techStack\": \"Java/Spring\",\n        \"startTime\": \"2026-04-20T15:00:00Z\",\n        \"endTime\": \"2026-04-20T16:00:00Z\",\n        \"status\": \"SCHEDULED\"\n    },\n    \"shadower\": {\n        \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n        \"email\": \"shadower@gm2dev.com\",\n        \"role\": \"interviewer\"\n    },\n    \"status\": \"PENDING\",\n    \"reason\": null\n}"
 						}
 					]
 				},
@@ -480,7 +480,7 @@
 							"header": [
 								{ "key": "Content-Type", "value": "application/json" }
 							],
-							"body": "{\n    \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n    \"interview\": {\n        \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n        \"techStack\": \"Java/Spring\",\n        \"startTime\": \"2026-04-20T15:00:00Z\",\n        \"endTime\": \"2026-04-20T16:00:00Z\",\n        \"status\": \"SCHEDULED\"\n    },\n    \"shadower\": {\n        \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n        \"email\": \"shadower@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"shadower@gm2dev.com\"\n    },\n    \"status\": \"APPROVED\",\n    \"reason\": null\n}"
+							"body": "{\n    \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n    \"interview\": {\n        \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n        \"techStack\": \"Java/Spring\",\n        \"startTime\": \"2026-04-20T15:00:00Z\",\n        \"endTime\": \"2026-04-20T16:00:00Z\",\n        \"status\": \"SCHEDULED\"\n    },\n    \"shadower\": {\n        \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n        \"email\": \"shadower@gm2dev.com\",\n        \"role\": \"interviewer\"\n    },\n    \"status\": \"APPROVED\",\n    \"reason\": null\n}"
 						}
 					]
 				},
@@ -513,7 +513,7 @@
 							"header": [
 								{ "key": "Content-Type", "value": "application/json" }
 							],
-							"body": "{\n    \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n    \"interview\": {\n        \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n        \"techStack\": \"Java/Spring\",\n        \"startTime\": \"2026-04-20T15:00:00Z\",\n        \"endTime\": \"2026-04-20T16:00:00Z\",\n        \"status\": \"SCHEDULED\"\n    },\n    \"shadower\": {\n        \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n        \"email\": \"shadower@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"shadower@gm2dev.com\"\n    },\n    \"status\": \"REJECTED\",\n    \"reason\": \"Interview is already at full capacity\"\n}"
+							"body": "{\n    \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n    \"interview\": {\n        \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n        \"techStack\": \"Java/Spring\",\n        \"startTime\": \"2026-04-20T15:00:00Z\",\n        \"endTime\": \"2026-04-20T16:00:00Z\",\n        \"status\": \"SCHEDULED\"\n    },\n    \"shadower\": {\n        \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n        \"email\": \"shadower@gm2dev.com\",\n        \"role\": \"interviewer\"\n    },\n    \"status\": \"REJECTED\",\n    \"reason\": \"Interview is already at full capacity\"\n}"
 						}
 					]
 				},
@@ -537,7 +537,7 @@
 							"header": [
 								{ "key": "Content-Type", "value": "application/json" }
 							],
-							"body": "{\n    \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n    \"interview\": {\n        \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n        \"techStack\": \"Java/Spring\",\n        \"startTime\": \"2026-04-20T15:00:00Z\",\n        \"endTime\": \"2026-04-20T16:00:00Z\",\n        \"status\": \"SCHEDULED\"\n    },\n    \"shadower\": {\n        \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n        \"email\": \"shadower@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"shadower@gm2dev.com\"\n    },\n    \"status\": \"CANCELLED\",\n    \"reason\": null\n}"
+							"body": "{\n    \"id\": \"990e8400-e29b-41d4-a716-446655440004\",\n    \"interview\": {\n        \"id\": \"880e8400-e29b-41d4-a716-446655440003\",\n        \"techStack\": \"Java/Spring\",\n        \"startTime\": \"2026-04-20T15:00:00Z\",\n        \"endTime\": \"2026-04-20T16:00:00Z\",\n        \"status\": \"SCHEDULED\"\n    },\n    \"shadower\": {\n        \"id\": \"aa0e8400-e29b-41d4-a716-446655440005\",\n        \"email\": \"shadower@gm2dev.com\",\n        \"role\": \"interviewer\"\n    },\n    \"status\": \"CANCELLED\",\n    \"reason\": null\n}"
 						}
 					]
 				}
@@ -567,7 +567,7 @@
 							"header": [
 								{ "key": "Content-Type", "value": "application/json" }
 							],
-							"body": "{\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"email\": \"user@gm2dev.com\",\n    \"role\": \"interviewer\",\n    \"calendarEmail\": \"user@gm2dev.com\"\n}"
+							"body": "{\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"email\": \"user@gm2dev.com\",\n    \"role\": \"interviewer\"\n}"
 						}
 					]
 				},
@@ -591,7 +591,7 @@
 							"header": [
 								{ "key": "Content-Type", "value": "application/json" }
 							],
-							"body": "[\n    {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"email\": \"user@gm2dev.com\",\n        \"role\": \"interviewer\",\n        \"calendarEmail\": \"user@gm2dev.com\"\n    }\n]"
+							"body": "[\n    {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"email\": \"user@gm2dev.com\",\n        \"role\": \"interviewer\"\n    }\n]"
 						}
 					]
 				}
@@ -602,7 +602,7 @@
 			"description": "Authentication endpoints. No Bearer token required.",
 			"item": [
 				{
-					"name": "Exchange Token",
+					"name": "Exchange Token (Google OAuth2)",
 					"request": {
 						"auth": { "type": "noauth" },
 						"method": "POST",
@@ -624,7 +624,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["auth", "token"]
 						},
-						"description": "Postman-compatible token exchange. Accepts an authorization code and redirect_uri, returns an access token."
+						"description": "Postman-compatible token exchange. Accepts a Google authorization code and redirect_uri, returns an access token."
 					},
 					"response": [
 						{
@@ -635,6 +635,353 @@
 								{ "key": "Content-Type", "value": "application/json" }
 							],
 							"body": "{\n    \"access_token\": \"eyJhbGciOiJIUzI1NiJ9...\",\n    \"token_type\": \"Bearer\",\n    \"expires_in\": 3600\n}"
+						}
+					]
+				},
+				{
+					"name": "Register",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"user@gm2dev.com\",\n    \"password\": \"Passw0rd!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "Registers a new user with email and password. Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, and one number. An email verification link is sent — login is blocked until verified."
+					},
+					"response": [
+						{
+							"name": "201 Created",
+							"status": "Created",
+							"code": 201,
+							"header": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "Verify Email",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/verify?token=PASTE_TOKEN_HERE",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "verify"],
+							"query": [
+								{ "key": "token", "value": "PASTE_TOKEN_HERE" }
+							]
+						},
+						"description": "Verifies an email address using the token from the verification email. Must be called before the user can log in."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const body = pm.response.json();",
+									"    pm.environment.set('jwt_token', body.token);",
+									"    console.log('JWT token stored in jwt_token environment variable');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"user@gm2dev.com\",\n    \"password\": \"Passw0rd!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Authenticates with email and password. Returns a JWT. The `jwt_token` environment variable is auto-set from the response."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"token\": \"eyJhbGciOiJIUzI1NiJ9...\",\n    \"expiresAt\": \"2026-04-20T16:00:00Z\"\n}"
+						},
+						{
+							"name": "401 Unauthorized — unverified email",
+							"status": "Unauthorized",
+							"code": 401,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"error\": \"Email not verified\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Resend Verification Email",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"user@gm2dev.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/resend-verification",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "resend-verification"]
+						},
+						"description": "Resends the email verification link to the given address. Safe to call even if already verified — always returns 200."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"user@gm2dev.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/forgot-password",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "forgot-password"]
+						},
+						"description": "Sends a password reset link to the given email address. Always returns 200 to prevent email enumeration."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"PASTE_RESET_TOKEN_HERE\",\n    \"newPassword\": \"NewPassw0rd!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/reset-password",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "reset-password"]
+						},
+						"description": "Resets the user's password using the token from the reset email. Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, and one number."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"description": "Admin-only user management endpoints. Requires a JWT with `role: admin`.",
+			"item": [
+				{
+					"name": "List Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/users?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users"],
+							"query": [
+								{ "key": "page", "value": "0" },
+								{ "key": "size", "value": "20" }
+							]
+						},
+						"description": "Returns a paginated list of all user profiles. Requires admin role."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"content\": [\n        {\n            \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n            \"email\": \"user@gm2dev.com\",\n            \"role\": \"interviewer\"\n        }\n    ],\n    \"pageable\": {\n        \"pageNumber\": 0,\n        \"pageSize\": 20\n    },\n    \"totalElements\": 1,\n    \"totalPages\": 1\n}"
+						}
+					]
+				},
+				{
+					"name": "Create User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const body = pm.response.json();",
+									"    pm.environment.set('admin_user_id', body.id);",
+									"    console.log('Set admin_user_id = ' + body.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"newuser@gm2dev.com\",\n    \"role\": \"interviewer\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/users",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users"]
+						},
+						"description": "Creates a new user with a temporary password. The user will receive an email with login instructions. `role` must be `interviewer` or `admin`. The `admin_user_id` environment variable is auto-set from the response."
+					},
+					"response": [
+						{
+							"name": "201 Created",
+							"status": "Created",
+							"code": 201,
+							"header": [
+								{ "key": "Content-Type", "value": "application/json" }
+							],
+							"body": "{\n    \"id\": \"bb0e8400-e29b-41d4-a716-446655440006\",\n    \"email\": \"newuser@gm2dev.com\",\n    \"role\": \"interviewer\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update User Role",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"role\": \"admin\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/users/{{admin_user_id}}/role",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users", "{{admin_user_id}}", "role"]
+						},
+						"description": "Promotes or demotes a user. `role` must be `interviewer` or `admin`."
+					},
+					"response": [
+						{
+							"name": "200 OK",
+							"status": "OK",
+							"code": 200,
+							"header": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/users/{{admin_user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users", "{{admin_user_id}}"]
+						},
+						"description": "Permanently deletes a user profile. Returns 204 on success."
+					},
+					"response": [
+						{
+							"name": "204 No Content",
+							"status": "No Content",
+							"code": 204,
+							"header": [],
+							"body": ""
 						}
 					]
 				}
