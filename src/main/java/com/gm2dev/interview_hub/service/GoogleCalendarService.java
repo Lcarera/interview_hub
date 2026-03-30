@@ -1,8 +1,10 @@
 package com.gm2dev.interview_hub.service;
 
-import com.gm2dev.interview_hub.config.GoogleServiceAccountProperties;
+import com.gm2dev.interview_hub.config.GoogleCalendarProperties;
+import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
 import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
+import com.gm2dev.interview_hub.domain.ShadowingRequestStatus;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
@@ -14,8 +16,7 @@ import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventAttendee;
 import com.google.api.services.calendar.model.EventDateTime;
 import com.google.auth.http.HttpCredentialsAdapter;
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.auth.oauth2.ServiceAccountCredentials;
+import com.google.auth.oauth2.UserCredentials;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -31,20 +32,23 @@ public class GoogleCalendarService {
 
     public record CalendarEventResult(String eventId, String meetLink) {}
 
-    private final GoogleServiceAccountProperties serviceAccountProperties;
+    private final GoogleOAuthProperties oAuthProperties;
+    private final GoogleCalendarProperties calendarProperties;
 
-    public GoogleCalendarService(GoogleServiceAccountProperties serviceAccountProperties) {
-        this.serviceAccountProperties = serviceAccountProperties;
+    public GoogleCalendarService(GoogleOAuthProperties oAuthProperties,
+                                  GoogleCalendarProperties calendarProperties) {
+        this.oAuthProperties = oAuthProperties;
+        this.calendarProperties = calendarProperties;
     }
 
     public CalendarEventResult createEvent(Interview interview) throws IOException {
         Calendar calendar = buildCalendarClient();
-        String calendarId = serviceAccountProperties.getCalendarId();
+        String calendarId = calendarProperties.getId();
         Event event = buildEvent(interview);
 
         Event created = calendar.events().insert(calendarId, event)
                 .setConferenceDataVersion(1)
-                .setSendUpdates("none")
+                .setSendUpdates("all")
                 .execute();
         log.debug("Created Google Calendar event: {}", created.getId());
         return new CalendarEventResult(created.getId(), created.getHangoutLink());
@@ -52,29 +56,29 @@ public class GoogleCalendarService {
 
     public void updateEvent(Interview interview) throws IOException {
         Calendar calendar = buildCalendarClient();
-        String calendarId = serviceAccountProperties.getCalendarId();
+        String calendarId = calendarProperties.getId();
         Event event = buildEvent(interview);
 
         calendar.events().update(calendarId, interview.getGoogleEventId(), event)
                 .setConferenceDataVersion(1)
-                .setSendUpdates("none")
+                .setSendUpdates("all")
                 .execute();
         log.debug("Updated Google Calendar event: {}", interview.getGoogleEventId());
     }
 
     public void deleteEvent(String googleEventId) throws IOException {
         Calendar calendar = buildCalendarClient();
-        String calendarId = serviceAccountProperties.getCalendarId();
+        String calendarId = calendarProperties.getId();
 
         calendar.events().delete(calendarId, googleEventId)
-                .setSendUpdates("none")
+                .setSendUpdates("all")
                 .execute();
         log.debug("Deleted Google Calendar event: {}", googleEventId);
     }
 
     public void addAttendee(String googleEventId, String attendeeEmail) throws IOException {
         Calendar calendar = buildCalendarClient();
-        String calendarId = serviceAccountProperties.getCalendarId();
+        String calendarId = calendarProperties.getId();
 
         Event event = calendar.events().get(calendarId, googleEventId).execute();
 
@@ -82,27 +86,47 @@ public class GoogleCalendarService {
         if (event.getAttendees() != null) {
             attendees.addAll(event.getAttendees());
         }
-        EventAttendee newAttendee = new EventAttendee().setEmail(attendeeEmail);
-        attendees.add(newAttendee);
+        attendees.add(new EventAttendee().setEmail(attendeeEmail));
 
         Event patch = new Event().setAttendees(attendees);
         calendar.events().patch(calendarId, googleEventId, patch)
-                .setSendUpdates("none")
+                .setSendUpdates("all")
                 .execute();
 
         log.debug("Added attendee {} to event {}", attendeeEmail, googleEventId);
     }
 
-    Calendar buildCalendarClient() throws IOException {
-        if (serviceAccountProperties.getKeyJson() == null || serviceAccountProperties.getKeyJson().isBlank()) {
-            throw new IOException("Google service account key not configured");
+    public void removeAttendee(String googleEventId, String attendeeEmail) throws IOException {
+        Calendar calendar = buildCalendarClient();
+        String calendarId = calendarProperties.getId();
+
+        Event event = calendar.events().get(calendarId, googleEventId).execute();
+
+        List<EventAttendee> attendees = new ArrayList<>();
+        if (event.getAttendees() != null) {
+            event.getAttendees().stream()
+                    .filter(a -> !attendeeEmail.equals(a.getEmail()))
+                    .forEach(attendees::add);
         }
 
-        GoogleCredentials credentials = ServiceAccountCredentials
-                .fromStream(new java.io.ByteArrayInputStream(serviceAccountProperties.getKeyJson().getBytes()))
-                .createScoped(java.util.List.of("https://www.googleapis.com/auth/calendar"));
+        Event patch = new Event().setAttendees(attendees);
+        calendar.events().patch(calendarId, googleEventId, patch)
+                .setSendUpdates("all")
+                .execute();
 
-        credentials.refreshIfExpired();
+        log.debug("Removed attendee {} from event {}", attendeeEmail, googleEventId);
+    }
+
+    Calendar buildCalendarClient() throws IOException {
+        if (calendarProperties.getRefreshToken() == null || calendarProperties.getRefreshToken().isBlank()) {
+            throw new IOException("Google Calendar refresh token not configured");
+        }
+
+        UserCredentials credentials = UserCredentials.newBuilder()
+                .setClientId(oAuthProperties.getClientId())
+                .setClientSecret(oAuthProperties.getClientSecret())
+                .setRefreshToken(calendarProperties.getRefreshToken())
+                .build();
 
         HttpTransport transport;
         try {
@@ -165,6 +189,16 @@ public class GoogleCalendarService {
         if (candidate != null && candidate.getEmail() != null) {
             attendees.add(new EventAttendee().setEmail(candidate.getEmail()));
         }
+
+        if (interview.getShadowingRequests() != null) {
+            interview.getShadowingRequests().stream()
+                    .filter(sr -> ShadowingRequestStatus.APPROVED.equals(sr.getStatus()))
+                    .map(sr -> sr.getShadower().getEmail())
+                    .filter(email -> email != null)
+                    .map(email -> new EventAttendee().setEmail(email))
+                    .forEach(attendees::add);
+        }
+
         event.setAttendees(attendees);
 
         return event;

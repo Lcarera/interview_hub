@@ -1,7 +1,9 @@
 package com.gm2dev.interview_hub.controller;
 
+import com.gm2dev.interview_hub.dto.EmailTaskPayload;
 import com.gm2dev.interview_hub.service.EmailService;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -10,6 +12,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -32,7 +35,7 @@ class InternalEmailControllerTest {
     private EmailService emailService;
 
     @Test
-    void processEmailTask_withValidVerificationPayload_sendsEmail() throws Exception {
+    void processEmailTask_withValidVerificationPayload_callsSendDirectly() throws Exception {
         String payload = """
             {"type":"VERIFICATION","to":"user@gm2dev.com","token":"abc123"}
             """;
@@ -42,11 +45,16 @@ class InternalEmailControllerTest {
                         .content(payload))
                 .andExpect(status().isOk());
 
-        verify(emailService).sendVerificationEmail("user@gm2dev.com", "abc123");
+        ArgumentCaptor<EmailTaskPayload> captor = ArgumentCaptor.forClass(EmailTaskPayload.class);
+        verify(emailService).sendDirectly(captor.capture());
+
+        EmailTaskPayload captured = captor.getValue();
+        assertInstanceOf(EmailTaskPayload.VerificationEmail.class, captured);
+        assertEquals("user@gm2dev.com", captured.to());
     }
 
     @Test
-    void processEmailTask_withValidPasswordResetPayload_sendsEmail() throws Exception {
+    void processEmailTask_withValidPasswordResetPayload_callsSendDirectly() throws Exception {
         String payload = """
             {"type":"PASSWORD_RESET","to":"user@gm2dev.com","token":"reset-token"}
             """;
@@ -56,11 +64,15 @@ class InternalEmailControllerTest {
                         .content(payload))
                 .andExpect(status().isOk());
 
-        verify(emailService).sendPasswordResetEmail("user@gm2dev.com", "reset-token");
+        ArgumentCaptor<EmailTaskPayload> captor = ArgumentCaptor.forClass(EmailTaskPayload.class);
+        verify(emailService).sendDirectly(captor.capture());
+
+        EmailTaskPayload captured = captor.getValue();
+        assertInstanceOf(EmailTaskPayload.PasswordResetEmail.class, captured);
     }
 
     @Test
-    void processEmailTask_withValidTemporaryPasswordPayload_sendsEmail() throws Exception {
+    void processEmailTask_withValidTemporaryPasswordPayload_callsSendDirectly() throws Exception {
         String payload = """
             {"type":"TEMPORARY_PASSWORD","to":"user@gm2dev.com","temporaryPassword":"TempPass123"}
             """;
@@ -70,11 +82,15 @@ class InternalEmailControllerTest {
                         .content(payload))
                 .andExpect(status().isOk());
 
-        verify(emailService).sendTemporaryPasswordEmail("user@gm2dev.com", "TempPass123");
+        ArgumentCaptor<EmailTaskPayload> captor = ArgumentCaptor.forClass(EmailTaskPayload.class);
+        verify(emailService).sendDirectly(captor.capture());
+
+        EmailTaskPayload captured = captor.getValue();
+        assertInstanceOf(EmailTaskPayload.TemporaryPasswordEmail.class, captured);
     }
 
     @Test
-    void processEmailTask_withValidShadowingApprovedPayload_sendsEmail() throws Exception {
+    void processEmailTask_withValidShadowingApprovedPayload_callsSendDirectly() throws Exception {
         String payload = """
             {"type":"SHADOWING_APPROVED","to":"shadower@gm2dev.com","summary":"Java Interview - Jane Doe","startTime":"2026-03-20T10:00:00Z","endTime":"2026-03-20T11:00:00Z"}
             """;
@@ -84,12 +100,11 @@ class InternalEmailControllerTest {
                         .content(payload))
                 .andExpect(status().isOk());
 
-        verify(emailService).sendShadowingApprovedEmail(
-                "shadower@gm2dev.com",
-                "Java Interview - Jane Doe",
-                "2026-03-20T10:00:00Z",
-                "2026-03-20T11:00:00Z"
-        );
+        ArgumentCaptor<EmailTaskPayload> captor = ArgumentCaptor.forClass(EmailTaskPayload.class);
+        verify(emailService).sendDirectly(captor.capture());
+
+        EmailTaskPayload captured = captor.getValue();
+        assertInstanceOf(EmailTaskPayload.ShadowingApprovedEmail.class, captured);
     }
 
     @Test

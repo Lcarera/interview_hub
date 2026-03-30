@@ -52,7 +52,7 @@ Pulumi provisions the following GCP resources:
 |------------------|--------------------------------------------------------------|
 | `__main__.py`    | Pulumi entry point — imports all modules, exports stack outputs |
 | `iam.py`         | Creates `interview-hub-cloudrun` service account + IAM bindings |
-| `secrets.py`     | Creates 8 GCP Secret Manager secrets (DB, OAuth, JWT, Resend API key, service account key) |
+| `secrets.py`     | Creates 8 GCP Secret Manager secrets (DB, OAuth, JWT, Resend API key, Calendar refresh token) |
 | `registry.py`    | Creates Artifact Registry Docker repository                  |
 | `cloudtasks.py`  | Creates Cloud Tasks queue for async email with rate limiting |
 | `cloudrun.py`    | Deploys backend and frontend Cloud Run services              |
@@ -78,7 +78,7 @@ Pulumi provisions the following GCP resources:
 | `interview-hub-google-client-secret`       | `GOOGLE_CLIENT_SECRET`        |
 | `interview-hub-jwt-signing-secret`         | `JWT_SIGNING_SECRET`          |
 | `interview-hub-resend-api-key`             | `RESEND_API_KEY`              |
-| `interview-hub-google-service-account-key` | `GOOGLE_SERVICE_ACCOUNT_KEY`  |
+| `interview-hub-google-calendar-refresh-token` | `GOOGLE_CALENDAR_REFRESH_TOKEN` |
 
 All secrets use auto-replication. Pulumi creates the secret containers — values must be set manually:
 

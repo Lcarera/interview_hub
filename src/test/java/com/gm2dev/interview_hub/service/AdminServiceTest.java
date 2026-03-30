@@ -3,6 +3,7 @@ package com.gm2dev.interview_hub.service;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.CreateUserRequest;
+import com.gm2dev.interview_hub.dto.EmailTaskPayload;
 import com.gm2dev.interview_hub.dto.ProfileDto;
 import com.gm2dev.interview_hub.mapper.ProfileMapper;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
@@ -41,7 +42,7 @@ class AdminServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private EmailService emailService;
+    private EmailSender emailSender;
 
     @Mock
     private ProfileMapper profileMapper;
@@ -56,7 +57,7 @@ class AdminServiceTest {
 
     @BeforeEach
     void setUp() {
-        adminService = new AdminService(profileRepository, passwordEncoder, emailService, profileMapper, interviewRepository, shadowingRequestRepository);
+        adminService = new AdminService(profileRepository, passwordEncoder, emailSender, profileMapper, interviewRepository, shadowingRequestRepository);
     }
 
     @Test
@@ -107,7 +108,11 @@ class AdminServiceTest {
         assertNotNull(saved.getPasswordHash());
         assertEquals(dto, result);
 
-        verify(emailService).queueTemporaryPasswordEmail(eq("new@gm2dev.com"), anyString());
+        ArgumentCaptor<EmailTaskPayload> emailCaptor = ArgumentCaptor.forClass(EmailTaskPayload.class);
+        verify(emailSender).send(emailCaptor.capture());
+        EmailTaskPayload captured = emailCaptor.getValue();
+        assertInstanceOf(EmailTaskPayload.TemporaryPasswordEmail.class, captured);
+        assertEquals("new@gm2dev.com", captured.to());
     }
 
     @Test
@@ -146,7 +151,7 @@ class AdminServiceTest {
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
         when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
         doThrow(new RuntimeException("Email delivery failed"))
-                .when(emailService).queueTemporaryPasswordEmail(anyString(), anyString());
+                .when(emailSender).send(any(EmailTaskPayload.class));
 
         assertThrows(RuntimeException.class, () -> adminService.createUser(request));
     }
@@ -257,9 +262,11 @@ class AdminServiceTest {
             adminService.createUser(request);
         }
 
-        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
-        verify(emailService, times(20)).queueTemporaryPasswordEmail(eq("new@gm2dev.com"), passwordCaptor.capture());
-        List<String> passwords = passwordCaptor.getAllValues();
+        ArgumentCaptor<EmailTaskPayload> emailCaptor = ArgumentCaptor.forClass(EmailTaskPayload.class);
+        verify(emailSender, times(20)).send(emailCaptor.capture());
+        List<String> passwords = emailCaptor.getAllValues().stream()
+                .map(p -> ((EmailTaskPayload.TemporaryPasswordEmail) p).temporaryPassword())
+                .toList();
 
         boolean allMatchUnshuffledPattern = passwords.stream()
                 .allMatch(p -> Character.isUpperCase(p.charAt(0))

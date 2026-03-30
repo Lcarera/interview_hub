@@ -1,7 +1,6 @@
 package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
-import com.gm2dev.interview_hub.config.JwtProperties;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.dto.AuthResponse;
@@ -12,16 +11,11 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.JwsHeader;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
+
 import java.io.IOException;
-import java.time.Instant;
 import java.util.UUID;
 
 import static com.gm2dev.interview_hub.config.AllowedDomains.ALLOWED_DOMAINS;
@@ -35,18 +29,15 @@ public class AuthService {
     private static final String SCOPES = "openid email profile";
 
     private final GoogleOAuthProperties googleProperties;
-    private final JwtProperties jwtProperties;
     private final ProfileRepository profileRepository;
-    private final JwtEncoder jwtEncoder;
+    private final JwtService jwtService;
 
     public AuthService(GoogleOAuthProperties googleProperties,
-                       JwtProperties jwtProperties,
                        ProfileRepository profileRepository,
-                       JwtEncoder jwtEncoder) {
+                       JwtService jwtService) {
         this.googleProperties = googleProperties;
-        this.jwtProperties = jwtProperties;
         this.profileRepository = profileRepository;
-        this.jwtEncoder = jwtEncoder;
+        this.jwtService = jwtService;
     }
 
     public String buildAuthorizationUrl() {
@@ -94,8 +85,7 @@ public class AuthService {
 
         profileRepository.save(profile);
 
-        String jwt = issueJwt(profile);
-        return new AuthResponse(jwt, jwtProperties.getExpirationSeconds(), email);
+        return jwtService.issueToken(profile);
     }
 
     GoogleTokenResponse exchangeCodeForTokens(String code, String redirectUri) throws IOException {
@@ -108,19 +98,5 @@ public class AuthService {
                 code,
                 redirectUri
         ).execute();
-    }
-
-    private String issueJwt(Profile profile) {
-        Instant now = Instant.now();
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-                .subject(profile.getId().toString())
-                .claim("email", profile.getEmail())
-                .claim("role", profile.getRole().name())
-                .issuedAt(now)
-                .expiresAt(now.plusSeconds(jwtProperties.getExpirationSeconds()))
-                .build();
-
-        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
-        return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }
 }

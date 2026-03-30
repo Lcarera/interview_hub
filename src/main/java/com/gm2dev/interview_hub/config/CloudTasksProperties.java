@@ -15,16 +15,4 @@ public record CloudTasksProperties(
     public String queuePath() {
         return String.format("projects/%s/locations/%s/queues/%s", projectId, location, queueId);
     }
-
-    public boolean hasValidServiceAccountEmail() {
-        return serviceAccountEmail != null && !serviceAccountEmail.isBlank();
-    }
-
-    public boolean hasValidWorkerUrl() {
-        return workerUrl != null && !workerUrl.isBlank();
-    }
-
-    public boolean hasValidAudience() {
-        return audience != null && !audience.isBlank();
-    }
 }

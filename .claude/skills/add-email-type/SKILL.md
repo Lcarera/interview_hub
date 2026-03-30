@@ -5,17 +5,17 @@ description: Step-by-step guide for adding a new email type to the Interview Hub
 
 # Adding a New Email Type
 
-This skill walks through every file that needs changes when adding a new email type to the async email system (sealed interface + Google Cloud Tasks + Resend).
+This skill walks through every file that needs changes when adding a new email type to the async email system. After the self-rendering payload refactor, adding a new email type is a **2-step process** (down from 5 steps).
 
-The email system uses a **sealed interface with records** for type-safe payloads, **pattern matching switch** in the worker controller, and a **queue-or-send facade** in EmailService. All five touchpoints must stay in sync.
+The email system uses **self-rendering sealed records** — each `EmailTaskPayload` record knows how to render its own subject and HTML body. No dispatcher changes, no controller switch statements.
 
-## The five changes, in order
+## The two changes, in order
 
-### 1. Add the record to `EmailTaskPayload`
+### 1. Add the self-rendering record to `EmailTaskPayload`
 
 **File:** `src/main/java/com/gm2dev/interview_hub/dto/EmailTaskPayload.java`
 
-Three things in this file:
+Four things in this file:
 
 **a) Add to `@JsonSubTypes`** — pick an UPPER_SNAKE_CASE name for the `"type"` discriminator:
 
@@ -34,99 +34,104 @@ public sealed interface EmailTaskPayload permits
         EmailTaskPayload.NewEmailType {
 ```
 
-**c) Define the record** inside the interface. Every record must have `@NotBlank @Email String to()` as its first field (the sealed interface declares this contract). Add whatever extra fields the email template needs:
+**c) Define the record** inside the interface with the required `to()` field and type-specific fields:
 
 ```java
 record NewEmailType(
         @NotBlank @Email String to,
         @NotBlank String someField
-) implements EmailTaskPayload {}
+) implements EmailTaskPayload {
+    @Override
+    public String subject() {
+        return "Interview Hub — Your Subject";
+    }
+
+    @Override
+    public String htmlBody(EmailRenderContext ctx) {
+        return "<h2>Your Heading</h2>"
+                + "<p>Your email body here.</p>"
+                + "<p>Field value: " + someField + "</p>";
+    }
+
+    // Optional: override propagateFailure() if this email should fail silently
+    // @Override
+    // public boolean propagateFailure() { return false; }
+}
 ```
+
+**d) Implement the required methods:**
+- `subject()` — return the email subject line
+- `htmlBody(EmailRenderContext ctx)` — return the HTML body (use `ctx.frontendUrl()` for links)
+- `propagateFailure()` — defaults to `true` (throws on failure); override to `false` for silent failure
 
 Use `@NotBlank` on required String fields so the worker rejects malformed payloads via `@Valid`.
 
-### 2. Add a case to the worker switch
-
-**File:** `src/main/java/com/gm2dev/interview_hub/controller/InternalEmailController.java`
-
-Add a case to the pattern-matching `switch` in `processEmailTask()`:
-
-```java
-case EmailTaskPayload.NewEmailType e ->
-        emailService.sendNewEmailType(e.to(), e.someField());
-```
-
-The compiler enforces exhaustiveness on sealed types — it won't compile until you add this case. That's the whole point of the sealed interface: you can't forget a case.
-
-### 3. Add send + queue methods to `EmailService`
-
-**File:** `src/main/java/com/gm2dev/interview_hub/service/EmailService.java`
-
-**a) The send method** — builds the HTML and calls Resend:
-
-```java
-public void sendNewEmailType(String toEmail, String someField) {
-    String subject = "Your Subject";
-    String html = "...";  // build your email HTML
-    sendEmail(toEmail, subject, html);
-}
-```
-
-Follow the existing pattern: use string concatenation or a template for the HTML body, then delegate to the private `sendEmail()` helper.
-
-**b) The queue facade method** — queues if Cloud Tasks is enabled, otherwise sends directly:
-
-```java
-public void queueNewEmailType(String toEmail, String someField) {
-    if (isCloudTasksEnabled()) {
-        emailQueueService.queueEmail(new EmailTaskPayload.NewEmailType(toEmail, someField));
-    } else {
-        sendNewEmailType(toEmail, someField);
-    }
-}
-```
-
-This is the method that other services call. The send method is only called directly by the worker controller.
-
-### 4. Call the queue method from business logic
+### 2. Call `emailSender.send()` from business logic
 
 Find the service where the trigger lives (e.g., `ShadowingRequestService`, `EmailPasswordAuthService`, `AdminService`) and call:
 
 ```java
-emailService.queueNewEmailType(recipientEmail, someField);
+emailSender.send(new EmailTaskPayload.NewEmailType(recipientEmail, someField));
 ```
 
-### 5. Add tests
-
-**a) Controller test** — in `InternalEmailControllerTest`, add a test that POSTs the new payload type with the `X-CloudTasks-QueueName` header and verifies the correct `emailService.sendXxx()` is called:
+Inject `EmailSender` into your service if not already present:
 
 ```java
-@Test
-void processEmailTask_newEmailType_callsSendMethod() throws Exception {
-    mockMvc.perform(post("/internal/email-worker")
-                    .header("X-CloudTasks-QueueName", "email-queue")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content("""
-                            {"type":"NEW_EMAIL_TYPE","to":"user@gm2dev.com","someField":"value"}
-                            """)
-                    .with(csrf()))
-            .andExpect(status().isOk());
+private final EmailSender emailSender;
 
-    verify(emailService).sendNewEmailType("user@gm2dev.com", "value");
+public YourService(EmailSender emailSender, /* other deps */) {
+    this.emailSender = emailSender;
+    // ...
 }
 ```
 
-**b) Queue service test** — in `EmailQueueServiceTest`, verify the payload serializes correctly and creates a Cloud Task.
+### 3. Add tests
 
-**c) EmailService test** — test both the `queue` method (delegates to queue service or falls back to send) and the `send` method (builds correct HTML and calls Resend).
+**a) Payload rendering test** — verify subject() and htmlBody() return expected content:
+
+```java
+@Test
+void newEmailType_rendersCorrectSubjectAndBody() {
+    var payload = new EmailTaskPayload.NewEmailType("user@gm2dev.com", "value");
+    var ctx = new EmailRenderContext("http://localhost:4200");
+
+    assertEquals("Interview Hub — Your Subject", payload.subject());
+    assertTrue(payload.htmlBody(ctx).contains("value"));
+}
+```
+
+**b) Caller integration test** — verify your service sends the correct payload:
+
+```java
+@MockitoBean
+private EmailSender emailSender;
+
+@Test
+void yourMethod_sendsNewEmailType() {
+    // ... trigger the action ...
+
+    ArgumentCaptor<EmailTaskPayload> captor = ArgumentCaptor.forClass(EmailTaskPayload.class);
+    verify(emailSender).send(captor.capture());
+
+    EmailTaskPayload.NewEmailType email = (EmailTaskPayload.NewEmailType) captor.getValue();
+    assertEquals("user@gm2dev.com", email.to());
+    assertEquals("expectedValue", email.someField());
+}
+```
+
+## What you DON'T need to change
+
+After this refactor, these files no longer need modification when adding a new email type:
+
+- `EmailService.java` — no new `queue*()` or `send*()` methods needed
+- `InternalEmailController.java` — no switch case needed (polymorphism handles dispatch)
+
+The sealed interface enforces exhaustiveness — the compiler will tell you if you forget to implement a required method.
 
 ## Checklist
 
-- [ ] Record added to `EmailTaskPayload` (JsonSubTypes + permits + record definition)
-- [ ] Case added to `InternalEmailController` switch
-- [ ] `sendXxx()` method added to `EmailService`
-- [ ] `queueXxx()` facade method added to `EmailService`
-- [ ] Business logic calls `queueXxx()`
-- [ ] Controller test added
-- [ ] Queue service test added
-- [ ] EmailService test added
+- [ ] Record added to `EmailTaskPayload` (@JsonSubTypes + permits + record + subject() + htmlBody())
+- [ ] Optional: override `propagateFailure()` if silent failure is desired
+- [ ] Business logic calls `emailSender.send(new NewEmailType(...))`
+- [ ] Payload rendering test added
+- [ ] Caller integration test added

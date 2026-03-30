@@ -21,18 +21,7 @@ public class InternalEmailController {
     @PostMapping("/email-worker")
     public ResponseEntity<Void> processEmailTask(@RequestBody @Valid EmailTaskPayload payload) {
         log.debug("Processing {} email for {}", payload.getClass().getSimpleName(), payload.to());
-
-        switch (payload) {
-            case EmailTaskPayload.VerificationEmail e ->
-                    emailService.sendVerificationEmail(e.to(), e.token());
-            case EmailTaskPayload.PasswordResetEmail e ->
-                    emailService.sendPasswordResetEmail(e.to(), e.token());
-            case EmailTaskPayload.TemporaryPasswordEmail e ->
-                    emailService.sendTemporaryPasswordEmail(e.to(), e.temporaryPassword());
-            case EmailTaskPayload.ShadowingApprovedEmail e ->
-                    emailService.sendShadowingApprovedEmail(e.to(), e.summary(), e.startTime(), e.endTime());
-        }
-
+        emailService.sendDirectly(payload);
         return ResponseEntity.ok().build();
     }
 }

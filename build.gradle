@@ -105,6 +105,7 @@ jacocoTestReport {
 				'**/*MapperImpl.class',
 				'**/CloudTasksConfig.class',
 				'**/CloudTasksAuthenticationFilter.class',
+				'**/CloudTasksSecurityConfig.class',
 				'**/SecurityConfig.class',
 				'**/EmailQueueService.class'
 			])
@@ -122,6 +123,7 @@ jacocoTestCoverageVerification {
 				'**/*MapperImpl.class',
 				'**/CloudTasksConfig.class',
 				'**/CloudTasksAuthenticationFilter.class',
+				'**/CloudTasksSecurityConfig.class',
 				'**/SecurityConfig.class',
 				'**/EmailQueueService.class'
 			])

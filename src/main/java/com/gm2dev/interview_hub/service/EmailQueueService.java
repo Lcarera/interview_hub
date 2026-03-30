@@ -41,23 +41,21 @@ public class EmailQueueService {
         try {
             String jsonPayload = objectMapper.writeValueAsString(payload);
 
-            HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder()
+            OidcToken oidcToken = OidcToken.newBuilder()
+                    .setServiceAccountEmail(properties.serviceAccountEmail())
+                    .setAudience(properties.audience())
+                    .build();
+
+            HttpRequest httpRequest = HttpRequest.newBuilder()
                     .setUrl(workerUrl)
                     .setHttpMethod(HttpMethod.POST)
                     .putHeaders("Content-Type", "application/json")
-                    .setBody(ByteString.copyFrom(jsonPayload, StandardCharsets.UTF_8));
-
-            if (properties.hasValidServiceAccountEmail()) {
-                OidcToken.Builder oidcBuilder = OidcToken.newBuilder()
-                        .setServiceAccountEmail(properties.serviceAccountEmail());
-                if (properties.hasValidAudience()) {
-                    oidcBuilder.setAudience(properties.audience());
-                }
-                httpRequestBuilder.setOidcToken(oidcBuilder.build());
-            }
+                    .setBody(ByteString.copyFrom(jsonPayload, StandardCharsets.UTF_8))
+                    .setOidcToken(oidcToken)
+                    .build();
 
             Task task = Task.newBuilder()
-                    .setHttpRequest(httpRequestBuilder.build())
+                    .setHttpRequest(httpRequest)
                     .build();
 
             Task created = cloudTasksClient.createTask(properties.queuePath(), task);
