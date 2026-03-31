@@ -46,7 +46,8 @@ jobs:
           base: ${{ steps.base.outputs.sha }}
           filters: |
             backend:
-              - 'src/**'
+              - 'services/core/**'
+              - 'services/shared/**'
               - 'build.gradle'
               - 'settings.gradle'
               - 'gradle/**'
@@ -128,7 +129,7 @@ jobs:
         if: needs.changes.outputs.backend == 'true'
         run: |
           IMAGE=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/backend:${{ github.sha }}
-          ./gradlew bootBuildImage --imageName=$IMAGE
+          ./gradlew :services:core:bootBuildImage --imageName=$IMAGE
           docker push $IMAGE
 
       - name: Build and push frontend image
