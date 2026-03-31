@@ -56,3 +56,4 @@ infra/venv/
 
 ### Cloudflare ###
 cloudflare/.wrangler/
+.worktrees/
