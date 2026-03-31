@@ -78,6 +78,8 @@ All routes use lazy loading (`loadComponent`):
 | `/interviews` | InterviewListComponent | authGuard | Paginated interview list |
 | `/interviews/:id` | InterviewDetailComponent | authGuard | Interview detail + shadowing |
 | `/candidates` | CandidateListComponent | authGuard | Candidate CRUD list |
+| `/calendar` | CalendarComponent | authGuard | Embedded Google Calendar iframe |
+| `/admin/users` | UserManagementComponent | authGuard + adminGuard | User role management |
 | `**` | — | — | Redirects to `/` |
 
 ## Authentication Flow
