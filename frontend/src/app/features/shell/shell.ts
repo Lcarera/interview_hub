@@ -26,6 +26,7 @@ import { AuthService } from '../../core/services/auth.service';
         <a mat-button routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Dashboard</a>
         <a mat-button routerLink="/interviews" routerLinkActive="active">Interviews</a>
         <a mat-button routerLink="/candidates" routerLinkActive="active">Candidates</a>
+        <a mat-button routerLink="/calendar" routerLinkActive="active">Calendar</a>
         @if (isAdmin()) {
           <a mat-button routerLink="/admin/users" routerLinkActive="active">Admin</a>
         }
