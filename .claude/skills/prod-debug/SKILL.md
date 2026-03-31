@@ -75,7 +75,8 @@ Adjust `--freshness` as needed (e.g. `3h`, `12h`, `7d`).
 | Error | Likely cause | Fix |
 |-------|-------------|-----|
 | `401 Unauthorized` from Google Calendar API | `GOOGLE_CALENDAR_REFRESH_TOKEN` secret is stale/revoked | Re-run `scripts/get-calendar-token.ts`, update the secret, redeploy |
-| `403 Forbidden` from Google Calendar API | Wrong calendar ID or insufficient OAuth scopes | Check `GOOGLE_CALENDAR_ID` env var; re-run token script with correct scopes |
+| `404 Not Found` from Google Calendar API | Wrong `GOOGLE_CALENDAR_ID` or the authorized account doesn't have write access to that calendar | Update `GOOGLE_CALENDAR_ID` env var in Cloud Run to the correct calendar ID |
+| `403 Forbidden` from Google Calendar API | Insufficient OAuth scopes on the refresh token | Re-run token script to re-authorize with correct scopes |
 | `Connection refused` / `JDBC` errors | DB_URL wrong or Supabase connection limit hit | Check Supabase dashboard; verify `DB_URL` secret |
 | `JWT signature invalid` | `JWT_SIGNING_SECRET` mismatch between frontend token and backend | Verify the secret in Cloud Run matches what issued the token |
 | Email not sent | `CLOUD_TASKS_ENABLED` misconfiguration or `RESEND_API_KEY` invalid | Check Cloud Tasks queue; verify Resend key is live |
