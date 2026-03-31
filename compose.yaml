@@ -1,4 +1,27 @@
 services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  eureka-server:
+    image: eureka-server:0.0.1-SNAPSHOT
+    ports:
+      - "8761:8761"
+    environment:
+      EUREKA_HOSTNAME: eureka-server
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   app:
     image: interview-hub:0.0.1-SNAPSHOT
     ports:
@@ -16,9 +39,14 @@ services:
       MAIL_FROM: ${MAIL_FROM:-noreply@lcarera.dev}
       GOOGLE_CALENDAR_REFRESH_TOKEN: ${GOOGLE_CALENDAR_REFRESH_TOKEN}
       GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-primary}
+      EUREKA_URL: http://eureka-server:8761/eureka/
     env_file:
       - path: .env
         required: false
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./frontend
