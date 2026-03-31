@@ -9,6 +9,12 @@ configurations {
     }
 }
 
+dependencyManagement {
+    imports {
+        mavenBom 'com.google.cloud:libraries-bom:26.77.0'
+    }
+}
+
 dependencies {
     // Web
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
@@ -35,9 +41,6 @@ dependencies {
 
     // JSON Processing
     implementation 'com.fasterxml.jackson.core:jackson-databind'
-
-    // Google Cloud BOM
-    implementation platform('com.google.cloud:libraries-bom:26.77.0')
 
     // Google API (Calendar + Auth)
     implementation 'com.google.apis:google-api-services-calendar:v3-rev20250115-2.0.0'
@@ -70,7 +73,6 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
     finalizedBy jacocoTestReport
 }
 
