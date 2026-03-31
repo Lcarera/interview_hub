@@ -1,1 +1,5 @@
 rootProject.name = 'interview_hub'
+
+include 'services:core'
+include 'services:shared'
+include 'services:eureka-server'
