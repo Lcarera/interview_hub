@@ -758,6 +758,10 @@ app:
   resend:
     api-key: test-resend-api-key
 
+eureka:
+  client:
+    enabled: false
+
 logging:
   level:
     com.gm2dev.interview_hub: DEBUG
