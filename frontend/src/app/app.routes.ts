@@ -49,6 +49,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/candidates/candidate-list/candidate-list').then(m => m.CandidateListComponent),
       },
       {
+        path: 'calendar',
+        loadComponent: () => import('./features/calendar/calendar').then(m => m.CalendarComponent),
+      },
+      {
         path: 'admin/users',
         canActivate: [adminGuard],
         loadComponent: () => import('./features/admin/user-management/user-management').then(m => m.UserManagementComponent),
