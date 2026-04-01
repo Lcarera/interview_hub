@@ -1,5 +1,5 @@
 server:
-  port: 8083
+  port: ${PORT:8083}
 
 spring:
   application:
@@ -12,10 +12,7 @@ spring:
           group: notification-service
           content-type: application/json
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
+    addresses: ${RABBITMQ_URL:amqp://guest:guest@localhost:5672}
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:4200}

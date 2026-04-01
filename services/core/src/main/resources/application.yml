@@ -31,10 +31,7 @@ spring:
           destination: notification.emails
           content-type: application/json
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
+    addresses: ${RABBITMQ_URL:amqp://guest:guest@localhost:5672}
 
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080}

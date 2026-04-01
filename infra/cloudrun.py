@@ -101,6 +101,10 @@ notification_service = gcp.cloudrunv2.Service(
                         value=eureka_service.uri.apply(lambda u: u + "/eureka/"),
                     ),
                     gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="FRONTEND_URL",
+                        value=pulumi.Output.concat("https://", domain),
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
                         name="MAIL_FROM",
                         value="noreply@lcarera.dev",
                     ),
@@ -131,11 +135,12 @@ gcp.cloudrunv2.ServiceIamMember(
     member="allUsers",
 )
 
-# Backend secrets exclude RESEND_API_KEY and RABBITMQ_URL — those are notification-service concerns
+# Backend secrets exclude RESEND_API_KEY — that is a notification-service concern
 _backend_secret_names = [
     "DB_URL", "DB_USERNAME", "DB_PASSWORD",
     "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
     "JWT_SIGNING_SECRET", "GOOGLE_CALENDAR_REFRESH_TOKEN",
+    "RABBITMQ_URL",
 ]
 _backend_secret_envs = [
     gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
