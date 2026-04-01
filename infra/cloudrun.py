@@ -13,6 +13,7 @@ domain = config.require("domain")
 # Image URIs are set at deploy time via CI; optional here so targeted `pulumi up` for secrets works
 backend_image = config.get("backend_image") or "placeholder"
 frontend_image = config.get("frontend_image") or "placeholder"
+eureka_image = config.get("eureka_image") or "placeholder"
 backend_domain = config.get("backend_domain") or "i-hub-be.lcarera.dev"
 
 # Build secret env var list from Secret Manager secrets
@@ -33,6 +34,44 @@ _secret_envs = [
 # This avoids routing through Cloudflare and ensures OIDC token audience matches the actual target
 cloudtasks_worker_url = config.get("cloudtasks_worker_url")
 
+eureka_service = gcp.cloudrunv2.Service(
+    "eureka-server",
+    name="interview-hub-eureka-server",
+    location=region,
+    project=project,
+    ingress="INGRESS_TRAFFIC_ALL",
+    scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=1),
+    template=gcp.cloudrunv2.ServiceTemplateArgs(
+        containers=[
+            gcp.cloudrunv2.ServiceTemplateContainerArgs(
+                image=eureka_image,
+                ports=[gcp.cloudrunv2.ServiceTemplateContainerPortArgs(container_port=8761)],
+                resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
+                    limits={"memory": "512Mi", "cpu": "500m"},
+                ),
+                startup_probe=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeArgs(
+                    http_get=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeHttpGetArgs(
+                        path="/actuator/health",
+                        port=8761,
+                    ),
+                    initial_delay_seconds=15,
+                    period_seconds=5,
+                    failure_threshold=20,
+                ),
+            )
+        ],
+    ),
+)
+
+gcp.cloudrunv2.ServiceIamMember(
+    "eureka-server-invoker",
+    project=project,
+    location=region,
+    name=eureka_service.name,
+    role="roles/run.invoker",
+    member="allUsers",
+)
+
 backend_service = gcp.cloudrunv2.Service(
     "backend",
     name="interview-hub-backend",
@@ -52,6 +91,10 @@ backend_service = gcp.cloudrunv2.Service(
                     )
                 ],
                 envs=_secret_envs + [
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="EUREKA_URL",
+                        value=eureka_service.uri.apply(lambda u: u + "/eureka/"),
+                    ),
                     gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
                         name="APP_BASE_URL",
                         value=pulumi.Output.concat("https://", backend_domain),
