@@ -29,6 +29,14 @@ pulumi stack output        # show exported values (registry_url, backend_url, fr
 - `interview-hub-infra:cloudtasks_worker_url` — Cloud Run service URL for Cloud Tasks HTTP targets (bypasses Cloudflare, ensures OIDC audience matches)
 - `interview-hub-infra:backend_image` / `frontend_image` — Set by CI at deploy time; fallback to `"placeholder"` for secrets-only `pulumi up`
 
+## Cloud Run Scaling Notes
+
+- **Eureka server:** `min_instance_count=1` required — heartbeat model breaks on scale-to-zero; all registrations are lost
+- **RabbitMQ consumers:** `min_instance_count=1` required — persistent AMQP TCP connection; scale-to-zero = silent queue backlog
+- **RabbitMQ on GCP:** no managed offering; use CloudAMQP free tier (1M msg/month). Store AMQP URL as a Secret Manager secret (`RABBITMQ_URL`).
+- **Eureka URL env var:** must include `/eureka/` suffix — `eureka_service.uri.apply(lambda u: u + "/eureka/")`
+- **New services follow the pattern:** add `foo_image = config.get("foo_image") or "placeholder"`, define the Cloud Run service, add IAM invoker binding, export the URI in `__main__.py`, add change filter + build step + Pulumi config block in `deploy.yml`
+
 ## Key Design Decisions
 
 - **Secrets vs plain env vars:** Sensitive values (DB creds, API keys, Resend key) go through Secret Manager (`secrets.py` → `_secret_envs` in `cloudrun.py`). Non-sensitive config (app URLs, calendar ID, mail from address) are plain env vars.

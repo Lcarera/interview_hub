@@ -194,6 +194,12 @@ The application models a four-entity system:
 
 In production the frontend uses same-origin requests (empty `apiUrl`), so all API calls go through nginx. In dev mode (`bun run start`), the frontend calls `http://localhost:8080` directly.
 
+## Microservices Deploy Strategy
+
+Deploy all 4 microservices plans to `prod` together after Plan 4 completes. Intermediate deploys create broken states:
+- Plan 1 alone: Eureka running but nothing registers with it (no value, ~$5/month wasted)
+- Plan 2 alone: `cloudtasks.py` deleted → Cloud Tasks queue destroyed before RabbitMQ is wired → emails stop working
+
 ## Multi-Module Gradle (feat/microservices-plan1 branch onward)
 
 The `feat/microservices-plan1` branch restructures the project as a Gradle multi-module monorepo under `services/`. Key conventions and gotchas:
