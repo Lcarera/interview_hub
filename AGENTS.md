@@ -11,8 +11,8 @@
 
 | Service | How to run | Notes |
 |---------|-----------|-------|
-| Backend tests | `./gradlew test` | Uses H2 in-memory DB; no external services needed. `GoogleCalendarService` is always mocked. |
-| Backend full build | `./gradlew build` | Includes tests + JaCoCo coverage verification (95% branch min). |
+| Backend tests | `./gradlew test` (monolith) or `./gradlew :services:core:test` (multi-module) | Uses H2 in-memory DB; no external services needed. `GoogleCalendarService` is always mocked. |
+| Backend full build | `./gradlew build` (monolith) or `./gradlew :services:core:build` (multi-module) | Includes tests + JaCoCo coverage verification (95% branch min). |
 | Frontend dev server | `cd frontend && bun run start` | Serves on port 4200; calls backend on `localhost:8080` in dev mode. |
 | Frontend tests | `cd frontend && bun run test` | Vitest with jsdom; no backend required. |
 | Full stack (Docker) | `docker compose up` | Requires `.env` file with all secrets (see `CLAUDE.md` Environment Variables section). |

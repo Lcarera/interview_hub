@@ -1,151 +1,33 @@
 plugins {
-	id 'java'
-	id 'jacoco'
-	id 'org.springframework.boot' version '4.0.2'
-	id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.springframework.boot' version '4.0.2' apply false
+    id 'io.spring.dependency-management' version '1.1.7' apply false
 }
 
-group = 'com.gm2dev'
-version = '0.0.1-SNAPSHOT'
-description = 'Interview hub is a centralization of all interviews and shadowing requests'
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'io.spring.dependency-management'
 
-java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(25)
-	}
-}
+    group = 'com.gm2dev'
+    version = '0.0.1-SNAPSHOT'
 
-configurations {
-	compileOnly {
-		extendsFrom annotationProcessor
-	}
-}
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(25)
+        }
+    }
 
-repositories {
-	mavenCentral()
-}
+    repositories {
+        mavenCentral()
+    }
 
-dependencies {
-	// Web
-	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.boot:spring-boot-dependencies:4.0.2"
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:2025.1.1"
+        }
+    }
 
-	// Data & Database
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation 'org.postgresql:postgresql'
-
-	// Security
-	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
-	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-
-	// Validation
-	implementation 'org.springframework.boot:spring-boot-starter-validation'
-
-	// Email (Resend HTTP API)
-	implementation 'com.resend:resend-java:4.11.0'
-
-	// Actuator (health checks, metrics)
-	implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
-	// API Documentation
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
-
-	// JSON Processing (for JSONB converter)
-	implementation 'com.fasterxml.jackson.core:jackson-databind'
-
-	// Google Cloud BOM — aligns all Google Cloud + gRPC + protobuf versions
-	implementation platform('com.google.cloud:libraries-bom:26.77.0')
-
-	// Google API (Calendar + Auth)
-	implementation 'com.google.apis:google-api-services-calendar:v3-rev20250115-2.0.0'
-	implementation 'com.google.api-client:google-api-client'
-	implementation 'com.google.http-client:google-http-client-jackson2'
-	implementation 'com.google.auth:google-auth-library-oauth2-http'
-
-	// Google Cloud Tasks
-	implementation 'com.google.cloud:google-cloud-tasks'
-
-	// Lombok
-	compileOnly 'org.projectlombok:lombok'
-	annotationProcessor 'org.projectlombok:lombok'
-
-	// MapStruct
-	implementation 'org.mapstruct:mapstruct:1.6.3'
-	annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
-	annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
-
-	// Development Tools
-	developmentOnly 'org.springframework.boot:spring-boot-devtools'
-	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
-	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
-
-	// Testing
-	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-	testImplementation 'org.springframework.security:spring-security-test'
-	testImplementation 'com.h2database:h2'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-}
-
-tasks.named('test') {
-	useJUnitPlatform()
-	finalizedBy jacocoTestReport
-}
-
-jacocoTestReport {
-	dependsOn test
-	reports {
-		xml.required = true
-		html.required = true
-	}
-	afterEvaluate {
-		classDirectories.setFrom(files(classDirectories.files.collect {
-			fileTree(dir: it, exclude: [
-				'**/InterviewHubApplication.class',
-				'**/GoogleCalendarService.class',
-				'**/OpenApiConfig.class',
-				'**/*MapperImpl.class',
-				'**/CloudTasksConfig.class',
-				'**/CloudTasksAuthenticationFilter.class',
-				'**/CloudTasksSecurityConfig.class',
-				'**/SecurityConfig.class',
-				'**/EmailQueueService.class'
-			])
-		}))
-	}
-}
-
-jacocoTestCoverageVerification {
-	afterEvaluate {
-		classDirectories.setFrom(files(classDirectories.files.collect {
-			fileTree(dir: it, exclude: [
-				'**/InterviewHubApplication.class',
-				'**/GoogleCalendarService.class',
-				'**/OpenApiConfig.class',
-				'**/*MapperImpl.class',
-				'**/CloudTasksConfig.class',
-				'**/CloudTasksAuthenticationFilter.class',
-				'**/CloudTasksSecurityConfig.class',
-				'**/SecurityConfig.class',
-				'**/EmailQueueService.class'
-			])
-		}))
-	}
-	violationRules {
-		rule {
-			limit {
-				counter = 'BRANCH'
-				minimum = 0.95
-			}
-		}
-	}
-}
-
-tasks.named('check') {
-	dependsOn jacocoTestCoverageVerification
-}
-
-tasks.named('bootBuildImage') {
-	imageName = "interview-hub:${version}"
-	environment = [
-		'BP_JVM_VERSION': '25'
-	]
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
 }

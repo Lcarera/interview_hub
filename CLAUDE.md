@@ -45,6 +45,14 @@ If test results seem stale or inconsistent, use `./gradlew clean test --no-build
 ./gradlew clean
 ```
 
+**Run tests for a specific module (multi-module monorepo on `feat/microservices-plan1`+):**
+```bash
+./gradlew :services:core:test          # core only
+./gradlew :services:shared:test        # shared DTOs only
+./gradlew :services:eureka-server:test # Eureka server only
+./gradlew :services:core:bootBuildImage # build core Docker image
+```
+
 **Frontend commands (from `frontend/` directory, requires Bun):**
 ```bash
 bun install          # install dependencies
@@ -155,6 +163,7 @@ The application models a four-entity system:
 - Email sending is async via Google Cloud Tasks when `CLOUD_TASKS_ENABLED=true`; falls back to synchronous Resend calls when disabled
 - Flow: callers inject `EmailSender` and call `emailSender.send(payload)` → `EmailService.send()` either enqueues to Cloud Tasks (via `EmailQueueService`) or calls `sendDirectly()` synchronously → Cloud Tasks calls `POST /internal/email-worker` → `InternalEmailController` calls `emailService.sendDirectly(payload)` (no switch dispatch — polymorphism on the payload handles rendering via `payload.subject()` / `payload.htmlBody()`)
 - `EmailTaskPayload` is a sealed interface with Jackson `@JsonTypeInfo` polymorphism (discriminator: `"type"` field with values `VERIFICATION`, `PASSWORD_RESET`, `TEMPORARY_PASSWORD`, `SHADOWING_APPROVED`)
+- `ShadowingApprovedEmail.startTime` and `endTime` are `String` (not `Instant`) — used for display in email body only, no time arithmetic needed; the shared `EmailMessage.ShadowingApprovedEmailMessage` mirrors this
 - `EmailQueueService` is `@ConditionalOnProperty(name = "app.cloud-tasks.enabled", havingValue = "true")` — not created when Cloud Tasks is disabled
 - `InternalEmailController` validates `X-CloudTasks-QueueName` header presence (returns 403 without it)
 - In production, nginx must NOT proxy `/internal/*` to prevent external access; Cloud Run receives the request directly from Cloud Tasks
@@ -184,6 +193,17 @@ The application models a four-entity system:
 - `/internal/*` is intentionally NOT proxied — Cloud Tasks calls Cloud Run directly
 
 In production the frontend uses same-origin requests (empty `apiUrl`), so all API calls go through nginx. In dev mode (`bun run start`), the frontend calls `http://localhost:8080` directly.
+
+## Multi-Module Gradle (feat/microservices-plan1 branch onward)
+
+The `feat/microservices-plan1` branch restructures the project as a Gradle multi-module monorepo under `services/`. Key conventions and gotchas:
+
+- **Spring Cloud version:** `2025.1.1` — compatible with Spring Boot 4.0.2; use in the root `build.gradle` BOM import
+- **`id 'java' apply false` is invalid in Gradle 9** for core plugins — omit `java` from the root plugins block; apply it via `apply plugin: 'java'` inside `subprojects {}` instead
+- **Google Cloud BOM:** use `dependencyManagement { imports { mavenBom '...' } }` in the module's `build.gradle` — NOT `implementation platform(...)` — to stay consistent with `io.spring.dependency-management`
+- **`useJUnitPlatform()` is declared in the root `subprojects {}`** — individual module `tasks.named('test')` blocks only need `finalizedBy jacocoTestReport`, not `useJUnitPlatform()` again
+- **Eureka server context test:** do NOT add `eureka.client.enabled: false` to `application-test.yml` for `eureka-server` — the server's autoconfiguration depends on client beans; disabling the client breaks the server context. Use `register-with-eureka: false` + `fetch-registry: false` instead
+- **`shared` module stub:** `services/eureka-server/build.gradle` and `services/shared/build.gradle` must exist (even as empty files) before `./gradlew` runs — Gradle 9 refuses to configure projects whose directories aren't declared
 
 ## Testing
 
