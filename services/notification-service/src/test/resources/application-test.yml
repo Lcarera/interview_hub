@@ -1,0 +1,15 @@
+spring:
+  cloud:
+    stream:
+      default-binder: test
+
+eureka:
+  client:
+    enabled: false
+
+app:
+  frontend-url: http://localhost:4200
+  mail:
+    from: test@gm2dev.com
+  resend:
+    api-key: test-key
