@@ -835,6 +835,167 @@ git commit -m "chore: add eureka-server and rabbitmq to docker compose"
 
 ---
 
+## Task 5: Deploy Eureka Server to GCP Cloud Run
+
+**Files:**
+- Modify: `infra/cloudrun.py`
+- Modify: `infra/__main__.py`
+- Modify: `.github/workflows/deploy.yml`
+
+> **Why always-on:** Eureka uses a heartbeat model — if the server scales to zero, all registrations are lost and clients enter error state. `min_instance_count=1` keeps it alive at ~$5/month.
+
+- [ ] **Step 1: Add eureka_service to `infra/cloudrun.py`**
+
+Define the eureka image config variable and the Cloud Run service. Place the `eureka_service` definition **before** `backend_service` (it must exist before we can reference `eureka_service.uri`):
+
+```python
+eureka_image = config.get("eureka_image") or "placeholder"
+
+eureka_service = gcp.cloudrunv2.Service(
+    "eureka-server",
+    name="interview-hub-eureka-server",
+    location=region,
+    project=project,
+    ingress="INGRESS_TRAFFIC_ALL",
+    scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=1),
+    template=gcp.cloudrunv2.ServiceTemplateArgs(
+        containers=[
+            gcp.cloudrunv2.ServiceTemplateContainerArgs(
+                image=eureka_image,
+                ports=[gcp.cloudrunv2.ServiceTemplateContainerPortArgs(container_port=8761)],
+                resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
+                    limits={"memory": "512Mi", "cpu": "500m"},
+                ),
+                startup_probe=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeArgs(
+                    http_get=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeHttpGetArgs(
+                        path="/actuator/health",
+                        port=8761,
+                    ),
+                    initial_delay_seconds=15,
+                    period_seconds=5,
+                    failure_threshold=20,
+                ),
+            )
+        ],
+    ),
+)
+
+gcp.cloudrunv2.ServiceIamMember(
+    "eureka-server-invoker",
+    project=project,
+    location=region,
+    name=eureka_service.name,
+    role="roles/run.invoker",
+    member="allUsers",
+)
+```
+
+- [ ] **Step 2: Add `EUREKA_URL` to `backend_service` env vars**
+
+Inside `backend_service`'s `envs=_secret_envs + [...]` list, add:
+
+```python
+gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+    name="EUREKA_URL",
+    value=eureka_service.uri.apply(lambda u: u + "/eureka/"),
+),
+```
+
+- [ ] **Step 3: Export eureka URL in `infra/__main__.py`**
+
+```python
+from cloudrun import backend_service, frontend_service, eureka_service
+# ...
+pulumi.export("eureka_url", eureka_service.uri)
+```
+
+- [ ] **Step 4: Update `.github/workflows/deploy.yml`**
+
+**4a.** Add `eureka` to the `filters` in the `changes` job and add it to `outputs`:
+
+```yaml
+outputs:
+  backend: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.backend }}
+  frontend: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.frontend }}
+  infra: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.infra }}
+  migrations: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.migrations }}
+  eureka: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.eureka }}
+  base_sha: ${{ steps.base.outputs.sha }}
+```
+
+```yaml
+filters: |
+  backend:
+    - 'services/core/**'
+    - 'services/shared/**'
+    - 'build.gradle'
+    - 'settings.gradle'
+    - 'gradle/**'
+    - 'gradlew'
+    - 'gradlew.bat'
+  frontend:
+    - 'frontend/**'
+  infra:
+    - 'infra/**'
+    - '.github/workflows/deploy.yml'
+  migrations:
+    - 'supabase/migrations/**'
+  eureka:
+    - 'services/eureka-server/**'
+```
+
+**4b.** Update the `deploy` job `if` condition to include eureka:
+
+```yaml
+if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infra == 'true' || needs.changes.outputs.migrations == 'true' || needs.changes.outputs.eureka == 'true'
+```
+
+**4c.** Add a build-and-push step for the eureka image (after the backend build step):
+
+```yaml
+- name: Build and push eureka image
+  if: needs.changes.outputs.eureka == 'true'
+  run: |
+    IMAGE=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/eureka-server:${{ github.sha }}
+    ./gradlew :services:eureka-server:bootBuildImage --imageName=$IMAGE
+    docker push $IMAGE
+```
+
+**4d.** In the "Deploy with Pulumi" step, add eureka image config before `pulumi up`:
+
+```bash
+if [ "${{ needs.changes.outputs.eureka }}" == "true" ]; then
+  pulumi config set interview-hub-infra:eureka_image \
+    ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/eureka-server:${{ github.sha }}
+else
+  CURRENT=$(gcloud run services describe interview-hub-eureka-server \
+    --region=${{ env.GCP_REGION }} --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || echo "")
+  if [ -n "$CURRENT" ]; then
+    pulumi config set interview-hub-infra:eureka_image "$CURRENT"
+  fi
+fi
+```
+
+- [ ] **Step 5: Verify with `pulumi preview`**
+
+```bash
+cd infra
+source venv/bin/activate
+pulumi stack select prod
+pulumi preview
+```
+
+Expected: Preview shows `+ interview-hub-eureka-server` Cloud Run service to create and `~ interview-hub-backend` to update (new `EUREKA_URL` env var). No errors.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add infra/cloudrun.py infra/__main__.py .github/workflows/deploy.yml
+git commit -m "feat: deploy eureka-server to Cloud Run; add EUREKA_URL to core"
+```
+
+---
+
 ## Self-Review
 
 **Spec coverage:**

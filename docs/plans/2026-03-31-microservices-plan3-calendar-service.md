@@ -1246,6 +1246,169 @@ git commit -m "chore: add calendar-service to docker compose, remove calendar en
 
 ---
 
+## Task 13: Deploy Calendar Service to GCP Cloud Run
+
+**Files:**
+- Modify: `infra/cloudrun.py`
+- Modify: `infra/__main__.py`
+- Modify: `.github/workflows/deploy.yml`
+
+> calendar-service is called synchronously via OpenFeign from core. It is a standard HTTP service and can scale to zero (Cold starts add latency to calendar operations, but that is acceptable for a learning project).
+
+- [ ] **Step 1: Update `infra/cloudrun.py`**
+
+**1a.** Add the calendar image config variable:
+
+```python
+calendar_image = config.get("calendar_image") or "placeholder"
+```
+
+**1b.** Remove `GOOGLE_CALENDAR_REFRESH_TOKEN` and `GOOGLE_CALENDAR_ID` env vars from `backend_service`. After Plan 3, core no longer calls Google Calendar directly.
+
+**1c.** Add `calendar_service` after `notification_service`. calendar-service needs `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALENDAR_REFRESH_TOKEN` from Secret Manager:
+
+```python
+_calendar_secret_envs = [
+    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+        name=name,
+        value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+            secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                secret=secrets[name].secret_id,
+                version="latest",
+            )
+        ),
+    )
+    for name in ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_CALENDAR_REFRESH_TOKEN"]
+]
+
+calendar_service = gcp.cloudrunv2.Service(
+    "calendar-service",
+    name="interview-hub-calendar",
+    location=region,
+    project=project,
+    ingress="INGRESS_TRAFFIC_ALL",
+    scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=0),
+    opts=pulumi.ResourceOptions(depends_on=[secret_access_binding]),
+    template=gcp.cloudrunv2.ServiceTemplateArgs(
+        service_account=cloudrun_sa.email,
+        containers=[
+            gcp.cloudrunv2.ServiceTemplateContainerArgs(
+                image=calendar_image,
+                ports=[gcp.cloudrunv2.ServiceTemplateContainerPortArgs(container_port=8080)],
+                envs=_calendar_secret_envs + [
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="EUREKA_URL",
+                        value=eureka_service.uri.apply(lambda u: u + "/eureka/"),
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="GOOGLE_CALENDAR_ID",
+                        value="0cae724ce3870858a6213c7f351107891bd3c1265b336d3bfef5693c3a3cdc9d@group.calendar.google.com",
+                    ),
+                ],
+                resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
+                    limits={"memory": "512Mi", "cpu": "500m"},
+                ),
+                startup_probe=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeArgs(
+                    http_get=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeHttpGetArgs(
+                        path="/actuator/health",
+                        port=8080,
+                    ),
+                    initial_delay_seconds=15,
+                    period_seconds=5,
+                    failure_threshold=20,
+                ),
+            )
+        ],
+    ),
+)
+
+gcp.cloudrunv2.ServiceIamMember(
+    "calendar-service-invoker",
+    project=project,
+    location=region,
+    name=calendar_service.name,
+    role="roles/run.invoker",
+    member="allUsers",
+)
+```
+
+- [ ] **Step 2: Export calendar URL in `infra/__main__.py`**
+
+```python
+from cloudrun import backend_service, frontend_service, eureka_service, notification_service, calendar_service
+# ...
+pulumi.export("calendar_url", calendar_service.uri)
+```
+
+- [ ] **Step 3: Update `.github/workflows/deploy.yml`**
+
+**3a.** Add `calendar` filter and output in the `changes` job:
+
+```yaml
+outputs:
+  # ... existing outputs ...
+  calendar: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.calendar }}
+```
+
+```yaml
+filters: |
+  # ... existing filters ...
+  calendar:
+    - 'services/calendar-service/**'
+```
+
+**3b.** Add calendar to the `deploy` job `if` condition:
+
+```yaml
+if: ... || needs.changes.outputs.calendar == 'true'
+```
+
+**3c.** Add build-and-push step:
+
+```yaml
+- name: Build and push calendar image
+  if: needs.changes.outputs.calendar == 'true'
+  run: |
+    IMAGE=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/calendar:${{ github.sha }}
+    ./gradlew :services:calendar-service:bootBuildImage --imageName=$IMAGE
+    docker push $IMAGE
+```
+
+**3d.** In the "Deploy with Pulumi" step, add calendar image config:
+
+```bash
+if [ "${{ needs.changes.outputs.calendar }}" == "true" ]; then
+  pulumi config set interview-hub-infra:calendar_image \
+    ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/calendar:${{ github.sha }}
+else
+  CURRENT=$(gcloud run services describe interview-hub-calendar \
+    --region=${{ env.GCP_REGION }} --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || echo "")
+  if [ -n "$CURRENT" ]; then
+    pulumi config set interview-hub-infra:calendar_image "$CURRENT"
+  fi
+fi
+```
+
+- [ ] **Step 4: Verify with `pulumi preview`**
+
+```bash
+cd infra
+source venv/bin/activate
+pulumi stack select prod
+pulumi preview
+```
+
+Expected: Preview shows `+ interview-hub-calendar` to create, `~ interview-hub-backend` to update (removed `GOOGLE_CALENDAR_REFRESH_TOKEN` and `GOOGLE_CALENDAR_ID` env vars). No errors.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add infra/cloudrun.py infra/__main__.py .github/workflows/deploy.yml
+git commit -m "feat: deploy calendar-service to Cloud Run; move calendar secrets from core"
+```
+
+---
+
 ## Self-Review
 
 **Spec coverage:**

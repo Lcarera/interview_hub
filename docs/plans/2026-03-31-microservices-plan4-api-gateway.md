@@ -640,6 +640,193 @@ git commit -m "chore: verify api-gateway full-stack smoke test passes"
 
 ---
 
+## Task 7: Deploy API Gateway to GCP Cloud Run
+
+**Files:**
+- Modify: `infra/cloudrun.py`
+- Modify: `infra/__main__.py`
+- Modify: `.github/workflows/deploy.yml`
+
+> The api-gateway becomes the new public entry point for all API traffic. The frontend and Cloudflare DNS already point at `backend_domain` — after this task, that domain serves the gateway instead of core. Core stays publicly accessible at its own Cloud Run URL for now (acceptable for a learning project; in production you'd restrict core to `INGRESS_TRAFFIC_INTERNAL_ONLY`).
+>
+> The gateway validates HMAC-SHA256 JWTs, so it needs `JWT_SIGNING_SECRET` from Secret Manager.
+>
+> **OAuth callback note:** `APP_BASE_URL` on core is used to build the Google OAuth redirect URI (`APP_BASE_URL/auth/google/callback`). The gateway routes `/auth/**` to core, so this URI goes through the gateway. After this task, `APP_BASE_URL` on core must equal the gateway's public domain (same value as `backend_domain`). Update `Pulumi.prod.yaml`'s `interview-hub-infra:backend_domain` to point to the gateway's Cloudflare DNS entry.
+
+- [ ] **Step 1: Update `infra/cloudrun.py`**
+
+**1a.** Add the gateway image config variable:
+
+```python
+gateway_image = config.get("gateway_image") or "placeholder"
+```
+
+**1b.** Add `api_gateway_service` after `calendar_service`. The gateway needs `JWT_SIGNING_SECRET` from Secret Manager and `EUREKA_URL` as a plain env var:
+
+```python
+_gateway_secret_envs = [
+    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+        name="JWT_SIGNING_SECRET",
+        value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+            secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                secret=secrets["JWT_SIGNING_SECRET"].secret_id,
+                version="latest",
+            )
+        ),
+    ),
+]
+
+api_gateway_service = gcp.cloudrunv2.Service(
+    "api-gateway",
+    name="interview-hub-api-gateway",
+    location=region,
+    project=project,
+    ingress="INGRESS_TRAFFIC_ALL",
+    scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=0),
+    opts=pulumi.ResourceOptions(depends_on=[secret_access_binding]),
+    template=gcp.cloudrunv2.ServiceTemplateArgs(
+        service_account=cloudrun_sa.email,
+        containers=[
+            gcp.cloudrunv2.ServiceTemplateContainerArgs(
+                image=gateway_image,
+                ports=[gcp.cloudrunv2.ServiceTemplateContainerPortArgs(container_port=8080)],
+                envs=_gateway_secret_envs + [
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="EUREKA_URL",
+                        value=eureka_service.uri.apply(lambda u: u + "/eureka/"),
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="APP_BASE_URL",
+                        value=pulumi.Output.concat("https://", backend_domain),
+                    ),
+                ],
+                resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
+                    limits={"memory": "512Mi", "cpu": "500m"},
+                ),
+                startup_probe=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeArgs(
+                    http_get=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeHttpGetArgs(
+                        path="/actuator/health",
+                        port=8080,
+                    ),
+                    initial_delay_seconds=15,
+                    period_seconds=5,
+                    failure_threshold=20,
+                ),
+            )
+        ],
+    ),
+)
+
+gcp.cloudrunv2.ServiceIamMember(
+    "api-gateway-invoker",
+    project=project,
+    location=region,
+    name=api_gateway_service.name,
+    role="roles/run.invoker",
+    member="allUsers",
+)
+```
+
+**1c.** On `backend_service`, change `APP_BASE_URL` to use the gateway domain instead of the backend domain:
+
+```python
+# Change this:
+gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+    name="APP_BASE_URL",
+    value=pulumi.Output.concat("https://", backend_domain),
+),
+# To this (core's APP_BASE_URL = gateway domain so OAuth callbacks go through the gateway):
+gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+    name="APP_BASE_URL",
+    value=pulumi.Output.concat("https://", backend_domain),  # backend_domain now points to gateway via DNS
+),
+```
+
+(No code change needed — `backend_domain` in `Pulumi.prod.yaml` will be updated to the gateway's Cloudflare DNS entry.)
+
+- [ ] **Step 2: Export gateway URL in `infra/__main__.py`**
+
+```python
+from cloudrun import backend_service, frontend_service, eureka_service, notification_service, calendar_service, api_gateway_service
+# ...
+pulumi.export("gateway_url", api_gateway_service.uri)
+```
+
+- [ ] **Step 3: Update `.github/workflows/deploy.yml`**
+
+**3a.** Add `gateway` filter and output:
+
+```yaml
+outputs:
+  # ... existing outputs ...
+  gateway: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.gateway }}
+```
+
+```yaml
+filters: |
+  # ... existing filters ...
+  gateway:
+    - 'services/api-gateway/**'
+```
+
+**3b.** Add gateway to the `deploy` job `if` condition:
+
+```yaml
+if: ... || needs.changes.outputs.gateway == 'true'
+```
+
+**3c.** Add build-and-push step:
+
+```yaml
+- name: Build and push gateway image
+  if: needs.changes.outputs.gateway == 'true'
+  run: |
+    IMAGE=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/api-gateway:${{ github.sha }}
+    ./gradlew :services:api-gateway:bootBuildImage --imageName=$IMAGE
+    docker push $IMAGE
+```
+
+**3d.** In the "Deploy with Pulumi" step, add gateway image config:
+
+```bash
+if [ "${{ needs.changes.outputs.gateway }}" == "true" ]; then
+  pulumi config set interview-hub-infra:gateway_image \
+    ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/api-gateway:${{ github.sha }}
+else
+  CURRENT=$(gcloud run services describe interview-hub-api-gateway \
+    --region=${{ env.GCP_REGION }} --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || echo "")
+  if [ -n "$CURRENT" ]; then
+    pulumi config set interview-hub-infra:gateway_image "$CURRENT"
+  fi
+fi
+```
+
+- [ ] **Step 4: Update `Pulumi.prod.yaml` `backend_domain` to point to the gateway**
+
+After deploying the gateway, update Cloudflare DNS for `backend_domain` to point at the gateway's Cloud Run URL. In `Pulumi.prod.yaml`, no change is needed to `backend_domain` if you're reusing the same Cloudflare entry — just update the DNS target.
+
+If you want a separate domain for the gateway (e.g. `i-hub-gw.lcarera.dev`), add a new `gateway_domain` config key and update `APP_BASE_URL` on both core and gateway accordingly.
+
+- [ ] **Step 5: Verify with `pulumi preview`**
+
+```bash
+cd infra
+source venv/bin/activate
+pulumi stack select prod
+pulumi preview
+```
+
+Expected: Preview shows `+ interview-hub-api-gateway` to create. No errors.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add infra/cloudrun.py infra/__main__.py .github/workflows/deploy.yml
+git commit -m "feat: deploy api-gateway to Cloud Run"
+```
+
+---
+
 ## Self-Review
 
 **Spec coverage:**

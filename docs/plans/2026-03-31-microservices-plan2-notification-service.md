@@ -1195,6 +1195,240 @@ git commit -m "chore: add notification-service to docker compose; remove cloud-t
 
 ---
 
+## Task 9: Deploy Notification Service to GCP Cloud Run
+
+**Files:**
+- Modify: `infra/secrets.py`
+- Delete: `infra/cloudtasks.py`
+- Modify: `infra/cloudrun.py`
+- Modify: `infra/__main__.py`
+- Modify: `.github/workflows/deploy.yml`
+
+> **Why always-on:** notification-service holds a persistent TCP connection to CloudAMQP. If it scales to zero, nobody consumes the RabbitMQ queue and emails queue indefinitely. `min_instance_count=1` keeps the consumer alive at ~$5/month.
+>
+> **Why delete `cloudtasks.py`:** Plan 2 removes all Cloud Tasks application code. Keeping the queue in GCP with no consumer wastes resources and creates confusing stack drift.
+
+- [ ] **Step 1: Add `RABBITMQ_URL` to `infra/secrets.py`**
+
+Add `"RABBITMQ_URL"` to the `_SECRET_NAMES` list:
+
+```python
+_SECRET_NAMES = [
+    "DB_URL",
+    "DB_USERNAME",
+    "DB_PASSWORD",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "JWT_SIGNING_SECRET",
+    "RESEND_API_KEY",
+    "GOOGLE_CALENDAR_REFRESH_TOKEN",
+    "RABBITMQ_URL",  # CloudAMQP AMQP URL (amqps://user:pass@host/vhost)
+]
+```
+
+- [ ] **Step 2: Delete `infra/cloudtasks.py`**
+
+```bash
+rm infra/cloudtasks.py
+```
+
+Pulumi will detect the removed resource on next `pulumi up` and destroy the Cloud Tasks queue and IAM binding.
+
+- [ ] **Step 3: Update `infra/__main__.py`**
+
+Remove the cloudtasks import and export. Add notification_service:
+
+```python
+import pulumi
+from registry import registry_url
+from iam import cloudrun_sa  # noqa: F401 — imported for side effects
+from secrets import secrets  # noqa: F401 — imported for side effects
+from cloudrun import backend_service, frontend_service, eureka_service, notification_service
+
+pulumi.export("registry_url", registry_url)
+pulumi.export("backend_url", backend_service.uri)
+pulumi.export("frontend_url", frontend_service.uri)
+pulumi.export("eureka_url", eureka_service.uri)
+pulumi.export("notification_url", notification_service.uri)
+```
+
+- [ ] **Step 4: Update `infra/cloudrun.py`**
+
+**4a.** Remove the cloudtasks import at the top:
+
+```python
+# Remove this line:
+from cloudtasks import email_queue, cloudtasks_enqueuer
+```
+
+**4b.** Remove `cloudtasks_enqueuer` from `backend_service`'s `opts` and all Cloud Tasks env vars. The `opts` line becomes:
+
+```python
+opts=pulumi.ResourceOptions(depends_on=[secret_access_binding]),
+```
+
+Remove these env vars from `backend_service`:
+- `GCP_PROJECT_ID`
+- `GCP_LOCATION`
+- `CLOUD_TASKS_QUEUE_ID`
+- `CLOUD_TASKS_ENABLED`
+- `CLOUD_TASKS_SA_EMAIL`
+- `CLOUD_TASKS_WORKER_URL`
+- `CLOUD_TASKS_AUDIENCE`
+
+Also remove this line near the top of the file:
+```python
+cloudtasks_worker_url = config.get("cloudtasks_worker_url")
+```
+
+**4c.** Add `notification_service` after `eureka_service`. The notification service reads `RESEND_API_KEY` and `RABBITMQ_URL` from Secret Manager:
+
+```python
+notification_image = config.get("notification_image") or "placeholder"
+
+_notification_secret_envs = [
+    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+        name=name,
+        value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+            secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                secret=secrets[name].secret_id,
+                version="latest",
+            )
+        ),
+    )
+    for name in ["RESEND_API_KEY", "RABBITMQ_URL"]
+]
+
+notification_service = gcp.cloudrunv2.Service(
+    "notification-service",
+    name="interview-hub-notification",
+    location=region,
+    project=project,
+    ingress="INGRESS_TRAFFIC_ALL",
+    scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=1),
+    opts=pulumi.ResourceOptions(depends_on=[secret_access_binding]),
+    template=gcp.cloudrunv2.ServiceTemplateArgs(
+        service_account=cloudrun_sa.email,
+        containers=[
+            gcp.cloudrunv2.ServiceTemplateContainerArgs(
+                image=notification_image,
+                ports=[gcp.cloudrunv2.ServiceTemplateContainerPortArgs(container_port=8080)],
+                envs=_notification_secret_envs + [
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="EUREKA_URL",
+                        value=eureka_service.uri.apply(lambda u: u + "/eureka/"),
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="MAIL_FROM",
+                        value="noreply@lcarera.dev",
+                    ),
+                ],
+                resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
+                    limits={"memory": "512Mi", "cpu": "500m"},
+                ),
+                startup_probe=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeArgs(
+                    http_get=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeHttpGetArgs(
+                        path="/actuator/health",
+                        port=8080,
+                    ),
+                    initial_delay_seconds=15,
+                    period_seconds=5,
+                    failure_threshold=20,
+                ),
+            )
+        ],
+    ),
+)
+
+gcp.cloudrunv2.ServiceIamMember(
+    "notification-service-invoker",
+    project=project,
+    location=region,
+    name=notification_service.name,
+    role="roles/run.invoker",
+    member="allUsers",
+)
+```
+
+- [ ] **Step 5: Update `.github/workflows/deploy.yml`**
+
+**5a.** Add `notification` filter and output in the `changes` job:
+
+```yaml
+outputs:
+  # ... existing outputs ...
+  notification: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.notification }}
+```
+
+```yaml
+filters: |
+  # ... existing filters ...
+  notification:
+    - 'services/notification-service/**'
+```
+
+**5b.** Add notification to the `deploy` job `if` condition:
+
+```yaml
+if: ... || needs.changes.outputs.notification == 'true'
+```
+
+**5c.** Add build-and-push step (after the backend build step):
+
+```yaml
+- name: Build and push notification image
+  if: needs.changes.outputs.notification == 'true'
+  run: |
+    IMAGE=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/notification:${{ github.sha }}
+    ./gradlew :services:notification-service:bootBuildImage --imageName=$IMAGE
+    docker push $IMAGE
+```
+
+**5d.** In the "Deploy with Pulumi" step, add notification image config:
+
+```bash
+if [ "${{ needs.changes.outputs.notification }}" == "true" ]; then
+  pulumi config set interview-hub-infra:notification_image \
+    ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/notification:${{ github.sha }}
+else
+  CURRENT=$(gcloud run services describe interview-hub-notification \
+    --region=${{ env.GCP_REGION }} --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || echo "")
+  if [ -n "$CURRENT" ]; then
+    pulumi config set interview-hub-infra:notification_image "$CURRENT"
+  fi
+fi
+```
+
+- [ ] **Step 6: Set `RABBITMQ_URL` secret value manually**
+
+After `pulumi up` creates the `interview-hub-rabbitmq-url` secret, set its value using the CloudAMQP URL from your CloudAMQP dashboard (AMQP URI format: `amqps://user:pass@hostname/vhost`):
+
+```bash
+echo -n "amqps://YOUR_USER:YOUR_PASS@YOUR_HOST/YOUR_VHOST" | \
+  gcloud secrets versions add interview-hub-rabbitmq-url --data-file=-
+```
+
+- [ ] **Step 7: Verify with `pulumi preview`**
+
+```bash
+cd infra
+source venv/bin/activate
+pulumi stack select prod
+pulumi preview
+```
+
+Expected: Preview shows `+ interview-hub-notification` to create, `- email-queue` and `- cloudtasks-enqueuer` to destroy, `~ interview-hub-backend` to update (removed Cloud Tasks env vars). No errors.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add infra/secrets.py infra/cloudrun.py infra/__main__.py .github/workflows/deploy.yml
+git rm infra/cloudtasks.py
+git commit -m "feat: deploy notification-service to Cloud Run; remove Cloud Tasks infra"
+```
+
+---
+
 ## Self-Review
 
 **Spec coverage:**
