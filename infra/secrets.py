@@ -14,6 +14,7 @@ _SECRET_NAMES = [
     "JWT_SIGNING_SECRET",
     "RESEND_API_KEY",
     "GOOGLE_CALENDAR_REFRESH_TOKEN",
+    "RABBITMQ_URL",  # CloudAMQP AMQP URL (amqps://user:pass@host/vhost)
 ]
 
 secrets: dict[str, gcp.secretmanager.Secret] = {}
