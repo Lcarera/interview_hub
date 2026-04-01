@@ -28,11 +28,6 @@ app:
   jwt:
     signing-secret: test-signing-secret-that-is-at-least-32-bytes-long
     expiration-seconds: 3600
-  mail:
-    from: test@gm2dev.com
-  resend:
-    api-key: test-resend-api-key
-
 eureka:
   client:
     enabled: false

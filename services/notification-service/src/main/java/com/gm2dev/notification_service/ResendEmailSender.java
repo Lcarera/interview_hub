@@ -38,8 +38,9 @@ public class ResendEmailSender {
             log.debug("Sent {} email to {}", message.getClass().getSimpleName(), message.to());
         } catch (ResendException e) {
             log.error("Failed to send {} email to {}", message.getClass().getSimpleName(), message.to(), e);
-            // Do not rethrow — a failed email must not poison the RabbitMQ message
-            // and cause infinite redelivery. Log and discard.
+            // Rethrow so Spring Cloud Stream can retry (max-attempts: 3 in application.yml).
+            // After retries are exhausted the message is discarded, not requeued indefinitely.
+            throw new RuntimeException("Resend delivery failed", e);
         }
     }
 }

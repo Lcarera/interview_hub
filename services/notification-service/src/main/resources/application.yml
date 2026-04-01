@@ -11,6 +11,9 @@ spring:
           destination: notification.emails
           group: notification-service
           content-type: application/json
+          consumer:
+            max-attempts: 3
+            back-off-initial-interval: 1000
   rabbitmq:
     addresses: ${RABBITMQ_URL:amqp://guest:guest@localhost:5672}
 

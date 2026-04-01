@@ -16,20 +16,6 @@ eureka_image = config.get("eureka_image") or "placeholder"
 notification_image = config.get("notification_image") or "placeholder"
 backend_domain = config.get("backend_domain") or "i-hub-be.lcarera.dev"
 
-# Build secret env var list from Secret Manager secrets
-_secret_envs = [
-    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
-        name=name,
-        value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
-            secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
-                secret=secret.secret_id,
-                version="latest",
-            )
-        ),
-    )
-    for name, secret in secrets.items()
-]
-
 eureka_service = gcp.cloudrunv2.Service(
     "eureka-server",
     name="interview-hub-eureka-server",

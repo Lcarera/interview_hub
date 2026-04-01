@@ -46,11 +46,6 @@ app:
   jwt:
     signing-secret: ${JWT_SIGNING_SECRET}
     expiration-seconds: 3600
-  mail:
-    from: ${MAIL_FROM:noreply@lcarera.dev}
-  resend:
-    api-key: ${RESEND_API_KEY:}
-
 eureka:
   client:
     service-url:
