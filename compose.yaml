@@ -16,11 +16,6 @@ services:
       - "8761:8761"
     environment:
       EUREKA_HOSTNAME: eureka-server
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
 
   notification-service:
     image: notification-service:0.0.1-SNAPSHOT
@@ -34,7 +29,7 @@ services:
       rabbitmq:
         condition: service_healthy
       eureka-server:
-        condition: service_healthy
+        condition: service_started
 
   app:
     image: interview-hub:0.0.1-SNAPSHOT
@@ -58,7 +53,7 @@ services:
         required: false
     depends_on:
       eureka-server:
-        condition: service_healthy
+        condition: service_started
       rabbitmq:
         condition: service_healthy
 
