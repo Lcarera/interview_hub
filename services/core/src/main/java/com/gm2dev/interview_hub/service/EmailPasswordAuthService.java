@@ -4,8 +4,8 @@ import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.TokenType;
 import com.gm2dev.interview_hub.domain.VerificationToken;
 import com.gm2dev.interview_hub.dto.AuthResponse;
-import com.gm2dev.interview_hub.dto.EmailTaskPayload;
 import com.gm2dev.interview_hub.dto.LoginRequest;
+import com.gm2dev.shared.email.EmailMessage;
 import com.gm2dev.interview_hub.dto.RegisterRequest;
 import com.gm2dev.interview_hub.dto.ResetPasswordRequest;
 import com.gm2dev.interview_hub.mapper.ProfileMapper;
@@ -33,20 +33,20 @@ public class EmailPasswordAuthService {
     private final ProfileRepository profileRepository;
     private final VerificationTokenRepository verificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final EmailSender emailSender;
+    private final EmailPublisher emailPublisher;
     private final ProfileMapper profileMapper;
     private final JwtService jwtService;
 
     public EmailPasswordAuthService(ProfileRepository profileRepository,
                                      VerificationTokenRepository verificationTokenRepository,
                                      PasswordEncoder passwordEncoder,
-                                     EmailSender emailSender,
+                                     EmailPublisher emailPublisher,
                                      ProfileMapper profileMapper,
                                      JwtService jwtService) {
         this.profileRepository = profileRepository;
         this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
-        this.emailSender = emailSender;
+        this.emailPublisher = emailPublisher;
         this.profileMapper = profileMapper;
         this.jwtService = jwtService;
     }
@@ -65,7 +65,7 @@ public class EmailPasswordAuthService {
 
         String rawToken = UUID.randomUUID().toString();
         createVerificationToken(profile, TokenType.EMAIL_VERIFICATION, 24, rawToken);
-        emailSender.send(new EmailTaskPayload.VerificationEmail(request.email(), rawToken));
+        emailPublisher.publish(new EmailMessage.VerificationEmailMessage(request.email(), rawToken));
 
         log.debug("Registered new email/password user: {}", request.email());
     }
@@ -123,7 +123,7 @@ public class EmailPasswordAuthService {
                 invalidateActiveTokens(profile, TokenType.EMAIL_VERIFICATION);
                 String rawToken = UUID.randomUUID().toString();
                 createVerificationToken(profile, TokenType.EMAIL_VERIFICATION, 24, rawToken);
-                emailSender.send(new EmailTaskPayload.VerificationEmail(email, rawToken));
+                emailPublisher.publish(new EmailMessage.VerificationEmailMessage(email, rawToken));
             }
         });
     }
@@ -135,7 +135,7 @@ public class EmailPasswordAuthService {
                 invalidateActiveTokens(profile, TokenType.PASSWORD_RESET);
                 String rawToken = UUID.randomUUID().toString();
                 createVerificationToken(profile, TokenType.PASSWORD_RESET, 1, rawToken);
-                emailSender.send(new EmailTaskPayload.PasswordResetEmail(email, rawToken));
+                emailPublisher.publish(new EmailMessage.PasswordResetEmailMessage(email, rawToken));
             }
         });
     }

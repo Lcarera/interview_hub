@@ -26,6 +26,7 @@ jobs:
       infra: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.infra }}
       migrations: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.migrations }}
       eureka: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.eureka }}
+      notification: ${{ inputs.force_full_deploy == true && 'true' || steps.filter.outputs.notification }}
       base_sha: ${{ steps.base.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
@@ -63,10 +64,18 @@ jobs:
               - 'supabase/migrations/**'
             eureka:
               - 'services/eureka-server/**'
+            notification:
+              - 'services/notification-service/**'
+              - 'services/shared/**'
+              - 'build.gradle'
+              - 'settings.gradle'
+              - 'gradle/**'
+              - 'gradlew'
+              - 'gradlew.bat'
 
   deploy:
     needs: changes
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infra == 'true' || needs.changes.outputs.migrations == 'true' || needs.changes.outputs.eureka == 'true'
+    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infra == 'true' || needs.changes.outputs.migrations == 'true' || needs.changes.outputs.eureka == 'true' || needs.changes.outputs.notification == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -142,6 +151,13 @@ jobs:
           ./gradlew :services:eureka-server:bootBuildImage --imageName=$IMAGE
           docker push $IMAGE
 
+      - name: Build and push notification image
+        if: needs.changes.outputs.notification == 'true'
+        run: |
+          IMAGE=${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/notification-service:${{ github.sha }}
+          ./gradlew :services:notification-service:bootBuildImage --imageName=$IMAGE
+          docker push $IMAGE
+
       - name: Build and push frontend image
         if: needs.changes.outputs.frontend == 'true'
         run: |
@@ -194,6 +210,16 @@ jobs:
               --region=${{ env.GCP_REGION }} --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || echo "")
             if [ -n "$CURRENT" ]; then
               pulumi config set interview-hub-infra:eureka_image "$CURRENT"
+            fi
+          fi
+          if [ "${{ needs.changes.outputs.notification }}" == "true" ]; then
+            pulumi config set interview-hub-infra:notification_image \
+              ${{ env.REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/interview-hub/notification-service:${{ github.sha }}
+          else
+            CURRENT=$(gcloud run services describe interview-hub-notification \
+              --region=${{ env.GCP_REGION }} --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || echo "")
+            if [ -n "$CURRENT" ]; then
+              pulumi config set interview-hub-infra:notification_image "$CURRENT"
             fi
           fi
           pulumi up --yes

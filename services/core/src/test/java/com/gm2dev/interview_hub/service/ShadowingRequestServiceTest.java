@@ -1,7 +1,7 @@
 package com.gm2dev.interview_hub.service;
 
 import com.gm2dev.interview_hub.domain.*;
-import com.gm2dev.interview_hub.dto.EmailTaskPayload;
+import com.gm2dev.shared.email.EmailMessage;
 import com.gm2dev.interview_hub.repository.CandidateRepository;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
@@ -53,7 +53,7 @@ class ShadowingRequestServiceTest {
     private GoogleCalendarService googleCalendarService;
 
     @MockitoBean
-    private EmailSender emailSender;
+    private EmailPublisher emailPublisher;
 
     private Profile interviewer;
     private Profile shadower;
@@ -219,9 +219,9 @@ class ShadowingRequestServiceTest {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
         shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
 
-        ArgumentCaptor<EmailTaskPayload> captor = ArgumentCaptor.forClass(EmailTaskPayload.class);
-        verify(emailSender).send(captor.capture());
-        EmailTaskPayload.ShadowingApprovedEmail email = (EmailTaskPayload.ShadowingApprovedEmail) captor.getValue();
+        ArgumentCaptor<EmailMessage> captor = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(emailPublisher).publish(captor.capture());
+        EmailMessage.ShadowingApprovedEmailMessage email = (EmailMessage.ShadowingApprovedEmailMessage) captor.getValue();
         assertEquals("shadower@example.com", email.to());
         assertEquals("Java Interview - Unknown", email.summary());
     }
@@ -236,9 +236,9 @@ class ShadowingRequestServiceTest {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
         shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
 
-        ArgumentCaptor<EmailTaskPayload> captor2 = ArgumentCaptor.forClass(EmailTaskPayload.class);
-        verify(emailSender).send(captor2.capture());
-        EmailTaskPayload.ShadowingApprovedEmail email2 = (EmailTaskPayload.ShadowingApprovedEmail) captor2.getValue();
+        ArgumentCaptor<EmailMessage> captor2 = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(emailPublisher).publish(captor2.capture());
+        EmailMessage.ShadowingApprovedEmailMessage email2 = (EmailMessage.ShadowingApprovedEmailMessage) captor2.getValue();
         assertEquals("shadower@example.com", email2.to());
         assertEquals("Java Interview - Jane Doe", email2.summary());
     }
@@ -249,9 +249,9 @@ class ShadowingRequestServiceTest {
 
         shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
 
-        ArgumentCaptor<EmailTaskPayload> captor3 = ArgumentCaptor.forClass(EmailTaskPayload.class);
-        verify(emailSender).send(captor3.capture());
-        EmailTaskPayload.ShadowingApprovedEmail email3 = (EmailTaskPayload.ShadowingApprovedEmail) captor3.getValue();
+        ArgumentCaptor<EmailMessage> captor3 = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(emailPublisher).publish(captor3.capture());
+        EmailMessage.ShadowingApprovedEmailMessage email3 = (EmailMessage.ShadowingApprovedEmailMessage) captor3.getValue();
         assertEquals("shadower@example.com", email3.to());
         assertTrue(email3.summary().contains("Java"));
     }

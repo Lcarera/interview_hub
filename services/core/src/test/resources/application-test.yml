@@ -1,4 +1,7 @@
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
   datasource:
     url: jdbc:h2:mem:testdb;MODE=PostgreSQL
     driver-class-name: org.h2.Driver
@@ -15,14 +18,6 @@ spring:
 app:
   base-url: http://localhost:8080
   frontend-url: http://localhost:4200
-  cloud-tasks:
-    enabled: false
-    project-id: test-project
-    location: us-central1
-    queue-id: test-queue
-    service-account-email: test@test.iam.gserviceaccount.com
-    worker-url: http://localhost:8080
-    audience: http://localhost:8080
   google:
     client-id: test-client-id
     client-secret: test-client-secret
@@ -33,11 +28,6 @@ app:
   jwt:
     signing-secret: test-signing-secret-that-is-at-least-32-bytes-long
     expiration-seconds: 3600
-  mail:
-    from: test@gm2dev.com
-  resend:
-    api-key: test-resend-api-key
-
 eureka:
   client:
     enabled: false

@@ -11,7 +11,7 @@ import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.ShadowingRequest;
 import com.gm2dev.interview_hub.domain.ShadowingRequestStatus;
-import com.gm2dev.interview_hub.dto.EmailTaskPayload;
+import com.gm2dev.shared.email.EmailMessage;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.gm2dev.interview_hub.repository.ShadowingRequestRepository;
@@ -32,7 +32,7 @@ public class ShadowingRequestService {
     private final InterviewRepository interviewRepository;
     private final ProfileRepository profileRepository;
     private final GoogleCalendarService googleCalendarService;
-    private final EmailSender emailSender;
+    private final EmailPublisher emailPublisher;
 
     @Transactional
     public ShadowingRequest requestShadowing(UUID interviewId, UUID shadowerId) {
@@ -108,7 +108,7 @@ public class ShadowingRequestService {
 
         String summary = InterviewService.buildSummary(interview);
 
-        emailSender.send(new EmailTaskPayload.ShadowingApprovedEmail(
+        emailPublisher.publish(new EmailMessage.ShadowingApprovedEmailMessage(
                 request.getShadower().getEmail(),
                 summary,
                 EMAIL_DATE_FMT.format(interview.getStartTime()),

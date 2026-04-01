@@ -16,11 +16,20 @@ services:
       - "8761:8761"
     environment:
       EUREKA_HOSTNAME: eureka-server
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+
+  notification-service:
+    image: notification-service:0.0.1-SNAPSHOT
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-noreply@lcarera.dev}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
 
   app:
     image: interview-hub:0.0.1-SNAPSHOT
@@ -35,16 +44,17 @@ services:
       JWT_SIGNING_SECRET: ${JWT_SIGNING_SECRET}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
-      MAIL_FROM: ${MAIL_FROM:-noreply@lcarera.dev}
       GOOGLE_CALENDAR_REFRESH_TOKEN: ${GOOGLE_CALENDAR_REFRESH_TOKEN}
       GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-primary}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       EUREKA_URL: http://eureka-server:8761/eureka/
     env_file:
       - path: .env
         required: false
     depends_on:
       eureka-server:
+        condition: service_started
+      rabbitmq:
         condition: service_healthy
 
   frontend:

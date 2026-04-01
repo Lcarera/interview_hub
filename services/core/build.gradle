@@ -32,9 +32,6 @@ dependencies {
     // Validation
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-    // Email (Resend HTTP API)
-    implementation 'com.resend:resend-java:4.11.0'
-
     // Actuator
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
@@ -53,8 +50,9 @@ dependencies {
     implementation 'com.google.http-client:google-http-client-jackson2'
     implementation 'com.google.auth:google-auth-library-oauth2-http'
 
-    // Google Cloud Tasks
-    implementation 'com.google.cloud:google-cloud-tasks'
+    // Spring Cloud Stream (RabbitMQ)
+    implementation 'org.springframework.cloud:spring-cloud-stream'
+    implementation 'org.springframework.cloud:spring-cloud-stream-binder-rabbit'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -74,6 +72,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'com.h2database:h2'
+    testImplementation 'org.springframework.cloud:spring-cloud-stream-test-binder'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
@@ -94,11 +93,7 @@ jacocoTestReport {
                 '**/GoogleCalendarService.class',
                 '**/OpenApiConfig.class',
                 '**/*MapperImpl.class',
-                '**/CloudTasksConfig.class',
-                '**/CloudTasksAuthenticationFilter.class',
-                '**/CloudTasksSecurityConfig.class',
-                '**/SecurityConfig.class',
-                '**/EmailQueueService.class'
+                '**/SecurityConfig.class'
             ])
         }))
     }
@@ -112,11 +107,7 @@ jacocoTestCoverageVerification {
                 '**/GoogleCalendarService.class',
                 '**/OpenApiConfig.class',
                 '**/*MapperImpl.class',
-                '**/CloudTasksConfig.class',
-                '**/CloudTasksAuthenticationFilter.class',
-                '**/CloudTasksSecurityConfig.class',
-                '**/SecurityConfig.class',
-                '**/EmailQueueService.class'
+                '**/SecurityConfig.class'
             ])
         }))
     }

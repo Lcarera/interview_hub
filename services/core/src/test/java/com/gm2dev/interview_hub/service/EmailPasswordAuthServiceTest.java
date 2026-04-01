@@ -5,13 +5,13 @@ import com.gm2dev.interview_hub.domain.Role;
 import com.gm2dev.interview_hub.domain.TokenType;
 import com.gm2dev.interview_hub.domain.VerificationToken;
 import com.gm2dev.interview_hub.dto.AuthResponse;
-import com.gm2dev.interview_hub.dto.EmailTaskPayload;
 import com.gm2dev.interview_hub.dto.LoginRequest;
 import com.gm2dev.interview_hub.dto.RegisterRequest;
 import com.gm2dev.interview_hub.dto.ResetPasswordRequest;
 import com.gm2dev.interview_hub.mapper.ProfileMapper;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
 import com.gm2dev.interview_hub.repository.VerificationTokenRepository;
+import com.gm2dev.shared.email.EmailMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +42,7 @@ class EmailPasswordAuthServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private EmailSender emailSender;
+    private EmailPublisher emailPublisher;
 
     @Mock
     private ProfileMapper profileMapper;
@@ -56,7 +56,7 @@ class EmailPasswordAuthServiceTest {
     void setUp() {
         service = new EmailPasswordAuthService(
                 profileRepository, verificationTokenRepository,
-                passwordEncoder, emailSender, profileMapper, jwtService);
+                passwordEncoder, emailPublisher, profileMapper, jwtService);
     }
 
     // --- Register tests ---
@@ -87,9 +87,9 @@ class EmailPasswordAuthServiceTest {
         assertEquals(Role.interviewer, saved.getRole());
         assertFalse(saved.isEmailVerified());
 
-        ArgumentCaptor<EmailTaskPayload> emailCaptor = ArgumentCaptor.forClass(EmailTaskPayload.class);
-        verify(emailSender).send(emailCaptor.capture());
-        EmailTaskPayload.VerificationEmail email = (EmailTaskPayload.VerificationEmail) emailCaptor.getValue();
+        ArgumentCaptor<EmailMessage> emailCaptor = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(emailPublisher).publish(emailCaptor.capture());
+        EmailMessage.VerificationEmailMessage email = (EmailMessage.VerificationEmailMessage) emailCaptor.getValue();
         assertEquals("user@gm2dev.com", email.to());
         assertNotNull(email.token());
 
@@ -304,9 +304,9 @@ class EmailPasswordAuthServiceTest {
         service.resendVerification("user@gm2dev.com");
 
         assertTrue(oldToken.isUsed());
-        ArgumentCaptor<EmailTaskPayload> emailCaptor = ArgumentCaptor.forClass(EmailTaskPayload.class);
-        verify(emailSender).send(emailCaptor.capture());
-        assertInstanceOf(EmailTaskPayload.VerificationEmail.class, emailCaptor.getValue());
+        ArgumentCaptor<EmailMessage> emailCaptor = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(emailPublisher).publish(emailCaptor.capture());
+        assertInstanceOf(EmailMessage.VerificationEmailMessage.class, emailCaptor.getValue());
         assertEquals("user@gm2dev.com", emailCaptor.getValue().to());
     }
 
@@ -322,7 +322,7 @@ class EmailPasswordAuthServiceTest {
 
         service.resendVerification("user@gm2dev.com");
 
-        verify(emailSender, never()).send(any());
+        verify(emailPublisher, never()).publish(any());
     }
 
     @Test
@@ -330,7 +330,7 @@ class EmailPasswordAuthServiceTest {
         when(profileRepository.findByEmail("nobody@gm2dev.com")).thenReturn(Optional.empty());
 
         assertDoesNotThrow(() -> service.resendVerification("nobody@gm2dev.com"));
-        verify(emailSender, never()).send(any());
+        verify(emailPublisher, never()).publish(any());
     }
 
     @Test
@@ -345,7 +345,7 @@ class EmailPasswordAuthServiceTest {
 
         service.resendVerification("user@gm2dev.com");
 
-        verify(emailSender, never()).send(any());
+        verify(emailPublisher, never()).publish(any());
     }
 
     // --- Forgot password tests ---
@@ -369,9 +369,9 @@ class EmailPasswordAuthServiceTest {
         service.forgotPassword("user@gm2dev.com");
 
         assertTrue(oldToken.isUsed());
-        ArgumentCaptor<EmailTaskPayload> emailCaptor = ArgumentCaptor.forClass(EmailTaskPayload.class);
-        verify(emailSender).send(emailCaptor.capture());
-        assertInstanceOf(EmailTaskPayload.PasswordResetEmail.class, emailCaptor.getValue());
+        ArgumentCaptor<EmailMessage> emailCaptor = ArgumentCaptor.forClass(EmailMessage.class);
+        verify(emailPublisher).publish(emailCaptor.capture());
+        assertInstanceOf(EmailMessage.PasswordResetEmailMessage.class, emailCaptor.getValue());
         assertEquals("user@gm2dev.com", emailCaptor.getValue().to());
     }
 
@@ -380,7 +380,7 @@ class EmailPasswordAuthServiceTest {
         when(profileRepository.findByEmail("nobody@gm2dev.com")).thenReturn(Optional.empty());
 
         assertDoesNotThrow(() -> service.forgotPassword("nobody@gm2dev.com"));
-        verify(emailSender, never()).send(any());
+        verify(emailPublisher, never()).publish(any());
     }
 
     @Test
@@ -394,7 +394,7 @@ class EmailPasswordAuthServiceTest {
 
         service.forgotPassword("user@gm2dev.com");
 
-        verify(emailSender, never()).send(any());
+        verify(emailPublisher, never()).publish(any());
     }
 
     // --- Reset password tests ---
@@ -464,7 +464,7 @@ class EmailPasswordAuthServiceTest {
         when(profileRepository.save(any(Profile.class))).thenAnswer(inv -> inv.getArgument(0));
         when(verificationTokenRepository.save(any(VerificationToken.class))).thenAnswer(inv -> inv.getArgument(0));
         doThrow(new RuntimeException("Email delivery failed"))
-                .when(emailSender).send(any(EmailTaskPayload.class));
+                .when(emailPublisher).publish(any(EmailMessage.class));
 
         assertThrows(RuntimeException.class, () -> service.register(request));
     }

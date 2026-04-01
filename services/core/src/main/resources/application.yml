@@ -24,17 +24,18 @@ spring:
         format_sql: true
     show-sql: false
 
+  cloud:
+    stream:
+      bindings:
+        email-out-0:
+          destination: notification.emails
+          content-type: application/json
+  rabbitmq:
+    addresses: ${RABBITMQ_URL:amqp://guest:guest@localhost:5672}
+
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080}
   frontend-url: ${FRONTEND_URL:http://localhost:4200}
-  cloud-tasks:
-    project-id: ${GCP_PROJECT_ID:}
-    location: ${GCP_LOCATION:us-central1}
-    queue-id: ${CLOUD_TASKS_QUEUE_ID:email-queue}
-    enabled: ${CLOUD_TASKS_ENABLED:false}
-    service-account-email: ${CLOUD_TASKS_SA_EMAIL:}
-    worker-url: ${CLOUD_TASKS_WORKER_URL:${APP_BASE_URL:http://localhost:8080}}
-    audience: ${CLOUD_TASKS_AUDIENCE:${APP_BASE_URL:http://localhost:8080}}
   google:
     client-id: ${GOOGLE_CLIENT_ID}
     client-secret: ${GOOGLE_CLIENT_SECRET}
@@ -45,11 +46,6 @@ app:
   jwt:
     signing-secret: ${JWT_SIGNING_SECRET}
     expiration-seconds: 3600
-  mail:
-    from: ${MAIL_FROM:noreply@lcarera.dev}
-  resend:
-    api-key: ${RESEND_API_KEY:}
-
 eureka:
   client:
     service-url:
