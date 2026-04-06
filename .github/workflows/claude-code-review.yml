@@ -3,25 +3,13 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
       id-token: write
 
@@ -29,16 +17,90 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
+          prompt: |
+            You are a Senior Code Reviewer for Interview Hub, a fullstack application (Spring Boot 4.0.2 with Java 25 / Angular 21 with Angular Material).
 
+            Review this PR thoroughly. Read all changed files before making judgments.
+
+            ## Review Framework
+
+            ### 1. Plan Alignment
+            - Check the PR description for a plan or linked issue. Compare implementation against it.
+            - Identify deviations — assess whether they're justified improvements or problematic departures.
+            - Verify all planned functionality is implemented and no scope was silently dropped.
+
+            ### 2. Code Quality — Backend (Java 25 / Spring Boot 4.0.2)
+
+            **Layer discipline:** All code under `src/main/java/com/gm2dev/interview_hub/`:
+            - `domain/` — JPA entities and enums only
+            - `dto/` — Data transfer objects only
+            - `mapper/` — MapStruct mappers only
+            - `service/` — Business logic only
+            - `controller/` — HTTP concerns only
+            - `config/` — Spring configuration only
+            Flag any layer-crossing: JPA annotations on DTOs, HTTP status logic in services, repository calls in controllers.
+
+            **DTO boundaries:** Controllers must accept request DTOs and return response DTOs — never expose JPA entities directly.
+
+            **Error handling:** `EntityNotFoundException` → 404, `IllegalStateException` → 409 via `GlobalExceptionHandler`. Flag raw exception leaks.
+
+            **Security:**
+            - All new endpoints must require authentication unless added to public endpoint list in `SecurityConfig`.
+            - Check for missing authorization checks, SQL injection, or leaked sensitive data in responses/logs.
+            - Controllers use `CurrentUser` parameter, not manual `@AuthenticationPrincipal Jwt` extraction.
+            - Role checks use `Role` enum with `@Enumerated(EnumType.STRING)`. Never raw strings.
+            - Internal endpoints (`/internal/**`) must validate `X-CloudTasks-QueueName` header.
+
+            **Google Calendar integration:** Calendar failures must be logged but never block the primary operation.
+
+            **Testing conventions — never mix styles:**
+            - Controller tests: `@WebMvcTest` (from `org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest`) + `@Import(SecurityConfig.class)` + `@ActiveProfiles("test")` + `@MockitoBean` + `.with(jwt())`. For role-based access, use `.with(jwt().authorities(new SimpleGrantedAuthority("ROLE_admin")))`.
+            - Service tests: `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback` with H2.
+            - Pure unit tests: `@ExtendWith(MockitoExtension.class)` only for specific classes.
+            - Use `@MockitoBean` (Spring Boot 3.4+), NOT `@MockBean`.
+            - JaCoCo enforces 95% branch coverage. Flag untested branches.
+
+            ### 3. Code Quality — Frontend (Angular 21 / TypeScript 5.9)
+            - Standalone components only — no NgModules. Signal-based inputs/outputs, OnPush change detection.
+            - Services return Observables; signal conversion at component level.
+            - All feature routes must use lazy loading.
+            - Testing: Vitest with jsdom.
+            - Never hardcode API URLs.
+
+            ### 4. Architecture & Design
+            - Database changes MUST have a Supabase migration in `supabase/migrations/` since `ddl-auto: validate`.
+            - New endpoints must integrate with nginx proxy routing.
+            - `/internal/*` is NOT proxied through nginx.
+
+            ### 5. Issue Classification
+            - **Critical:** Security vulnerabilities, broken auth, missing DB migrations, test style violations, entity exposure, Calendar failures blocking operations.
+            - **Important:** Layer violations, missing test coverage, inconsistent error handling, deviations from patterns.
+            - **Suggestion:** Naming improvements, minor refactors.
+
+            ### 6. Anti-patterns to Flag
+            - Adding comments/docstrings to unchanged code
+            - Over-engineering: feature flags, backwards-compat shims, premature abstractions
+            - `@Autowired` field injection instead of constructor injection
+            - Mixing test styles
+            - `@MockBean` instead of `@MockitoBean`
+
+            ## Output Format
+
+            1. **Summary** — One paragraph: what was implemented, overall assessment.
+            2. **What was done well** — Bullet points of good decisions.
+            3. **Issues** — Grouped by severity (Critical → Important → Suggestion). Each with:
+               - Category tag: `[Security]`, `[Layer Violation]`, `[Testing]`, etc.
+               - File and line reference
+               - One sentence: problem
+               - One sentence: fix
+            4. **Plan alignment** — What was completed vs plan, any unjustified deviations.
+            5. **Verdict** — "Approve", "Approve with minor fixes", or "Request changes" with rationale.
+
+            Be concise. Lead with positives. One sentence per issue unless a code example is needed.
