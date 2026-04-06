@@ -14,6 +14,7 @@ backend_image = config.get("backend_image") or "placeholder"
 frontend_image = config.get("frontend_image") or "placeholder"
 eureka_image = config.get("eureka_image") or "placeholder"
 notification_image = config.get("notification_image") or "placeholder"
+calendar_image = config.get("calendar_image") or "placeholder"
 backend_domain = config.get("backend_domain") or "i-hub-be.lcarera.dev"
 
 eureka_service = gcp.cloudrunv2.Service(
@@ -121,11 +122,74 @@ gcp.cloudrunv2.ServiceIamMember(
     member="allUsers",
 )
 
+_calendar_secret_envs = [
+    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+        name=name,
+        value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+            secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                secret=secrets[name].secret_id,
+                version="latest",
+            )
+        ),
+    )
+    for name in ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_CALENDAR_REFRESH_TOKEN"]
+]
+
+calendar_service = gcp.cloudrunv2.Service(
+    "calendar-service",
+    name="interview-hub-calendar",
+    location=region,
+    project=project,
+    ingress="INGRESS_TRAFFIC_ALL",
+    scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=0),
+    opts=pulumi.ResourceOptions(depends_on=[secret_access_binding]),
+    template=gcp.cloudrunv2.ServiceTemplateArgs(
+        service_account=cloudrun_sa.email,
+        containers=[
+            gcp.cloudrunv2.ServiceTemplateContainerArgs(
+                image=calendar_image,
+                ports=[gcp.cloudrunv2.ServiceTemplateContainerPortArgs(container_port=8080)],
+                envs=_calendar_secret_envs + [
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="EUREKA_URL",
+                        value=eureka_service.uri.apply(lambda u: u + "/eureka/"),
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="GOOGLE_CALENDAR_ID",
+                        value="0cae724ce3870858a6213c7f351107891bd3c1265b336d3bfef5693c3a3cdc9d@group.calendar.google.com",
+                    ),
+                ],
+                resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
+                    limits={"memory": "512Mi", "cpu": "500m"},
+                ),
+                startup_probe=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeArgs(
+                    http_get=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeHttpGetArgs(
+                        path="/actuator/health",
+                        port=8080,
+                    ),
+                    initial_delay_seconds=15,
+                    period_seconds=5,
+                    failure_threshold=20,
+                ),
+            )
+        ],
+    ),
+)
+
+gcp.cloudrunv2.ServiceIamMember(
+    "calendar-service-invoker",
+    project=project,
+    location=region,
+    name=calendar_service.name,
+    role="roles/run.invoker",
+    member="allUsers",
+)
+
 # Backend secrets exclude RESEND_API_KEY — that is a notification-service concern
 _backend_secret_names = [
     "DB_URL", "DB_USERNAME", "DB_PASSWORD",
     "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
-    "JWT_SIGNING_SECRET", "GOOGLE_CALENDAR_REFRESH_TOKEN",
+    "JWT_SIGNING_SECRET",
     "RABBITMQ_URL",
 ]
 _backend_secret_envs = [
@@ -171,10 +235,6 @@ backend_service = gcp.cloudrunv2.Service(
                     gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
                         name="FRONTEND_URL",
                         value=pulumi.Output.concat("https://", domain),
-                    ),
-                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
-                        name="GOOGLE_CALENDAR_ID",
-                        value="0cae724ce3870858a6213c7f351107891bd3c1265b336d3bfef5693c3a3cdc9d@group.calendar.google.com",
                     ),
                 ],
                 resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
