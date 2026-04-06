@@ -51,8 +51,9 @@ src/main/java/com/gm2dev/interview_hub/
 │   ├── HmacJwtService.java            # HMAC-SHA256 JWT implementation
 │   ├── InterviewService.java          # Interview business logic
 │   ├── ShadowingRequestService.java   # Shadowing request business logic
-│   ├── ProfileService.java            # Profile business logic
-│   └── GoogleCalendarService.java     # Calendar API integration (OAuth2 user credentials)
+│   └── ProfileService.java            # Profile business logic
+├── client/
+│   └── CalendarServiceClient.java     # OpenFeign client for calendar-service (Eureka discovery)
 ```
 
 ## Domain Model
@@ -148,12 +149,12 @@ Only `@gm2dev.com` and `@lcarera.dev` accounts are allowed (configured in `Allow
 
 | Action                        | Calendar Effect                                    |
 |-------------------------------|----------------------------------------------------|
-| Create interview              | Creates event on shared calendar, adds interviewer + candidate as attendees |
-| Update interview              | Updates the Calendar event                         |
-| Delete interview              | Cancels the Calendar event                         |
-| Approve shadowing request     | Adds shadower as attendee to the Calendar event    |
+| Create interview              | Creates event via calendar-service, adds interviewer + candidate as attendees |
+| Update interview              | Updates the Calendar event via calendar-service    |
+| Delete interview              | Cancels the Calendar event via calendar-service    |
+| Approve shadowing request     | Adds shadower as attendee via calendar-service     |
 
-Uses a Google Service Account's own calendar (configurable via `GOOGLE_CALENDAR_ID`). No domain-wide delegation required. Attendees receive email invitations. Calendar API failures are logged but do **not** block the primary database operation.
+Calendar operations are delegated to the `calendar-service` microservice via OpenFeign (`CalendarServiceClient`). Core discovers calendar-service through Eureka. Calendar API failures are logged but do **not** block the primary database operation.
 
 ## Configuration
 
@@ -170,8 +171,7 @@ Key properties from `application.yml`:
 | `app.jwt.expiration-seconds`     | -                      | JWT expiry (default: 3600)          |
 | `app.frontend-url`               | `FRONTEND_URL`         | Frontend URL for OAuth redirects    |
 | `app.google.redirect-uri`        | `APP_BASE_URL`         | Backend URL + `/auth/google/callback` |
-| `app.google.calendar.id`         | `GOOGLE_CALENDAR_ID`   | Shared calendar ID (default: `primary`) |
-| `app.google.calendar.refresh-token` | `GOOGLE_CALENDAR_REFRESH_TOKEN` | OAuth2 refresh token for calendar access |
+| _(calendar config moved to calendar-service)_ | | |
 
 Hibernate uses `ddl-auto: validate` — it will not modify the schema.
 
@@ -214,16 +214,16 @@ Two test styles are used — never mix them:
 
 - `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback`
 - Full Spring context with H2 in-memory database (`ddl-auto: create-drop`)
-- `GoogleCalendarService` is always `@MockitoBean`'d (makes real HTTP calls)
-- `AuthServiceTest`, `GoogleCalendarServiceTest`, `HmacJwtServiceTest`, and `CurrentUserArgumentResolverTest` use `@ExtendWith(MockitoExtension.class)` without Spring context
+- `CalendarServiceClient` (Feign interface) must be `@MockitoBean`'d in ALL `@SpringBootTest` classes (not just service tests — `CandidateServiceTest` needs it too)
+- `AuthServiceTest`, `HmacJwtServiceTest`, and `CurrentUserArgumentResolverTest` use `@ExtendWith(MockitoExtension.class)` without Spring context
 - `AuthService` and `EmailPasswordAuthService` tests mock `JwtService` instead of `JwtEncoder`/`JwtProperties`
 
 ### Code Coverage
 
 JaCoCo enforces **95% branch coverage**. Excluded classes:
 - `InterviewHubApplication`
-- `GoogleCalendarService`
 - `OpenApiConfig`
+- `SecurityConfig`
 - `*MapperImpl`
 
 ## Dependencies
@@ -235,8 +235,8 @@ JaCoCo enforces **95% branch coverage**. Excluded classes:
 | Spring Security OAuth2 Resource Server    | JWT validation                       |
 | Spring Security OAuth2 Client             | Google OAuth flow                    |
 | Spring Boot Actuator                      | Health endpoints                     |
-| Google Calendar API v3                    | Calendar event management            |
-| Google Auth Library (OAuth2 HTTP)         | Google token handling                |
+| Google API Client                         | OAuth token exchange (AuthService)   |
+| Spring Cloud OpenFeign                    | Declarative HTTP client (calendar-service) |
 | MapStruct 1.6.3                           | Entity ↔ DTO mapping                |
 | Lombok                                    | Boilerplate reduction                |
 | Jackson                                   | JSON/JSONB processing                |

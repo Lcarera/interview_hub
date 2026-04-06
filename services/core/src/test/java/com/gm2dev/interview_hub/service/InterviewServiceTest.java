@@ -1,5 +1,6 @@
 package com.gm2dev.interview_hub.service;
 
+import com.gm2dev.interview_hub.client.CalendarServiceClient;
 import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
@@ -10,6 +11,7 @@ import com.gm2dev.interview_hub.dto.UpdateInterviewRequest;
 import com.gm2dev.interview_hub.repository.CandidateRepository;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
+import com.gm2dev.shared.calendar.CalendarEventResponse;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
@@ -50,7 +52,7 @@ class InterviewServiceTest {
     private CandidateRepository candidateRepository;
 
     @MockitoBean
-    private GoogleCalendarService googleCalendarService;
+    private CalendarServiceClient calendarServiceClient;
 
     private Candidate createTestCandidate() {
         return candidateRepository.save(new Candidate(null, "Test Candidate", "candidate@example.com", null, null, null));
@@ -236,8 +238,8 @@ class InterviewServiceTest {
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
-        when(googleCalendarService.createEvent(any(Interview.class)))
-                .thenReturn(new GoogleCalendarService.CalendarEventResult("gcal-event-123", null));
+        when(calendarServiceClient.createEvent(any()))
+                .thenReturn(new CalendarEventResponse("gcal-event-123", null));
 
         Interview result = interviewService.createInterview(
                 new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
@@ -256,7 +258,7 @@ class InterviewServiceTest {
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
-        when(googleCalendarService.createEvent(any(Interview.class)))
+        when(calendarServiceClient.createEvent(any()))
                 .thenThrow(new RuntimeException("Calendar unavailable"));
 
         Interview result = interviewService.createInterview(
@@ -277,8 +279,8 @@ class InterviewServiceTest {
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
-        when(googleCalendarService.createEvent(any(Interview.class)))
-                .thenReturn(new GoogleCalendarService.CalendarEventResult("gcal-upd-event", null));
+        when(calendarServiceClient.createEvent(any()))
+                .thenReturn(new CalendarEventResponse("gcal-upd-event", null));
 
         Interview created = interviewService.createInterview(
                 new CreateInterviewRequest(profileId, candidate.getId(), null, "Java", start, end));
@@ -289,7 +291,7 @@ class InterviewServiceTest {
         interviewService.updateInterview(created.getId(), new UpdateInterviewRequest(
                 candidate.getId(), null, "Kotlin", newStart, newEnd, InterviewStatus.SCHEDULED), profileId);
 
-        verify(googleCalendarService).updateEvent(any(Interview.class));
+        verify(calendarServiceClient).updateEvent(any(), any());
     }
 
     @Test
@@ -303,15 +305,15 @@ class InterviewServiceTest {
         Instant start = Instant.now().plus(1, ChronoUnit.DAYS);
         Instant end = start.plus(1, ChronoUnit.HOURS);
 
-        when(googleCalendarService.createEvent(any(Interview.class)))
-                .thenReturn(new GoogleCalendarService.CalendarEventResult("gcal-del-event", null));
+        when(calendarServiceClient.createEvent(any()))
+                .thenReturn(new CalendarEventResponse("gcal-del-event", null));
 
         Interview created = interviewService.createInterview(
                 new CreateInterviewRequest(profileId, candidate.getId(), null, "Rust", start, end));
 
         interviewService.deleteInterview(created.getId(), profileId);
 
-        verify(googleCalendarService).deleteEvent(eq("gcal-del-event"));
+        verify(calendarServiceClient).deleteEvent(eq("gcal-del-event"));
     }
 
     @Test

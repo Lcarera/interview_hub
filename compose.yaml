@@ -31,6 +31,28 @@ services:
       eureka-server:
         condition: service_started
 
+  calendar-service:
+    image: calendar-service:0.0.1-SNAPSHOT
+    ports:
+      - "8082:8082"
+    environment:
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-primary}
+      GOOGLE_CALENDAR_REFRESH_TOKEN: ${GOOGLE_CALENDAR_REFRESH_TOKEN}
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      eureka-server:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   app:
     image: interview-hub:0.0.1-SNAPSHOT
     ports:
@@ -44,8 +66,6 @@ services:
       JWT_SIGNING_SECRET: ${JWT_SIGNING_SECRET}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
-      GOOGLE_CALENDAR_REFRESH_TOKEN: ${GOOGLE_CALENDAR_REFRESH_TOKEN}
-      GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-primary}
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       EUREKA_URL: http://eureka-server:8761/eureka/
     env_file:
@@ -55,6 +75,8 @@ services:
       eureka-server:
         condition: service_started
       rabbitmq:
+        condition: service_healthy
+      calendar-service:
         condition: service_healthy
 
   frontend:
