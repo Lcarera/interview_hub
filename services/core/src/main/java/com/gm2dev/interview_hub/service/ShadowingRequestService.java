@@ -7,10 +7,12 @@ import java.util.UUID;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.gm2dev.interview_hub.client.CalendarServiceClient;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.Profile;
 import com.gm2dev.interview_hub.domain.ShadowingRequest;
 import com.gm2dev.interview_hub.domain.ShadowingRequestStatus;
+import com.gm2dev.shared.calendar.AttendeeRequest;
 import com.gm2dev.shared.email.EmailMessage;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
@@ -31,7 +33,7 @@ public class ShadowingRequestService {
     private final ShadowingRequestRepository shadowingRequestRepository;
     private final InterviewRepository interviewRepository;
     private final ProfileRepository profileRepository;
-    private final GoogleCalendarService googleCalendarService;
+    private final CalendarServiceClient calendarServiceClient;
     private final EmailPublisher emailPublisher;
 
     @Transactional
@@ -69,7 +71,9 @@ public class ShadowingRequestService {
             Interview interview = request.getInterview();
             if (interview.getGoogleEventId() != null) {
                 try {
-                    googleCalendarService.removeAttendee(interview.getGoogleEventId(), request.getShadower().getEmail());
+                    calendarServiceClient.removeAttendee(
+                            interview.getGoogleEventId(),
+                            new AttendeeRequest(interview.getGoogleEventId(), request.getShadower().getEmail()));
                 } catch (Exception e) {
                     log.warn("Failed to remove shadower {} from Calendar event {}: {}",
                             request.getShadower().getEmail(), interview.getGoogleEventId(), e.getMessage());
@@ -97,8 +101,9 @@ public class ShadowingRequestService {
         Interview interview = request.getInterview();
         if (interview.getGoogleEventId() != null) {
             try {
-                googleCalendarService.addAttendee(interview.getGoogleEventId(),
-                        request.getShadower().getEmail());
+                calendarServiceClient.addAttendee(
+                        interview.getGoogleEventId(),
+                        new AttendeeRequest(interview.getGoogleEventId(), request.getShadower().getEmail()));
             } catch (Exception e) {
                 log.warn("Failed to add shadower {} to Calendar event {}: {}",
                         request.getShadower().getEmail(), interview.getGoogleEventId(),
@@ -134,7 +139,9 @@ public class ShadowingRequestService {
             Interview interview = request.getInterview();
             if (interview.getGoogleEventId() != null) {
                 try {
-                    googleCalendarService.removeAttendee(interview.getGoogleEventId(), request.getShadower().getEmail());
+                    calendarServiceClient.removeAttendee(
+                            interview.getGoogleEventId(),
+                            new AttendeeRequest(interview.getGoogleEventId(), request.getShadower().getEmail()));
                 } catch (Exception e) {
                     log.warn("Failed to remove shadower {} from Calendar event {}: {}",
                             request.getShadower().getEmail(), interview.getGoogleEventId(), e.getMessage());

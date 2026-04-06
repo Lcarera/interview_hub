@@ -1,15 +1,19 @@
 package com.gm2dev.interview_hub.service;
 
+import com.gm2dev.interview_hub.client.CalendarServiceClient;
 import com.gm2dev.interview_hub.domain.Candidate;
 import com.gm2dev.interview_hub.domain.Interview;
 import com.gm2dev.interview_hub.domain.InterviewStatus;
 import com.gm2dev.interview_hub.domain.Profile;
+import com.gm2dev.interview_hub.domain.ShadowingRequestStatus;
 import com.gm2dev.interview_hub.dto.CreateInterviewRequest;
 import com.gm2dev.interview_hub.dto.UpdateInterviewRequest;
 import com.gm2dev.interview_hub.mapper.InterviewMapper;
 import com.gm2dev.interview_hub.repository.CandidateRepository;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
 import com.gm2dev.interview_hub.repository.ProfileRepository;
+import com.gm2dev.shared.calendar.CalendarEventRequest;
+import com.gm2dev.shared.calendar.CalendarEventResponse;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +24,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -30,7 +36,7 @@ public class InterviewService {
     private final InterviewRepository interviewRepository;
     private final ProfileRepository profileRepository;
     private final CandidateRepository candidateRepository;
-    private final GoogleCalendarService googleCalendarService;
+    private final CalendarServiceClient calendarServiceClient;
     private final InterviewMapper interviewMapper;
 
     @Transactional
@@ -60,7 +66,7 @@ public class InterviewService {
         interview = interviewRepository.save(interview);
 
         try {
-            GoogleCalendarService.CalendarEventResult calendarResult = googleCalendarService.createEvent(interview);
+            CalendarEventResponse calendarResult = calendarServiceClient.createEvent(toCalendarRequest(interview));
             interview.setGoogleEventId(calendarResult.eventId());
             interview = interviewRepository.save(interview);
         } catch (Exception e) {
@@ -106,7 +112,7 @@ public class InterviewService {
 
         if (interview.getGoogleEventId() != null) {
             try {
-                googleCalendarService.updateEvent(interview);
+                calendarServiceClient.updateEvent(interview.getGoogleEventId(), toCalendarRequest(interview));
             } catch (Exception e) {
                 log.warn("Failed to update Google Calendar event {}: {}", interview.getGoogleEventId(), e.getMessage());
             }
@@ -124,13 +130,36 @@ public class InterviewService {
 
         if (interview.getGoogleEventId() != null) {
             try {
-                googleCalendarService.deleteEvent(interview.getGoogleEventId());
+                calendarServiceClient.deleteEvent(interview.getGoogleEventId());
             } catch (Exception e) {
                 log.warn("Failed to delete Google Calendar event {}: {}", interview.getGoogleEventId(), e.getMessage());
             }
         }
 
         interviewRepository.delete(interview);
+    }
+
+    private CalendarEventRequest toCalendarRequest(Interview interview) {
+        Candidate candidate = interview.getCandidate();
+        List<String> shadowerEmails = interview.getShadowingRequests() == null ? List.of() :
+                interview.getShadowingRequests().stream()
+                        .filter(sr -> ShadowingRequestStatus.APPROVED.equals(sr.getStatus()))
+                        .map(sr -> sr.getShadower().getEmail())
+                        .filter(Objects::nonNull)
+                        .toList();
+        return new CalendarEventRequest(
+                interview.getGoogleEventId(),
+                interview.getTechStack(),
+                candidate != null ? candidate.getName() : null,
+                candidate != null ? candidate.getEmail() : null,
+                candidate != null ? candidate.getLinkedinUrl() : null,
+                candidate != null ? candidate.getPrimaryArea() : null,
+                candidate != null ? candidate.getFeedbackLink() : null,
+                interview.getInterviewer().getEmail(),
+                shadowerEmails,
+                interview.getStartTime(),
+                interview.getEndTime()
+        );
     }
 
     static String buildSummary(Interview interview) {
