@@ -147,14 +147,15 @@ public class InterviewService {
                         .map(sr -> sr.getShadower().getEmail())
                         .filter(Objects::nonNull)
                         .toList();
+        // candidate is guaranteed non-null: candidateId is @NotNull on Create/UpdateInterviewRequest
         return new CalendarEventRequest(
                 interview.getGoogleEventId(),
                 interview.getTechStack(),
-                candidate != null ? candidate.getName() : null,
-                candidate != null ? candidate.getEmail() : null,
-                candidate != null ? candidate.getLinkedinUrl() : null,
-                candidate != null ? candidate.getPrimaryArea() : null,
-                candidate != null ? candidate.getFeedbackLink() : null,
+                candidate.getName(),
+                candidate.getEmail(),
+                candidate.getLinkedinUrl(),
+                candidate.getPrimaryArea(),
+                candidate.getFeedbackLink(),
                 interview.getInterviewer().getEmail(),
                 shadowerEmails,
                 interview.getStartTime(),
