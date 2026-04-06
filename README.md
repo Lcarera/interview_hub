@@ -14,18 +14,28 @@ A fullstack application for managing technical interviews and shadowing requests
            |                                  |
   +--------v-----------+          +-----------v----------+
   | GCP Cloud Run      |          | GCP Cloud Run        |
-  | Frontend           |          | Backend              |
+  | Frontend           |          | Backend (core)       |
   | Angular + nginx :80|          | Spring Boot :8080    |
   +--------------------+          +-----------+----------+
+                                              |
+                                  +-----------v-----------+
+                                  | Eureka Service        |
+                                  | Discovery :8761       |
+                                  +---+---------------+---+
+                                      |               |
+                          +-----------v---+   +-------v-----------+
+                          | Calendar      |   | Notification      |
+                          | Service :8082 |   | Service           |
+                          | Google Cal API|   | RabbitMQ + Resend |
+                          +---------------+   +-------------------+
                                               |
                                   +-----------v-----------+
                                   | Supabase              |
                                   | PostgreSQL            |
                                   +-----+-----------+-----+
-                                        |           |
-                                   Google       Google
-                                   OAuth 2.0   Calendar
-                                                API v3
+                                        |
+                                   Google
+                                   OAuth 2.0
 ```
 
 ## Tech Stack
@@ -98,29 +108,34 @@ A fullstack application for managing technical interviews and shadowing requests
 
 ```
 interview_hub/
-├── src/                  # Spring Boot backend (Java 25)
-├── frontend/             # Angular 21 SPA
-├── infra/                # Pulumi IaC (GCP Cloud Run, Secret Manager, etc.)
-├── supabase/migrations/  # PostgreSQL schema migrations
-├── postman/              # Postman collection for API testing
-├── .github/workflows/    # CI/CD pipeline (GitHub Actions)
-├── compose.yaml          # Local Docker Compose (backend + frontend)
-├── build.gradle          # Gradle build config
-└── CLAUDE.md             # AI assistant instructions
+├── services/
+│   ├── core/                 # Spring Boot backend (Java 25)
+│   ├── shared/               # Shared DTOs between services
+│   ├── eureka-server/        # Netflix Eureka service discovery
+│   ├── notification-service/ # Email notifications (RabbitMQ + Resend)
+│   └── calendar-service/     # Google Calendar API microservice
+├── frontend/                 # Angular 21 SPA
+├── infra/                    # Pulumi IaC (GCP Cloud Run, Secret Manager, etc.)
+├── supabase/migrations/      # PostgreSQL schema migrations
+├── postman/                  # Postman collection for API testing
+├── .github/workflows/        # CI/CD pipeline (GitHub Actions)
+├── compose.yaml              # Local Docker Compose (all services)
+├── build.gradle              # Root Gradle build config
+└── CLAUDE.md                 # AI assistant instructions
 ```
 
 See per-module documentation:
-- [Backend (src/)](src/README.md)
+- [Backend (core)](services/core/src/README.md)
 - [Frontend](frontend/README.md)
 - [Infrastructure](infra/README.md)
 
 ## CI/CD
 
-The GitHub Actions workflow (`.github/workflows/deploy.yml`) triggers on every push to `main`:
+The GitHub Actions workflow (`.github/workflows/deploy.yml`) triggers on push to `prod`:
 
-1. Builds the backend image with `./gradlew bootBuildImage`
-2. Builds the frontend image with Docker (multi-stage: Bun + nginx)
-3. Pushes both images to GCP Artifact Registry (tagged with git SHA)
+1. Detects which services changed (backend, frontend, eureka, notification, calendar, infra, migrations)
+2. Builds changed service images with `./gradlew :services:<name>:bootBuildImage`
+3. Pushes images to GCP Artifact Registry (tagged with git SHA)
 4. Deploys to GCP Cloud Run via `pulumi up`
 
 **Required GitHub Secrets:**

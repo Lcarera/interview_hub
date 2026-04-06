@@ -50,7 +50,9 @@ If test results seem stale or inconsistent, use `./gradlew clean test --no-build
 ./gradlew :services:core:test          # core only
 ./gradlew :services:shared:test        # shared DTOs only
 ./gradlew :services:eureka-server:test # Eureka server only
+./gradlew :services:calendar-service:test  # calendar-service only
 ./gradlew :services:core:bootBuildImage # build core Docker image
+./gradlew :services:calendar-service:bootBuildImage # build calendar Docker image
 ```
 
 **Frontend commands (from `frontend/` directory, requires Bun):**
@@ -69,7 +71,8 @@ All under `src/main/java/com/gm2dev/interview_hub/`:
 
 - `domain/` - JPA entities (Candidate, Interview, Profile, ShadowingRequest) and enums (InterviewStatus, ShadowingRequestStatus)
 - `repository/` - Spring Data JPA repositories (CandidateRepository, InterviewRepository, ProfileRepository, ShadowingRequestRepository)
-- `service/` - Business logic (CandidateService, InterviewService, ShadowingRequestService, AuthService, EmailPasswordAuthService, EmailService, EmailQueueService, GoogleCalendarService, JwtService, HmacJwtService)
+- `service/` - Business logic (CandidateService, InterviewService, ShadowingRequestService, AuthService, EmailPasswordAuthService, EmailService, EmailQueueService, JwtService, HmacJwtService)
+- `client/` - OpenFeign clients (CalendarServiceClient — calls calendar-service by Eureka name)
 - `dto/` - Data transfer objects (AuthResponse, CandidateDto, CandidateRequest, CreateInterviewRequest, UpdateInterviewRequest, InterviewDto, ProfileDto, RejectShadowingRequest, CurrentUser, etc.)
 - `mapper/` - MapStruct mappers (CandidateMapper, InterviewMapper, ProfileMapper, ShadowingRequestMapper)
 - `controller/` - REST controllers (CandidateController, InterviewController, ShadowingRequestController, AuthController, InternalEmailController, GlobalExceptionHandler)
@@ -149,8 +152,10 @@ The application models a four-entity system:
 - `CurrentUserArgumentResolver` automatically resolves `CurrentUser` record from JWT claims in controller method parameters
 
 **Google Calendar Integration:**
-- Uses OAuth2 user credentials (`GOOGLE_CALENDAR_REFRESH_TOKEN`) to manage events on a shared calendar (configurable via `GOOGLE_CALENDAR_ID`, defaults to `"primary"`)
-- `GoogleCalendarService.buildCalendarClient()` builds a `UserCredentials` instance from `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALENDAR_REFRESH_TOKEN`; obtain the refresh token via `scripts/get-calendar-token.ts`
+- Calendar operations are handled by the `calendar-service` microservice (port 8082). `core` calls it via OpenFeign (`CalendarServiceClient`) using Eureka service discovery.
+- `calendar-service` uses OAuth2 user credentials (`GOOGLE_CALENDAR_REFRESH_TOKEN`) to manage events on a shared calendar (configurable via `GOOGLE_CALENDAR_ID`, defaults to `"primary"`)
+- `GoogleCalendarService.buildCalendarClient()` in `calendar-service` builds a `UserCredentials` instance from `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALENDAR_REFRESH_TOKEN`; obtain the refresh token via `scripts/get-calendar-token.ts`
+- **Google API client in core:** `google-api-client` and `google-http-client-jackson2` must stay in core's `build.gradle` — `AuthService` uses them for OAuth token exchange. Only `google-api-services-calendar` and `google-auth-library-oauth2-http` moved to `calendar-service`.
 - Interviewers, candidates, and approved shadowers are added as attendees and receive email invitations (`sendUpdates="all"`)
 - Creating an interview → creates a Google Calendar event with interviewer and candidate as attendees
 - Updating an interview → updates the Calendar event (preserves approved shadowers as attendees)
@@ -225,14 +230,14 @@ Two distinct test styles are used — never mix them:
 **Service Tests (`@SpringBootTest`):**
 - `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback` — full Spring context with H2
 - **`application-test.yml` must stay in sync with `application.yml`** — when adding/removing `@ConfigurationProperties` classes, update both files; Spring Boot silently ignores unrecognized YAML keys, so stale test config never fails
-- `GoogleCalendarService` is always `@MockitoBean`'d since it makes real HTTP calls
+- `CalendarServiceClient` (Feign interface) must be `@MockitoBean`'d in ALL `@SpringBootTest` classes in core (not just service tests — `CandidateServiceTest` needs it too)
 - `AuthServiceTest`, `GoogleCalendarServiceTest`, `EmailQueueServiceTest`, `HmacJwtServiceTest`, and `CurrentUserArgumentResolverTest` use pure `@ExtendWith(MockitoExtension.class)` (no Spring context)
 - `AuthService` and `GoogleCalendarService` have package-private methods (`exchangeCodeForTokens`, `buildCalendarClient`) specifically to enable `spy()`-based interception without reflection
 - `AuthService` and `EmailPasswordAuthService` tests mock `JwtService` instead of `JwtEncoder`/`JwtProperties`
 
 **Frontend Tests:** Vitest with jsdom environment. Run with `bun run test` from `frontend/`.
 
-**Coverage:** JaCoCo enforces 95% branch coverage. `InterviewHubApplication`, `GoogleCalendarService`, `OpenApiConfig`, `*MapperImpl`, `CloudTasksConfig`, `CloudTasksAuthenticationFilter`, `SecurityConfig`, and `EmailQueueService` are excluded from coverage checks (Cloud Tasks integration classes are excluded due to complexity of testing OIDC token verification in unit tests).
+**Coverage:** JaCoCo enforces 95% branch coverage. `InterviewHubApplication`, `OpenApiConfig`, `*MapperImpl`, and `SecurityConfig` are excluded from coverage checks.
 
 ## Environment Variables
 
@@ -247,8 +252,8 @@ Required for runtime:
 - `FRONTEND_URL` - Frontend URL for OAuth callback redirects (default in compose: http://localhost)
 - `RESEND_API_KEY` - Resend API key for sending emails
 - `MAIL_FROM` - From email address (default: noreply@lcarera.dev)
-- `GOOGLE_CALENDAR_REFRESH_TOKEN` - OAuth2 refresh token for Google Calendar access (obtained via `scripts/get-calendar-token.ts`)
-- `GOOGLE_CALENDAR_ID` - Google Calendar ID for shared event calendar (default: `primary`)
+- `GOOGLE_CALENDAR_REFRESH_TOKEN` - OAuth2 refresh token for Google Calendar access (obtained via `scripts/get-calendar-token.ts`) — **configured on `calendar-service`, not core**
+- `GOOGLE_CALENDAR_ID` - Google Calendar ID for shared event calendar (default: `primary`) — **configured on `calendar-service`, not core**
 - `GCP_PROJECT_ID` - GCP project ID for Cloud Tasks queue path
 - `GCP_LOCATION` - GCP region for Cloud Tasks (default: us-central1)
 - `CLOUD_TASKS_QUEUE_ID` - Cloud Tasks queue name (default: email-queue)

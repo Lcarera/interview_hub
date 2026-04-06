@@ -19,7 +19,7 @@ Pulumi provisions the following GCP resources:
 │ Region: southamerica-east1                                  │
 │                                                             │
 │  ┌──────────────────┐                                       │
-│  │ Artifact Registry │ ◄── Docker images (backend/frontend) │
+│  │ Artifact Registry │ ◄── Docker images (5 services)       │
 │  │ interview-hub     │                                       │
 │  └──────────────────┘                                       │
 │                                                             │
@@ -28,6 +28,18 @@ Pulumi provisions the following GCP resources:
 │  │ backend (:8080)  │    │ frontend (:80)   │               │
 │  │ (Spring Boot)    │    │ (nginx + Angular)│               │
 │  └────────┬─────────┘    └──────────────────┘               │
+│           │                                                 │
+│  ┌────────┴─────────┐    ┌──────────────────┐               │
+│  │ Cloud Run        │    │ Cloud Run        │               │
+│  │ eureka (:8761)   │    │ calendar (:8080) │               │
+│  │ (Service Disc.)  │    │ (Google Cal API) │               │
+│  └──────────────────┘    └──────────────────┘               │
+│                                                             │
+│  ┌──────────────────┐                                       │
+│  │ Cloud Run        │                                       │
+│  │ notification     │                                       │
+│  │ (RabbitMQ+Resend)│                                       │
+│  └──────────────────┘                                       │
 │           │                                                 │
 │  ┌────────▼─────────┐                                       │
 │  │ Secret Manager   │                                       │
@@ -55,7 +67,7 @@ Pulumi provisions the following GCP resources:
 | `secrets.py`     | Creates 8 GCP Secret Manager secrets (DB, OAuth, JWT, Resend API key, Calendar refresh token) |
 | `registry.py`    | Creates Artifact Registry Docker repository                  |
 | `cloudtasks.py`  | Creates Cloud Tasks queue for async email with rate limiting |
-| `cloudrun.py`    | Deploys backend and frontend Cloud Run services              |
+| `cloudrun.py`    | Deploys 5 Cloud Run services (backend, frontend, eureka, notification, calendar) |
 
 ## GCP Resources
 
@@ -114,8 +126,17 @@ Cloud Tasks sends an OIDC token in the `Authorization` header when calling the w
 - Resources: 1 GiB memory, 1000m CPU
 - Min instances: 0 (scales to zero)
 - Health check: startup probe to `/actuator/health`
-- Env vars: 8 secrets from Secret Manager + `APP_BASE_URL`, `FRONTEND_URL`, `MAIL_FROM`, `GOOGLE_CALENDAR_ID`, `GCP_PROJECT_ID`, `GCP_LOCATION`, `CLOUD_TASKS_QUEUE_ID`, `CLOUD_TASKS_ENABLED`, `CLOUD_TASKS_SA_EMAIL`
+- Env vars: 7 secrets from Secret Manager + `APP_BASE_URL`, `FRONTEND_URL`, `EUREKA_URL`
 - IAM: `allUsers` invoker (publicly accessible)
+
+**Calendar Service (`interview-hub-calendar`):**
+- Image: set via CI/CD
+- Port: 8080
+- Resources: 512 MiB memory, 500m CPU
+- Min instances: 0 (scales to zero — cold starts acceptable for calendar ops)
+- Health check: startup probe to `/actuator/health`
+- Env vars: 3 secrets from Secret Manager (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALENDAR_REFRESH_TOKEN`) + `EUREKA_URL`, `GOOGLE_CALENDAR_ID`
+- IAM: `allUsers` invoker
 
 **Frontend (`interview-hub-frontend`):**
 - Image: set via CI/CD
@@ -148,11 +169,14 @@ The `domain` config sets `FRONTEND_URL` on the backend. The `backend_domain` con
 
 ## Stack Outputs
 
-| Output          | Description                                              |
-|-----------------|----------------------------------------------------------|
-| `registry_url`  | Artifact Registry URL for pushing Docker images          |
-| `backend_url`   | Cloud Run URL for the backend service                    |
-| `frontend_url`  | Cloud Run URL for the frontend service                   |
+| Output             | Description                                              |
+|--------------------|----------------------------------------------------------|
+| `registry_url`     | Artifact Registry URL for pushing Docker images          |
+| `backend_url`      | Cloud Run URL for the backend service                    |
+| `frontend_url`     | Cloud Run URL for the frontend service                   |
+| `eureka_url`       | Cloud Run URL for the Eureka service discovery           |
+| `notification_url` | Cloud Run URL for the notification service               |
+| `calendar_url`     | Cloud Run URL for the calendar service                   |
 
 ## Deployment
 
