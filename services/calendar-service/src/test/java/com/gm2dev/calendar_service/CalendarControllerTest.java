@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -27,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(CalendarController.class)
+@ActiveProfiles("test")
 class CalendarControllerTest {
 
     @Autowired
@@ -107,11 +109,11 @@ class CalendarControllerTest {
     }
 
     @Test
-    void deleteEventsEventIdAttendees_removesAttendeeAndReturns204() throws Exception {
+    void postEventsEventIdAttendeesRemove_removesAttendeeAndReturns204() throws Exception {
         AttendeeRequest attendeeRequest = new AttendeeRequest("evt-abc123", "shadow@gm2dev.com");
         doNothing().when(googleCalendarService).removeAttendee(any());
 
-        mockMvc.perform(delete("/events/evt-abc123/attendees")
+        mockMvc.perform(post("/events/evt-abc123/attendees/remove")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(attendeeRequest)))
                 .andExpect(status().isNoContent());
@@ -120,13 +122,43 @@ class CalendarControllerTest {
     }
 
     @Test
-    void postEvents_whenCalendarServiceThrows_returns500() throws Exception {
+    void postEvents_whenCalendarServiceThrowsIOException_returns500() throws Exception {
         CalendarEventRequest request = buildRequest(null);
-        when(googleCalendarService.createEvent(any())).thenThrow(new RuntimeException("Google Calendar unavailable"));
+        when(googleCalendarService.createEvent(any())).thenThrow(new java.io.IOException("Google Calendar unavailable"));
 
         mockMvc.perform(post("/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request)))
                 .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void putEventsEventId_whenEventIdMismatch_returns400() throws Exception {
+        CalendarEventRequest request = buildRequest("evt-different");
+
+        mockMvc.perform(put("/events/evt-abc123")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void postEventsEventIdAttendees_whenEventIdMismatch_returns400() throws Exception {
+        AttendeeRequest attendeeRequest = new AttendeeRequest("evt-different", "shadow@gm2dev.com");
+
+        mockMvc.perform(post("/events/evt-abc123/attendees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(attendeeRequest)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void postEventsEventIdAttendeesRemove_whenEventIdMismatch_returns400() throws Exception {
+        AttendeeRequest attendeeRequest = new AttendeeRequest("evt-different", "shadow@gm2dev.com");
+
+        mockMvc.perform(post("/events/evt-abc123/attendees/remove")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(attendeeRequest)))
+                .andExpect(status().isBadRequest());
     }
 }

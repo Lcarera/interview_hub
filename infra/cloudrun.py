@@ -140,7 +140,7 @@ calendar_service = gcp.cloudrunv2.Service(
     name="interview-hub-calendar",
     location=region,
     project=project,
-    ingress="INGRESS_TRAFFIC_ALL",
+    ingress="INGRESS_TRAFFIC_INTERNAL_ONLY",
     scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=0),
     opts=pulumi.ResourceOptions(depends_on=[secret_access_binding]),
     template=gcp.cloudrunv2.ServiceTemplateArgs(
@@ -182,7 +182,7 @@ gcp.cloudrunv2.ServiceIamMember(
     location=region,
     name=calendar_service.name,
     role="roles/run.invoker",
-    member="allUsers",
+    member=cloudrun_sa.email.apply(lambda e: f"serviceAccount:{e}"),
 )
 
 # Backend secrets exclude RESEND_API_KEY — that is a notification-service concern

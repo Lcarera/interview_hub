@@ -25,6 +25,6 @@ public interface CalendarServiceClient {
     @PostMapping("/events/{eventId}/attendees")
     void addAttendee(@PathVariable("eventId") String eventId, @RequestBody AttendeeRequest request);
 
-    @DeleteMapping("/events/{eventId}/attendees")
+    @PostMapping("/events/{eventId}/attendees/remove")
     void removeAttendee(@PathVariable("eventId") String eventId, @RequestBody AttendeeRequest request);
 }
