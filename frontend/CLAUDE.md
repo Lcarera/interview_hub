@@ -160,7 +160,7 @@ Multi-stage Dockerfile:
 1. **Build stage** — `oven/bun:1.2-alpine`: installs deps, runs `bunx ng build --configuration production`
 2. **Serve stage** — `nginx:1.27-alpine`: copies built assets to `/usr/share/nginx/html`, applies `nginx.conf`
 
-The nginx config proxies API routes to `http://app:8080` (the backend Docker service) and serves all other paths as SPA fallback (`try_files $uri $uri/ /index.html`).
+The nginx config proxies API routes to `http://api-gateway:8080` (the API Gateway Docker service) and serves all other paths as SPA fallback (`try_files $uri $uri/ /index.html`).
 
 ## Build Budgets
 
