@@ -43,6 +43,14 @@ class SecurityConfigTest {
     }
 
     @Test
+    void actuatorInfoShouldRequireAuth() {
+        webTestClient.get()
+            .uri("/actuator/info")
+            .exchange()
+            .expectStatus().isUnauthorized();
+    }
+
+    @Test
     void protectedEndpointWithoutTokenShouldReturn401() {
         webTestClient.get()
             .uri("/interviews")

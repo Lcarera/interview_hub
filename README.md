@@ -29,12 +29,12 @@ A fullstack application for managing technical interviews and shadowing requests
              +-----------v-----+  +-----------v-----+  +----------v--------+
              | Supabase        |  | Eureka Server   |  | Notification Svc  |
              | PostgreSQL      |  | Service Registry|  | RabbitMQ + Resend |
-             +-----------+-----+  +-----------------+  +-------------------+
-                         |
-                    +----+----+
-                    |         |
-               Google    Google
-               OAuth 2.0 Calendar
+             +-----------+-----+  +-----------+-----+  +-------------------+
+                         |                    |
+                    +----+----+    +----------v--------+
+                    |         |    | Calendar Service  |
+               Google    Google    | Google Cal API v3 |
+               OAuth 2.0 Calendar  +-------------------+
                           API v3
 ```
 
@@ -118,6 +118,7 @@ interview_hub/
 │   ├── api-gateway/          # Spring Cloud Gateway (WebFlux, JWT validation)
 │   ├── eureka-server/        # Netflix Eureka service registry
 │   ├── notification-service/ # Email processing via RabbitMQ + Resend
+│   ├── calendar-service/     # Google Calendar API microservice
 │   └── shared/               # Shared DTOs between services
 ├── frontend/                 # Angular 21 SPA
 ├── infra/                    # Pulumi IaC (GCP Cloud Run, Secret Manager, etc.)
@@ -130,6 +131,7 @@ interview_hub/
 ```
 
 See per-module documentation:
+- [Backend (core)](services/core/src/README.md)
 - [Frontend](frontend/README.md)
 - [Infrastructure](infra/README.md)
 
@@ -137,7 +139,7 @@ See per-module documentation:
 
 The GitHub Actions workflow (`.github/workflows/deploy.yml`) triggers on every push to `prod`:
 
-1. Detects which services changed (backend, frontend, eureka, notification, gateway, infra, migrations)
+1. Detects which services changed (backend, frontend, eureka, notification, gateway, calendar, infra, migrations)
 2. Builds only changed service images with `./gradlew :services:<module>:bootBuildImage`
 3. Pushes images to GCP Artifact Registry (tagged with git SHA)
 4. Runs Supabase migrations if new SQL files were added

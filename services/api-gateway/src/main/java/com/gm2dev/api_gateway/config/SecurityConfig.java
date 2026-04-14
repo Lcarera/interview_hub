@@ -1,6 +1,5 @@
 package com.gm2dev.api_gateway.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
@@ -16,14 +15,17 @@ import java.nio.charset.StandardCharsets;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
-    @Value("${app.jwt.signing-secret}")
-    private String signingSecret;
+    private final JwtProperties jwtProperties;
+
+    public SecurityConfig(JwtProperties jwtProperties) {
+        this.jwtProperties = jwtProperties;
+    }
 
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
             .authorizeExchange(exchanges -> exchanges
-                .pathMatchers("/auth/**", "/actuator/**").permitAll()
+                .pathMatchers("/auth/**", "/actuator/health").permitAll()
                 .anyExchange().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
@@ -36,7 +38,7 @@ public class SecurityConfig {
     @Bean
     public ReactiveJwtDecoder jwtDecoder() {
         SecretKeySpec key = new SecretKeySpec(
-            signingSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            jwtProperties.signingSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
         return NimbusReactiveJwtDecoder.withSecretKey(key).build();
     }
 }

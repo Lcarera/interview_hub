@@ -11,8 +11,8 @@
 
 | Service | How to run | Notes |
 |---------|-----------|-------|
-| All tests | `./gradlew test` | Runs core, api-gateway, eureka-server, notification-service, shared tests. |
-| Backend (core) tests | `./gradlew :services:core:test` | Uses H2 in-memory DB; no external services needed. `GoogleCalendarService` is always mocked. |
+| All tests | `./gradlew test` | Runs core, api-gateway, eureka-server, notification-service, calendar-service, shared tests. |
+| Backend (core) tests | `./gradlew :services:core:test` | Uses H2 in-memory DB; no external services needed. `CalendarServiceClient` is always mocked. |
 | API Gateway tests | `./gradlew :services:api-gateway:test` | WebFlux/reactive tests; Eureka disabled in test profile. |
 | Backend full build | `./gradlew :services:core:build` | Includes tests + JaCoCo coverage verification (95% branch min). |
 | Frontend dev server | `cd frontend && bun run start` | Serves on port 4200; calls backend on `localhost:8080` in dev mode. |
@@ -37,8 +37,8 @@ Docker must be started before building: `sudo dockerd &` (and `sudo chmod 666 /v
 - Backend tests use `@ActiveProfiles("test")` which activates `application-test.yml` (H2 database, dummy OAuth/JWT config). No real database or Google credentials are needed for tests.
 - The Gradle wrapper downloads Gradle 9.3.0 on first run (~10s). Subsequent builds are faster.
 - Frontend has a duplicate `@angular/material` entry in `package.json` (dependencies + devDependencies); `bun install` warns but works fine.
-- JaCoCo coverage threshold is 95% branch coverage (excludes `InterviewHubApplication`, `GoogleCalendarService`, and MapStruct-generated `*MapperImpl` classes).
-- Running the full application requires external secrets (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `JWT_SIGNING_SECRET`, `GOOGLE_CALENDAR_REFRESH_TOKEN`) — see `CLAUDE.md` for the full list.
+- JaCoCo coverage threshold is 95% branch coverage (excludes `InterviewHubApplication`, `OpenApiConfig`, `SecurityConfig`, and MapStruct-generated `*MapperImpl` classes).
+- Running the full application requires external secrets (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `JWT_SIGNING_SECRET`) — see `CLAUDE.md` for the full list. Calendar secrets (`GOOGLE_CALENDAR_REFRESH_TOKEN`, `GOOGLE_CALENDAR_ID`) are configured on `calendar-service`, not core.
 - **This line and `CLAUDE.md` Environment Variables must stay in sync** — if env vars change, update both files.
 - **Config class deletions** — when removing a `@ConfigurationProperties` class, grep all usages (not just imports) before deleting; also update `application-test.yml` alongside `application.yml`.
 - Login requires a Google account with a domain in the `AllowedDomains.ALLOWED_DOMAINS` allowlist (`@gm2dev.com`, `@lcarera.dev`).

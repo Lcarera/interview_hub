@@ -1,0 +1,15 @@
+app:
+  google:
+    client-id: fake-client-id
+    client-secret: fake-client-secret
+    calendar:
+      id: primary
+      refresh-token: fake-refresh-token
+
+eureka:
+  client:
+    enabled: false
+
+logging:
+  level:
+    com.gm2dev.calendar_service: DEBUG

@@ -19,7 +19,7 @@ pulumi stack output        # show exported values (registry_url, backend_url, fr
 - `iam.py` — Cloud Run service account (`interview-hub-cloudrun`) with Secret Manager access.
 - `secrets.py` — GCP Secret Manager secrets (8 secrets: DB creds, Google OAuth, JWT, Resend API key, Google Calendar refresh token). Secret values are set manually via `gcloud`, not in code.
 - `cloudtasks.py` — Cloud Tasks queue (`email-queue`) for async email sending with 2 req/s rate limiting. Grants enqueuer role to Cloud Run SA.
-- `cloudrun.py` — Cloud Run v2 services (`eureka-server`, `notification-service`, `api-gateway`, `backend`, `frontend`) with env vars, health probes, and public invoker bindings.
+- `cloudrun.py` — Six Cloud Run v2 services (`backend`, `frontend`, `eureka-server`, `notification-service`, `api-gateway`, `calendar-service`) with env vars, health probes, and invoker bindings.
 
 ## Config Values (`Pulumi.prod.yaml`)
 
@@ -27,11 +27,12 @@ pulumi stack output        # show exported values (registry_url, backend_url, fr
 - `interview-hub-infra:domain` — Frontend custom domain
 - `interview-hub-infra:backend_domain` — Backend custom domain
 - `interview-hub-infra:cloudtasks_worker_url` — Cloud Run service URL for Cloud Tasks HTTP targets (bypasses Cloudflare, ensures OIDC audience matches)
-- `interview-hub-infra:backend_image` / `frontend_image` / `eureka_image` / `notification_image` / `gateway_image` — Set by CI at deploy time; fallback to `"placeholder"` for secrets-only `pulumi up`
+- `interview-hub-infra:backend_image` / `frontend_image` / `eureka_image` / `notification_image` / `gateway_image` / `calendar_image` — Set by CI at deploy time; fallback to `"placeholder"` for secrets-only `pulumi up`
 
 ## Cloud Run Scaling Notes
 
 - **Eureka server:** `min_instance_count=1` required — heartbeat model breaks on scale-to-zero; all registrations are lost
+- **API Gateway:** `min_instance_count=1` required — public entry point; scale-to-zero adds cold start latency on every idle request
 - **RabbitMQ consumers:** `min_instance_count=1` required — persistent AMQP TCP connection; scale-to-zero = silent queue backlog
 - **RabbitMQ on GCP:** no managed offering; use CloudAMQP free tier (1M msg/month). Store AMQP URL as a Secret Manager secret (`RABBITMQ_URL`).
 - **Eureka URL env var:** must include `/eureka/` suffix — `eureka_service.uri.apply(lambda u: u + "/eureka/")`
