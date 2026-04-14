@@ -14,6 +14,7 @@ backend_image = config.get("backend_image") or "placeholder"
 frontend_image = config.get("frontend_image") or "placeholder"
 eureka_image = config.get("eureka_image") or "placeholder"
 notification_image = config.get("notification_image") or "placeholder"
+gateway_image = config.get("gateway_image") or "placeholder"
 backend_domain = config.get("backend_domain") or "i-hub-be.lcarera.dev"
 
 eureka_service = gcp.cloudrunv2.Service(
@@ -117,6 +118,68 @@ gcp.cloudrunv2.ServiceIamMember(
     project=project,
     location=region,
     name=notification_service.name,
+    role="roles/run.invoker",
+    member="allUsers",
+)
+
+_gateway_secret_envs = [
+    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+        name="JWT_SIGNING_SECRET",
+        value_source=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceArgs(
+            secret_key_ref=gcp.cloudrunv2.ServiceTemplateContainerEnvValueSourceSecretKeyRefArgs(
+                secret=secrets["JWT_SIGNING_SECRET"].secret_id,
+                version="latest",
+            )
+        ),
+    ),
+]
+
+api_gateway_service = gcp.cloudrunv2.Service(
+    "api-gateway",
+    name="interview-hub-api-gateway",
+    location=region,
+    project=project,
+    ingress="INGRESS_TRAFFIC_ALL",
+    scaling=gcp.cloudrunv2.ServiceScalingArgs(min_instance_count=0),
+    opts=pulumi.ResourceOptions(depends_on=[secret_access_binding]),
+    template=gcp.cloudrunv2.ServiceTemplateArgs(
+        service_account=cloudrun_sa.email,
+        containers=[
+            gcp.cloudrunv2.ServiceTemplateContainerArgs(
+                image=gateway_image,
+                ports=[gcp.cloudrunv2.ServiceTemplateContainerPortArgs(container_port=8080)],
+                envs=_gateway_secret_envs + [
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="EUREKA_URL",
+                        value=eureka_service.uri.apply(lambda u: u + "/eureka/"),
+                    ),
+                    gcp.cloudrunv2.ServiceTemplateContainerEnvArgs(
+                        name="APP_BASE_URL",
+                        value=pulumi.Output.concat("https://", backend_domain),
+                    ),
+                ],
+                resources=gcp.cloudrunv2.ServiceTemplateContainerResourcesArgs(
+                    limits={"memory": "512Mi", "cpu": "500m"},
+                ),
+                startup_probe=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeArgs(
+                    http_get=gcp.cloudrunv2.ServiceTemplateContainerStartupProbeHttpGetArgs(
+                        path="/actuator/health",
+                        port=8080,
+                    ),
+                    initial_delay_seconds=15,
+                    period_seconds=5,
+                    failure_threshold=20,
+                ),
+            )
+        ],
+    ),
+)
+
+gcp.cloudrunv2.ServiceIamMember(
+    "api-gateway-invoker",
+    project=project,
+    location=region,
+    name=api_gateway_service.name,
     role="roles/run.invoker",
     member="allUsers",
 )
