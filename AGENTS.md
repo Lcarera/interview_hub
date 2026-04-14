@@ -11,8 +11,10 @@
 
 | Service | How to run | Notes |
 |---------|-----------|-------|
-| Backend tests | `./gradlew test` (monolith) or `./gradlew :services:core:test` (multi-module) | Uses H2 in-memory DB; no external services needed. `GoogleCalendarService` is always mocked. |
-| Backend full build | `./gradlew build` (monolith) or `./gradlew :services:core:build` (multi-module) | Includes tests + JaCoCo coverage verification (95% branch min). |
+| All tests | `./gradlew test` | Runs core, api-gateway, eureka-server, notification-service, shared tests. |
+| Backend (core) tests | `./gradlew :services:core:test` | Uses H2 in-memory DB; no external services needed. `GoogleCalendarService` is always mocked. |
+| API Gateway tests | `./gradlew :services:api-gateway:test` | WebFlux/reactive tests; Eureka disabled in test profile. |
+| Backend full build | `./gradlew :services:core:build` | Includes tests + JaCoCo coverage verification (95% branch min). |
 | Frontend dev server | `cd frontend && bun run start` | Serves on port 4200; calls backend on `localhost:8080` in dev mode. |
 | Frontend tests | `cd frontend && bun run test` | Vitest with jsdom; no backend required. |
 | Full stack (Docker) | `docker compose up` | Requires `.env` file with all secrets (see `CLAUDE.md` Environment Variables section). |
@@ -22,9 +24,9 @@
 To run the full stack via Docker Compose:
 1. Build backend image: `./gradlew bootBuildImage` (requires Docker daemon running)
 2. Create `.env` in project root with all required secrets (see `CLAUDE.md` Environment Variables)
-3. `docker compose up -d` starts backend (port 8080) and frontend+nginx (port 80)
-4. Health check: `curl $APP_BASE_URL/actuator/health` (default: port 8080)
-5. Frontend at `http://localhost` proxies API calls through nginx to the backend
+3. `docker compose up -d` starts all services: api-gateway (port 8080), backend (internal 8082), eureka (8761), notification-service, rabbitmq, frontend+nginx (port 80)
+4. Health check: `curl http://localhost:8080/actuator/health` (goes through api-gateway → core)
+5. Frontend at `http://localhost` proxies API calls through nginx to api-gateway
 
 Docker must be started before building: `sudo dockerd &` (and `sudo chmod 666 /var/run/docker.sock` if needed for permissions).
 

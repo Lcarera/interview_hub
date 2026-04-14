@@ -9,7 +9,7 @@ cd infra
 source venv/bin/activate   # Python virtualenv
 pulumi up                  # preview + deploy
 pulumi preview             # dry-run only
-pulumi stack output        # show exported values (registry_url, backend_url, frontend_url)
+pulumi stack output        # show exported values (registry_url, backend_url, frontend_url, eureka_url, notification_url, gateway_url)
 ```
 
 ## Module Structure
@@ -19,7 +19,7 @@ pulumi stack output        # show exported values (registry_url, backend_url, fr
 - `iam.py` — Cloud Run service account (`interview-hub-cloudrun`) with Secret Manager access.
 - `secrets.py` — GCP Secret Manager secrets (8 secrets: DB creds, Google OAuth, JWT, Resend API key, Google Calendar refresh token). Secret values are set manually via `gcloud`, not in code.
 - `cloudtasks.py` — Cloud Tasks queue (`email-queue`) for async email sending with 2 req/s rate limiting. Grants enqueuer role to Cloud Run SA.
-- `cloudrun.py` — Two Cloud Run v2 services (`backend`, `frontend`) with env vars, health probes, and public invoker bindings.
+- `cloudrun.py` — Cloud Run v2 services (`eureka-server`, `notification-service`, `api-gateway`, `backend`, `frontend`) with env vars, health probes, and public invoker bindings.
 
 ## Config Values (`Pulumi.prod.yaml`)
 
@@ -27,7 +27,7 @@ pulumi stack output        # show exported values (registry_url, backend_url, fr
 - `interview-hub-infra:domain` — Frontend custom domain
 - `interview-hub-infra:backend_domain` — Backend custom domain
 - `interview-hub-infra:cloudtasks_worker_url` — Cloud Run service URL for Cloud Tasks HTTP targets (bypasses Cloudflare, ensures OIDC audience matches)
-- `interview-hub-infra:backend_image` / `frontend_image` — Set by CI at deploy time; fallback to `"placeholder"` for secrets-only `pulumi up`
+- `interview-hub-infra:backend_image` / `frontend_image` / `eureka_image` / `notification_image` / `gateway_image` — Set by CI at deploy time; fallback to `"placeholder"` for secrets-only `pulumi up`
 
 ## Cloud Run Scaling Notes
 
@@ -41,5 +41,6 @@ pulumi stack output        # show exported values (registry_url, backend_url, fr
 
 - **Secrets vs plain env vars:** Sensitive values (DB creds, API keys, Resend key) go through Secret Manager (`secrets.py` → `_secret_envs` in `cloudrun.py`). Non-sensitive config (app URLs, calendar ID, mail from address) are plain env vars.
 - **Image config is optional:** `config.get()` with `"placeholder"` fallback allows running `pulumi up` to update secrets/env vars without a full CI image build. CI always sets the real image URI.
-- **Public ingress:** Both services use `INGRESS_TRAFFIC_ALL` + `allUsers` invoker, accessed through Cloudflare DNS proxy.
+- **Public ingress:** All services use `INGRESS_TRAFFIC_ALL` + `allUsers` invoker, accessed through Cloudflare DNS proxy.
+- **API Gateway:** `api-gateway` is the public entry point; `backend_domain` DNS points to gateway. Core's `APP_BASE_URL` uses `backend_domain` so OAuth callbacks route through the gateway.
 - **No local state:** Pulumi state is managed remotely (Pulumi Cloud). No state files in the repo.

@@ -14,26 +14,39 @@ A fullstack application for managing technical interviews and shadowing requests
            |                                  |
   +--------v-----------+          +-----------v----------+
   | GCP Cloud Run      |          | GCP Cloud Run        |
-  | Frontend           |          | Backend              |
-  | Angular + nginx :80|          | Spring Boot :8080    |
+  | Frontend           |          | API Gateway          |
+  | Angular + nginx :80|          | Spring Cloud GW :8080|
   +--------------------+          +-----------+----------+
                                               |
-                                  +-----------v-----------+
-                                  | Supabase              |
-                                  | PostgreSQL            |
-                                  +-----+-----------+-----+
-                                        |           |
-                                   Google       Google
-                                   OAuth 2.0   Calendar
-                                                API v3
+                                  +-----------v----------+
+                                  | GCP Cloud Run        |
+                                  | Backend (Core)       |
+                                  | Spring Boot :8082    |
+                                  +-----------+----------+
+                                              |
+                         +--------------------+--------------------+
+                         |                    |                    |
+             +-----------v-----+  +-----------v-----+  +----------v--------+
+             | Supabase        |  | Eureka Server   |  | Notification Svc  |
+             | PostgreSQL      |  | Service Registry|  | RabbitMQ + Resend |
+             +-----------+-----+  +-----------------+  +-------------------+
+                         |
+                    +----+----+
+                    |         |
+               Google    Google
+               OAuth 2.0 Calendar
+                          API v3
 ```
 
 ## Tech Stack
 
 | Layer          | Technology                                  |
 |----------------|---------------------------------------------|
+| API Gateway    | Spring Cloud Gateway (WebFlux), Java 25     |
 | Backend        | Spring Boot 4.0.2, Java 25, PostgreSQL      |
 | Frontend       | Angular 21, Angular Material 21, TypeScript 5.9 |
+| Service Discovery | Netflix Eureka                           |
+| Messaging      | RabbitMQ (CloudAMQP in prod)                |
 | Infrastructure | Pulumi (Python), GCP Cloud Run              |
 | DNS/CDN        | Cloudflare (DNS proxy)                      |
 | Auth           | Google OAuth 2.0 (@gm2dev.com), HMAC-SHA256 JWT |
@@ -70,7 +83,9 @@ A fullstack application for managing technical interviews and shadowing requests
    ```
 
    This starts:
-   - **Backend** on `http://localhost:8080`
+   - **API Gateway** on `http://localhost:8080` (public entry point for all API traffic)
+   - **Backend (Core)** on internal port 8082 (not exposed externally — reached via Eureka)
+   - **Eureka Server** on `http://localhost:8761` (service discovery dashboard)
    - **Frontend** on `http://localhost` (port 80)
 
 5. **For frontend-only development** (assumes backend is running on port 8080):
@@ -98,30 +113,35 @@ A fullstack application for managing technical interviews and shadowing requests
 
 ```
 interview_hub/
-├── src/                  # Spring Boot backend (Java 25)
-├── frontend/             # Angular 21 SPA
-├── infra/                # Pulumi IaC (GCP Cloud Run, Secret Manager, etc.)
-├── supabase/migrations/  # PostgreSQL schema migrations
-├── postman/              # Postman collection for API testing
-├── .github/workflows/    # CI/CD pipeline (GitHub Actions)
-├── compose.yaml          # Local Docker Compose (backend + frontend)
-├── build.gradle          # Gradle build config
-└── CLAUDE.md             # AI assistant instructions
+├── services/
+│   ├── core/                 # Spring Boot backend (Java 25, MVC)
+│   ├── api-gateway/          # Spring Cloud Gateway (WebFlux, JWT validation)
+│   ├── eureka-server/        # Netflix Eureka service registry
+│   ├── notification-service/ # Email processing via RabbitMQ + Resend
+│   └── shared/               # Shared DTOs between services
+├── frontend/                 # Angular 21 SPA
+├── infra/                    # Pulumi IaC (GCP Cloud Run, Secret Manager, etc.)
+├── supabase/migrations/      # PostgreSQL schema migrations
+├── postman/                  # Postman collection for API testing
+├── .github/workflows/        # CI/CD pipeline (GitHub Actions)
+├── compose.yaml              # Local Docker Compose (all services)
+├── build.gradle              # Root Gradle config (multi-module monorepo)
+└── CLAUDE.md                 # AI assistant instructions
 ```
 
 See per-module documentation:
-- [Backend (src/)](src/README.md)
 - [Frontend](frontend/README.md)
 - [Infrastructure](infra/README.md)
 
 ## CI/CD
 
-The GitHub Actions workflow (`.github/workflows/deploy.yml`) triggers on every push to `main`:
+The GitHub Actions workflow (`.github/workflows/deploy.yml`) triggers on every push to `prod`:
 
-1. Builds the backend image with `./gradlew bootBuildImage`
-2. Builds the frontend image with Docker (multi-stage: Bun + nginx)
-3. Pushes both images to GCP Artifact Registry (tagged with git SHA)
-4. Deploys to GCP Cloud Run via `pulumi up`
+1. Detects which services changed (backend, frontend, eureka, notification, gateway, infra, migrations)
+2. Builds only changed service images with `./gradlew :services:<module>:bootBuildImage`
+3. Pushes images to GCP Artifact Registry (tagged with git SHA)
+4. Runs Supabase migrations if new SQL files were added
+5. Deploys to GCP Cloud Run via `pulumi up`
 
 **Required GitHub Secrets:**
 - `GCP_SA_KEY` — GCP service account JSON key
