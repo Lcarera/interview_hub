@@ -16,6 +16,25 @@ services:
       - "8761:8761"
     environment:
       EUREKA_HOSTNAME: eureka-server
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api-gateway:
+    image: api-gateway:0.0.1-SNAPSHOT
+    ports:
+      - "8080:8080"
+    environment:
+      JWT_SIGNING_SECRET: ${JWT_SIGNING_SECRET}
+      EUREKA_URL: http://eureka-server:8761/eureka/
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      eureka-server:
+        condition: service_healthy
 
   notification-service:
     image: notification-service:0.0.1-SNAPSHOT
@@ -29,13 +48,12 @@ services:
       rabbitmq:
         condition: service_healthy
       eureka-server:
-        condition: service_started
+        condition: service_healthy
 
   app:
     image: interview-hub:0.0.1-SNAPSHOT
-    ports:
-      - "8080:8080"
     environment:
+      SERVER_PORT: 8082
       DB_URL: ${DB_URL}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -53,7 +71,7 @@ services:
         required: false
     depends_on:
       eureka-server:
-        condition: service_started
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
 
@@ -65,4 +83,4 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - app
+      - api-gateway
