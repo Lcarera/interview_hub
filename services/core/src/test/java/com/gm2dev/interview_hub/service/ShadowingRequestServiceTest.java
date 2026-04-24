@@ -1,6 +1,8 @@
 package com.gm2dev.interview_hub.service;
 
+import com.gm2dev.interview_hub.client.CalendarServiceClient;
 import com.gm2dev.interview_hub.domain.*;
+import com.gm2dev.shared.calendar.AttendeeRequest;
 import com.gm2dev.shared.email.EmailMessage;
 import com.gm2dev.interview_hub.repository.CandidateRepository;
 import com.gm2dev.interview_hub.repository.InterviewRepository;
@@ -50,7 +52,7 @@ class ShadowingRequestServiceTest {
     private CandidateRepository candidateRepository;
 
     @MockitoBean
-    private GoogleCalendarService googleCalendarService;
+    private CalendarServiceClient calendarServiceClient;
 
     @MockitoBean
     private EmailPublisher emailPublisher;
@@ -178,8 +180,8 @@ class ShadowingRequestServiceTest {
         ShadowingRequest request = shadowingRequestService.requestShadowing(interview.getId(), shadower.getId());
         shadowingRequestService.approveShadowingRequest(request.getId(), interviewer.getId());
 
-        verify(googleCalendarService).addAttendee(
-                "gcal-shadow-event", "shadower@example.com");
+        verify(calendarServiceClient).addAttendee(
+                eq("gcal-shadow-event"), any(AttendeeRequest.class));
     }
 
     @Test
@@ -276,7 +278,8 @@ class ShadowingRequestServiceTest {
 
         shadowingRequestService.cancelShadowingRequest(request.getId(), shadower.getId());
 
-        verify(googleCalendarService).removeAttendee("gcal-cancel-approved", "shadower@example.com");
+        verify(calendarServiceClient).removeAttendee(
+                eq("gcal-cancel-approved"), any(AttendeeRequest.class));
     }
 
     @Test
@@ -300,6 +303,7 @@ class ShadowingRequestServiceTest {
 
         shadowingRequestService.rejectShadowingRequest(request.getId(), "reason", interviewer.getId());
 
-        verify(googleCalendarService).removeAttendee("gcal-reject-approved", "shadower@example.com");
+        verify(calendarServiceClient).removeAttendee(
+                eq("gcal-reject-approved"), any(AttendeeRequest.class));
     }
 }

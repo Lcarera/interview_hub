@@ -9,12 +9,6 @@ configurations {
     }
 }
 
-dependencyManagement {
-    imports {
-        mavenBom 'com.google.cloud:libraries-bom:26.77.0'
-    }
-}
-
 dependencies {
     implementation project(':services:shared')
 
@@ -38,17 +32,18 @@ dependencies {
     // Eureka Client
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
+    // OpenFeign (calls calendar-service)
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+
     // API Documentation
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
 
     // JSON Processing
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
-    // Google API (Calendar + Auth)
-    implementation 'com.google.apis:google-api-services-calendar:v3-rev20250115-2.0.0'
-    implementation 'com.google.api-client:google-api-client'
-    implementation 'com.google.http-client:google-http-client-jackson2'
-    implementation 'com.google.auth:google-auth-library-oauth2-http'
+    // Google API Client (needed for OAuth token exchange in AuthService)
+    implementation 'com.google.api-client:google-api-client:2.7.2'
+    implementation 'com.google.http-client:google-http-client-jackson2:1.45.3'
 
     // Spring Cloud Stream (RabbitMQ)
     implementation 'org.springframework.cloud:spring-cloud-stream'
@@ -90,7 +85,6 @@ jacocoTestReport {
         classDirectories.setFrom(files(classDirectories.files.collect {
             fileTree(dir: it, exclude: [
                 '**/InterviewHubApplication.class',
-                '**/GoogleCalendarService.class',
                 '**/OpenApiConfig.class',
                 '**/*MapperImpl.class',
                 '**/SecurityConfig.class'
@@ -104,7 +98,6 @@ jacocoTestCoverageVerification {
         classDirectories.setFrom(files(classDirectories.files.collect {
             fileTree(dir: it, exclude: [
                 '**/InterviewHubApplication.class',
-                '**/GoogleCalendarService.class',
                 '**/OpenApiConfig.class',
                 '**/*MapperImpl.class',
                 '**/SecurityConfig.class'

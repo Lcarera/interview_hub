@@ -1,4 +1,4 @@
-package com.gm2dev.interview_hub.config;
+package com.gm2dev.calendar_service.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

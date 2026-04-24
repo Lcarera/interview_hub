@@ -1,10 +1,10 @@
-package com.gm2dev.interview_hub.service;
+package com.gm2dev.calendar_service;
 
-import com.gm2dev.interview_hub.config.GoogleCalendarProperties;
-import com.gm2dev.interview_hub.config.GoogleOAuthProperties;
-import com.gm2dev.interview_hub.domain.Candidate;
-import com.gm2dev.interview_hub.domain.Interview;
-import com.gm2dev.interview_hub.domain.ShadowingRequestStatus;
+import com.gm2dev.calendar_service.config.GoogleCalendarProperties;
+import com.gm2dev.calendar_service.config.GoogleOAuthProperties;
+import com.gm2dev.shared.calendar.AttendeeRequest;
+import com.gm2dev.shared.calendar.CalendarEventRequest;
+import com.gm2dev.shared.calendar.CalendarEventResponse;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
@@ -30,8 +30,6 @@ import java.util.UUID;
 @Slf4j
 public class GoogleCalendarService {
 
-    public record CalendarEventResult(String eventId, String meetLink) {}
-
     private final GoogleOAuthProperties oAuthProperties;
     private final GoogleCalendarProperties calendarProperties;
 
@@ -41,29 +39,29 @@ public class GoogleCalendarService {
         this.calendarProperties = calendarProperties;
     }
 
-    public CalendarEventResult createEvent(Interview interview) throws IOException {
+    public CalendarEventResponse createEvent(CalendarEventRequest request) throws IOException {
         Calendar calendar = buildCalendarClient();
         String calendarId = calendarProperties.getId();
-        Event event = buildEvent(interview);
+        Event event = buildEvent(request);
 
         Event created = calendar.events().insert(calendarId, event)
                 .setConferenceDataVersion(1)
                 .setSendUpdates("all")
                 .execute();
         log.debug("Created Google Calendar event: {}", created.getId());
-        return new CalendarEventResult(created.getId(), created.getHangoutLink());
+        return new CalendarEventResponse(created.getId(), created.getHangoutLink());
     }
 
-    public void updateEvent(Interview interview) throws IOException {
+    public void updateEvent(CalendarEventRequest request) throws IOException {
         Calendar calendar = buildCalendarClient();
         String calendarId = calendarProperties.getId();
-        Event event = buildEvent(interview);
+        Event event = buildEvent(request);
 
-        calendar.events().update(calendarId, interview.getGoogleEventId(), event)
+        calendar.events().update(calendarId, request.googleEventId(), event)
                 .setConferenceDataVersion(1)
                 .setSendUpdates("all")
                 .execute();
-        log.debug("Updated Google Calendar event: {}", interview.getGoogleEventId());
+        log.debug("Updated Google Calendar event: {}", request.googleEventId());
     }
 
     public void deleteEvent(String googleEventId) throws IOException {
@@ -76,9 +74,11 @@ public class GoogleCalendarService {
         log.debug("Deleted Google Calendar event: {}", googleEventId);
     }
 
-    public void addAttendee(String googleEventId, String attendeeEmail) throws IOException {
+    public void addAttendee(AttendeeRequest request) throws IOException {
         Calendar calendar = buildCalendarClient();
         String calendarId = calendarProperties.getId();
+        String googleEventId = request.googleEventId();
+        String attendeeEmail = request.email();
 
         Event event = calendar.events().get(calendarId, googleEventId).execute();
 
@@ -96,9 +96,11 @@ public class GoogleCalendarService {
         log.debug("Added attendee {} to event {}", attendeeEmail, googleEventId);
     }
 
-    public void removeAttendee(String googleEventId, String attendeeEmail) throws IOException {
+    public void removeAttendee(AttendeeRequest request) throws IOException {
         Calendar calendar = buildCalendarClient();
         String calendarId = calendarProperties.getId();
+        String googleEventId = request.googleEventId();
+        String attendeeEmail = request.email();
 
         Event event = calendar.events().get(calendarId, googleEventId).execute();
 
@@ -137,42 +139,40 @@ public class GoogleCalendarService {
 
         return new Calendar.Builder(transport, JacksonFactory.getDefaultInstance(),
                 new HttpCredentialsAdapter(credentials))
-                .setApplicationName("Interview Hub")
+                .setApplicationName("Interview Hub - Calendar Service")
                 .build();
     }
 
-    private Event buildEvent(Interview interview) {
+    private Event buildEvent(CalendarEventRequest request) {
         Event event = new Event();
 
-        Candidate candidate = interview.getCandidate();
-        String candidateName = candidate != null && candidate.getName() != null ? candidate.getName() : "Unknown";
-        event.setSummary(interview.getTechStack() + " Interview - " + candidateName);
+        String candidateName = request.candidateName() != null ? request.candidateName() : "Unknown";
+        event.setSummary(request.techStack() + " Interview - " + candidateName);
 
         StringBuilder description = new StringBuilder();
-        description.append("Tech Stack: ").append(interview.getTechStack());
+        description.append("Tech Stack: ").append(request.techStack());
 
-        if (candidate != null) {
-            description.append("\n\nCandidate Details:");
-            description.append("\n  Name: ").append(candidate.getName());
-            if (candidate.getEmail() != null) {
-                description.append("\n  Email: ").append(candidate.getEmail());
-            }
-            if (candidate.getLinkedinUrl() != null) {
-                description.append("\n  LinkedIn: ").append(candidate.getLinkedinUrl());
-            }
-            if (candidate.getPrimaryArea() != null) {
-                description.append("\n  Primary Area: ").append(candidate.getPrimaryArea());
-            }
-            if (candidate.getFeedbackLink() != null) {
-                description.append("\n  Feedback Link: ").append(candidate.getFeedbackLink());
-            }
+        description.append("\n\nCandidate Details:");
+        description.append("\n  Name: ").append(candidateName);
+        if (request.candidateEmail() != null) {
+            description.append("\n  Email: ").append(request.candidateEmail());
         }
+        if (request.candidateLinkedIn() != null) {
+            description.append("\n  LinkedIn: ").append(request.candidateLinkedIn());
+        }
+        if (request.primaryArea() != null) {
+            description.append("\n  Primary Area: ").append(request.primaryArea());
+        }
+        if (request.feedbackLink() != null) {
+            description.append("\n  Feedback Link: ").append(request.feedbackLink());
+        }
+
         event.setDescription(description.toString());
 
         EventDateTime start = new EventDateTime()
-                .setDateTime(new com.google.api.client.util.DateTime(Date.from(interview.getStartTime())));
+                .setDateTime(new com.google.api.client.util.DateTime(Date.from(request.startTime())));
         EventDateTime end = new EventDateTime()
-                .setDateTime(new com.google.api.client.util.DateTime(Date.from(interview.getEndTime())));
+                .setDateTime(new com.google.api.client.util.DateTime(Date.from(request.endTime())));
 
         event.setStart(start);
         event.setEnd(end);
@@ -184,16 +184,15 @@ public class GoogleCalendarService {
         event.setConferenceData(new ConferenceData().setCreateRequest(conferenceRequest));
 
         List<EventAttendee> attendees = new ArrayList<>();
-        attendees.add(new EventAttendee().setEmail(interview.getInterviewer().getEmail()));
 
-        if (candidate != null && candidate.getEmail() != null) {
-            attendees.add(new EventAttendee().setEmail(candidate.getEmail()));
+        if (request.interviewerEmail() != null) {
+            attendees.add(new EventAttendee().setEmail(request.interviewerEmail()));
         }
-
-        if (interview.getShadowingRequests() != null) {
-            interview.getShadowingRequests().stream()
-                    .filter(sr -> ShadowingRequestStatus.APPROVED.equals(sr.getStatus()))
-                    .map(sr -> sr.getShadower().getEmail())
+        if (request.candidateEmail() != null) {
+            attendees.add(new EventAttendee().setEmail(request.candidateEmail()));
+        }
+        if (request.approvedShadowerEmails() != null) {
+            request.approvedShadowerEmails().stream()
                     .filter(email -> email != null)
                     .map(email -> new EventAttendee().setEmail(email))
                     .forEach(attendees::add);

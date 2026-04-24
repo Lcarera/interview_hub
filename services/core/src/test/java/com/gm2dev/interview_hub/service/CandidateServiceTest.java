@@ -42,7 +42,7 @@ class CandidateServiceTest {
     private EntityManager entityManager;
 
     @MockitoBean
-    private GoogleCalendarService googleCalendarService;
+    private com.gm2dev.interview_hub.client.CalendarServiceClient calendarServiceClient;
 
     @Test
     void createCandidate_withValidRequest_returnsCandidate() {
