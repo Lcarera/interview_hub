@@ -3,10 +3,6 @@ spring:
     exclude:
       - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
 
-eureka:
-  client:
-    enabled: false
-
 app:
   frontend-url: http://localhost:4200
   mail:

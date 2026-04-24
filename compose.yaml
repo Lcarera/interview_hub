@@ -10,31 +10,19 @@ services:
       timeout: 5s
       retries: 5
 
-  eureka-server:
-    image: eureka-server:0.0.1-SNAPSHOT
-    ports:
-      - "8761:8761"
-    environment:
-      EUREKA_HOSTNAME: eureka-server
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
   api-gateway:
     image: api-gateway:0.0.1-SNAPSHOT
     ports:
       - "8080:8080"
     environment:
       JWT_SIGNING_SECRET: ${JWT_SIGNING_SECRET}
-      EUREKA_URL: http://eureka-server:8761/eureka/
+      CORE_URL: http://app:8082
     env_file:
       - path: .env
         required: false
     depends_on:
-      eureka-server:
-        condition: service_healthy
+      app:
+        condition: service_started
 
   notification-service:
     image: notification-service:0.0.1-SNAPSHOT
@@ -43,11 +31,8 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-noreply@lcarera.dev}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
-      EUREKA_URL: http://eureka-server:8761/eureka/
     depends_on:
       rabbitmq:
-        condition: service_healthy
-      eureka-server:
         condition: service_healthy
 
   calendar-service:
@@ -59,13 +44,9 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-primary}
       GOOGLE_CALENDAR_REFRESH_TOKEN: ${GOOGLE_CALENDAR_REFRESH_TOKEN}
-      EUREKA_URL: http://eureka-server:8761/eureka/
     env_file:
       - path: .env
         required: false
-    depends_on:
-      eureka-server:
-        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1"]
       interval: 10s
@@ -85,13 +66,11 @@ services:
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
-      EUREKA_URL: http://eureka-server:8761/eureka/
+      CALENDAR_SERVICE_URL: http://calendar-service:8082
     env_file:
       - path: .env
         required: false
     depends_on:
-      eureka-server:
-        condition: service_healthy
       rabbitmq:
         condition: service_healthy
       calendar-service:

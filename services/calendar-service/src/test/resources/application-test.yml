@@ -6,10 +6,6 @@ app:
       id: primary
       refresh-token: fake-refresh-token
 
-eureka:
-  client:
-    enabled: false
-
 logging:
   level:
     com.gm2dev.calendar_service: DEBUG

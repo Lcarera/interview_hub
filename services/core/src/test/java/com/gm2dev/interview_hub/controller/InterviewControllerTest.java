@@ -185,15 +185,17 @@ class InterviewControllerTest {
         when(interviewService.updateInterview(eq(interview.getId()), any(UpdateInterviewRequest.class), any(UUID.class)))
                 .thenReturn(interview);
 
+        Instant futureStart = Instant.now().plus(30, ChronoUnit.DAYS);
+        Instant futureEnd = futureStart.plus(1, ChronoUnit.HOURS);
         String body = """
                 {
                     "candidateId": "%s",
                     "techStack": "Kotlin",
-                    "startTime": "2026-04-15T14:00:00Z",
-                    "endTime": "2026-04-15T15:00:00Z",
+                    "startTime": "%s",
+                    "endTime": "%s",
                     "status": "SCHEDULED"
                 }
-                """.formatted(UUID.randomUUID());
+                """.formatted(UUID.randomUUID(), futureStart, futureEnd);
 
         mockMvc.perform(put("/api/interviews/{id}", interview.getId())
                         .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
@@ -220,15 +222,17 @@ class InterviewControllerTest {
         when(interviewService.updateInterview(eq(interviewId), any(UpdateInterviewRequest.class), eq(nonOwnerId)))
                 .thenThrow(new org.springframework.security.access.AccessDeniedException("Not the interviewer"));
 
+        Instant futureStart = Instant.now().plus(30, ChronoUnit.DAYS);
+        Instant futureEnd = futureStart.plus(1, ChronoUnit.HOURS);
         String body = """
                 {
                     "candidateId": "%s",
                     "techStack": "Kotlin",
-                    "startTime": "2026-04-15T14:00:00Z",
-                    "endTime": "2026-04-15T15:00:00Z",
+                    "startTime": "%s",
+                    "endTime": "%s",
                     "status": "SCHEDULED"
                 }
-                """.formatted(UUID.randomUUID());
+                """.formatted(UUID.randomUUID(), futureStart, futureEnd);
 
         mockMvc.perform(put("/api/interviews/{id}", interviewId)
                         .with(jwt().jwt(j -> j.subject(nonOwnerId.toString())))

@@ -2,7 +2,6 @@ rootProject.name = 'interview_hub'
 
 include 'services:core'
 include 'services:shared'
-include 'services:eureka-server'
 include 'services:notification-service'
 include 'services:api-gateway'
 include 'services:calendar-service'
