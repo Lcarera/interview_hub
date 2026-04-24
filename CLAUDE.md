@@ -49,7 +49,6 @@ If test results seem stale or inconsistent, use `./gradlew clean test --no-build
 ```bash
 ./gradlew :services:core:test          # core only
 ./gradlew :services:shared:test        # shared DTOs only
-./gradlew :services:eureka-server:test # Eureka server only
 ./gradlew :services:calendar-service:test  # calendar-service only
 ./gradlew :services:core:bootBuildImage # build core Docker image
 ./gradlew :services:api-gateway:test   # api-gateway only
@@ -74,7 +73,7 @@ All under `src/main/java/com/gm2dev/interview_hub/`:
 - `domain/` - JPA entities (Candidate, Interview, Profile, ShadowingRequest) and enums (InterviewStatus, ShadowingRequestStatus)
 - `repository/` - Spring Data JPA repositories (CandidateRepository, InterviewRepository, ProfileRepository, ShadowingRequestRepository)
 - `service/` - Business logic (CandidateService, InterviewService, ShadowingRequestService, AuthService, EmailPasswordAuthService, EmailService, EmailQueueService, JwtService, HmacJwtService)
-- `client/` - OpenFeign clients (CalendarServiceClient — calls calendar-service by Eureka name)
+- `client/` - OpenFeign clients (CalendarServiceClient — calls calendar-service via `CALENDAR_SERVICE_URL` env var)
 - `dto/` - Data transfer objects (AuthResponse, CandidateDto, CandidateRequest, CreateInterviewRequest, UpdateInterviewRequest, InterviewDto, ProfileDto, RejectShadowingRequest, CurrentUser, etc.)
 - `mapper/` - MapStruct mappers (CandidateMapper, InterviewMapper, ProfileMapper, ShadowingRequestMapper)
 - `controller/` - REST controllers (CandidateController, InterviewController, ShadowingRequestController, AuthController, InternalEmailController, GlobalExceptionHandler)
@@ -102,7 +101,7 @@ All under `services/api-gateway/src/main/java/com/gm2dev/api_gateway/`:
 - `config/JwtProperties` — `@ConfigurationProperties("app.jwt")` record for HMAC-SHA256 signing secret
 - `ApiGatewayApplication` — `@SpringBootApplication` + `@EnableConfigurationProperties(JwtProperties.class)`
 
-Routes defined in `application.yml`: all traffic goes to `lb://core` via Eureka. Gateway validates JWTs (defense in depth — core validates too).
+Routes defined in `application.yml`: all traffic goes to `${CORE_URL}` (env var, defaults to `http://localhost:8082`). Gateway validates JWTs (defense in depth — core validates too).
 
 ### Core Domain Model
 
@@ -164,7 +163,7 @@ The application models a four-entity system:
 - `CurrentUserArgumentResolver` automatically resolves `CurrentUser` record from JWT claims in controller method parameters
 
 **Google Calendar Integration:**
-- Calendar operations are handled by the `calendar-service` microservice (port 8082). `core` calls it via OpenFeign (`CalendarServiceClient`) using Eureka service discovery.
+- Calendar operations are handled by the `calendar-service` microservice (port 8082). `core` calls it via OpenFeign (`CalendarServiceClient`) using the `CALENDAR_SERVICE_URL` env var (configured via `app.calendar-service.url` property).
 - `calendar-service` uses OAuth2 user credentials (`GOOGLE_CALENDAR_REFRESH_TOKEN`) to manage events on a shared calendar (configurable via `GOOGLE_CALENDAR_ID`, defaults to `"primary"`)
 - `GoogleCalendarService.buildCalendarClient()` in `calendar-service` builds a `UserCredentials` instance from `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALENDAR_REFRESH_TOKEN`; obtain the refresh token via `scripts/get-calendar-token.ts`
 - **Google API client in core:** `google-api-client` and `google-http-client-jackson2` must stay in core's `build.gradle` — `AuthService` uses them for OAuth token exchange. Only `google-api-services-calendar` and `google-auth-library-oauth2-http` moved to `calendar-service`.
@@ -202,8 +201,7 @@ The application models a four-entity system:
 
 **Docker Compose** (`compose.yaml`) runs these services:
 - `api-gateway` — Spring Cloud Gateway at port 8080 (public entry point for all API traffic, image `api-gateway:0.0.1-SNAPSHOT`)
-- `app` — Spring Boot backend on internal port 8082 (no external port mapping — only reachable via Eureka `lb://core`, image `interview-hub:0.0.1-SNAPSHOT`)
-- `eureka-server` — Service discovery at port 8761
+- `app` — Spring Boot backend on internal port 8082 (no external port mapping — reachable by api-gateway via `CORE_URL=http://app:8082`, image `interview-hub:0.0.1-SNAPSHOT`)
 - `notification-service` — Async email processing via RabbitMQ
 - `rabbitmq` — Message broker for notification-service
 - `frontend` — Angular app built via multi-stage Dockerfile (Bun 1.2 → nginx 1.27) on port 80
@@ -215,12 +213,6 @@ The application models a four-entity system:
 
 In production the frontend uses same-origin requests (empty `apiUrl`), so all API calls go through nginx. In dev mode (`bun run start`), the frontend calls `http://localhost:8080` directly.
 
-## Microservices Deploy Strategy
-
-Deploy all 4 microservices plans to `prod` together after Plan 4 completes. Intermediate deploys create broken states:
-- Plan 1 alone: Eureka running but nothing registers with it (no value, ~$5/month wasted)
-- Plan 2 alone: `cloudtasks.py` deleted → Cloud Tasks queue destroyed before RabbitMQ is wired → emails stop working
-
 ## Multi-Module Gradle (feat/microservices-plan1 branch onward)
 
 The `feat/microservices-plan1` branch restructures the project as a Gradle multi-module monorepo under `services/`. Key conventions and gotchas:
@@ -229,8 +221,7 @@ The `feat/microservices-plan1` branch restructures the project as a Gradle multi
 - **`id 'java' apply false` is invalid in Gradle 9** for core plugins — omit `java` from the root plugins block; apply it via `apply plugin: 'java'` inside `subprojects {}` instead
 - **Google Cloud BOM:** use `dependencyManagement { imports { mavenBom '...' } }` in the module's `build.gradle` — NOT `implementation platform(...)` — to stay consistent with `io.spring.dependency-management`
 - **`useJUnitPlatform()` is declared in the root `subprojects {}`** — individual module `tasks.named('test')` blocks only need `finalizedBy jacocoTestReport`, not `useJUnitPlatform()` again
-- **Eureka server context test:** do NOT add `eureka.client.enabled: false` to `application-test.yml` for `eureka-server` — the server's autoconfiguration depends on client beans; disabling the client breaks the server context. Use `register-with-eureka: false` + `fetch-registry: false` instead
-- **`shared` module stub:** `services/eureka-server/build.gradle` and `services/shared/build.gradle` must exist (even as empty files) before `./gradlew` runs — Gradle 9 refuses to configure projects whose directories aren't declared
+- **`shared` module stub:** `services/shared/build.gradle` must exist (even as an empty file) before `./gradlew` runs — Gradle 9 refuses to configure projects whose directories aren't declared
 - **Spring Cloud Gateway 5.0.0 artifact:** use `spring-cloud-starter-gateway-server-webflux` (reactive) or `spring-cloud-starter-gateway-server-webmvc` (servlet) — the old `spring-cloud-starter-gateway` was removed
 
 ## Testing
