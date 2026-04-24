@@ -73,14 +73,14 @@ class CalendarControllerTest {
     @Test
     void putEventsEventId_updatesEventAndReturns204() throws Exception {
         CalendarEventRequest request = buildRequest("evt-abc123");
-        doNothing().when(googleCalendarService).updateEvent(any());
+        doNothing().when(googleCalendarService).updateEvent(eq("evt-abc123"), any());
 
         mockMvc.perform(put("/events/evt-abc123")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request)))
                 .andExpect(status().isNoContent());
 
-        verify(googleCalendarService).updateEvent(any());
+        verify(googleCalendarService).updateEvent(eq("evt-abc123"), any());
     }
 
     @Test
@@ -96,27 +96,27 @@ class CalendarControllerTest {
     @Test
     void postEventsEventIdAttendees_addsAttendeeAndReturns204() throws Exception {
         AttendeeRequest attendeeRequest = new AttendeeRequest("evt-abc123", "shadow@gm2dev.com");
-        doNothing().when(googleCalendarService).addAttendee(any());
+        doNothing().when(googleCalendarService).addAttendee(eq("evt-abc123"), any());
 
         mockMvc.perform(post("/events/evt-abc123/attendees")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(attendeeRequest)))
                 .andExpect(status().isNoContent());
 
-        verify(googleCalendarService).addAttendee(any());
+        verify(googleCalendarService).addAttendee(eq("evt-abc123"), any());
     }
 
     @Test
     void deleteEventsEventIdAttendees_removesAttendeeAndReturns204() throws Exception {
         AttendeeRequest attendeeRequest = new AttendeeRequest("evt-abc123", "shadow@gm2dev.com");
-        doNothing().when(googleCalendarService).removeAttendee(any());
+        doNothing().when(googleCalendarService).removeAttendee(eq("evt-abc123"), any());
 
         mockMvc.perform(delete("/events/evt-abc123/attendees")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(attendeeRequest)))
                 .andExpect(status().isNoContent());
 
-        verify(googleCalendarService).removeAttendee(any());
+        verify(googleCalendarService).removeAttendee(eq("evt-abc123"), any());
     }
 
     @Test

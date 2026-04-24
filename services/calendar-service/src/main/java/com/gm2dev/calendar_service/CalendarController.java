@@ -34,7 +34,7 @@ public class CalendarController {
     public ResponseEntity<Void> updateEvent(
             @PathVariable String eventId,
             @RequestBody CalendarEventRequest request) throws IOException {
-        googleCalendarService.updateEvent(request);
+        googleCalendarService.updateEvent(eventId, request);
         return ResponseEntity.noContent().build();
     }
 
@@ -48,7 +48,7 @@ public class CalendarController {
     public ResponseEntity<Void> addAttendee(
             @PathVariable String eventId,
             @RequestBody AttendeeRequest request) throws IOException {
-        googleCalendarService.addAttendee(request);
+        googleCalendarService.addAttendee(eventId, request);
         return ResponseEntity.noContent().build();
     }
 
@@ -56,7 +56,7 @@ public class CalendarController {
     public ResponseEntity<Void> removeAttendee(
             @PathVariable String eventId,
             @RequestBody AttendeeRequest request) throws IOException {
-        googleCalendarService.removeAttendee(request);
+        googleCalendarService.removeAttendee(eventId, request);
         return ResponseEntity.noContent().build();
     }
 }

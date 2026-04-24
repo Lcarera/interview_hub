@@ -52,16 +52,16 @@ public class GoogleCalendarService {
         return new CalendarEventResponse(created.getId(), created.getHangoutLink());
     }
 
-    public void updateEvent(CalendarEventRequest request) throws IOException {
+    public void updateEvent(String googleEventId, CalendarEventRequest request) throws IOException {
         Calendar calendar = buildCalendarClient();
         String calendarId = calendarProperties.getId();
         Event event = buildEvent(request);
 
-        calendar.events().update(calendarId, request.googleEventId(), event)
+        calendar.events().update(calendarId, googleEventId, event)
                 .setConferenceDataVersion(1)
                 .setSendUpdates("all")
                 .execute();
-        log.debug("Updated Google Calendar event: {}", request.googleEventId());
+        log.debug("Updated Google Calendar event: {}", googleEventId);
     }
 
     public void deleteEvent(String googleEventId) throws IOException {
@@ -74,10 +74,9 @@ public class GoogleCalendarService {
         log.debug("Deleted Google Calendar event: {}", googleEventId);
     }
 
-    public void addAttendee(AttendeeRequest request) throws IOException {
+    public void addAttendee(String googleEventId, AttendeeRequest request) throws IOException {
         Calendar calendar = buildCalendarClient();
         String calendarId = calendarProperties.getId();
-        String googleEventId = request.googleEventId();
         String attendeeEmail = request.email();
 
         Event event = calendar.events().get(calendarId, googleEventId).execute();
@@ -96,10 +95,9 @@ public class GoogleCalendarService {
         log.debug("Added attendee {} to event {}", attendeeEmail, googleEventId);
     }
 
-    public void removeAttendee(AttendeeRequest request) throws IOException {
+    public void removeAttendee(String googleEventId, AttendeeRequest request) throws IOException {
         Calendar calendar = buildCalendarClient();
         String calendarId = calendarProperties.getId();
-        String googleEventId = request.googleEventId();
         String attendeeEmail = request.email();
 
         Event event = calendar.events().get(calendarId, googleEventId).execute();
