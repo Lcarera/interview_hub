@@ -5,6 +5,7 @@ import com.gm2dev.shared.calendar.CalendarEventRequest;
 import com.gm2dev.shared.calendar.CalendarEventResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,7 +28,7 @@ public class CalendarController {
     @PostMapping
     public ResponseEntity<CalendarEventResponse> createEvent(@RequestBody CalendarEventRequest request) throws IOException {
         CalendarEventResponse response = googleCalendarService.createEvent(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/{eventId}")

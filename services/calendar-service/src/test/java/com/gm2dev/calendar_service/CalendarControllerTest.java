@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 
@@ -63,7 +64,7 @@ class CalendarControllerTest {
         mockMvc.perform(post("/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.eventId").value("evt-abc123"))
                 .andExpect(jsonPath("$.meetLink").value("https://meet.google.com/xyz"));
 
@@ -122,7 +123,7 @@ class CalendarControllerTest {
     @Test
     void postEvents_whenCalendarServiceThrows_returns500() throws Exception {
         CalendarEventRequest request = buildRequest(null);
-        when(googleCalendarService.createEvent(any())).thenThrow(new RuntimeException("Google Calendar unavailable"));
+        when(googleCalendarService.createEvent(any())).thenThrow(new IOException("Google Calendar unavailable"));
 
         mockMvc.perform(post("/events")
                         .contentType(MediaType.APPLICATION_JSON)

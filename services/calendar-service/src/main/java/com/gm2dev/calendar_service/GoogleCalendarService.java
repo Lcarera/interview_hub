@@ -7,7 +7,7 @@ import com.gm2dev.shared.calendar.CalendarEventRequest;
 import com.gm2dev.shared.calendar.CalendarEventResponse;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
-import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.ConferenceData;
 import com.google.api.services.calendar.model.ConferenceSolutionKey;
@@ -135,7 +135,7 @@ public class GoogleCalendarService {
             throw new IOException("Failed to create HTTP transport", e);
         }
 
-        return new Calendar.Builder(transport, JacksonFactory.getDefaultInstance(),
+        return new Calendar.Builder(transport, GsonFactory.getDefaultInstance(),
                 new HttpCredentialsAdapter(credentials))
                 .setApplicationName("Interview Hub - Calendar Service")
                 .build();

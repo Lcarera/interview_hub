@@ -11,8 +11,8 @@ import java.io.IOException;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({IOException.class, RuntimeException.class})
-    public ResponseEntity<Void> handleCalendarException(Exception e) {
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<Void> handleCalendarException(IOException e) {
         log.error("Calendar operation failed: {}", e.getMessage());
         return ResponseEntity.internalServerError().build();
     }
