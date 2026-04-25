@@ -22,7 +22,7 @@ Interview Hub is a fullstack application for managing technical interviews and s
 ```bash
 docker compose up
 ```
-This starts two services: `app` (Spring Boot on port 8080) and `frontend` (Angular + nginx on port 80).
+This starts: `api-gateway` (port 8080), `app` (internal 8082), `calendar-service` (internal 8082), `notification-service`, `rabbitmq`, and `frontend` (port 80).
 
 **Run backend tests:**
 ```bash
@@ -45,7 +45,7 @@ If test results seem stale or inconsistent, use `./gradlew clean test --no-build
 ./gradlew clean
 ```
 
-**Run tests for a specific module (multi-module monorepo on `feat/microservices-plan1`+):**
+**Run tests for a specific module:**
 ```bash
 ./gradlew :services:core:test          # core only
 ./gradlew :services:shared:test        # shared DTOs only
@@ -182,7 +182,7 @@ The application models a four-entity system:
 - `ShadowingApprovedEmail.startTime` and `endTime` are `String` (not `Instant`) — used for display in email body only, no time arithmetic needed; the shared `EmailMessage.ShadowingApprovedEmailMessage` mirrors this
 - `EmailQueueService` is `@ConditionalOnProperty(name = "app.cloud-tasks.enabled", havingValue = "true")` — not created when Cloud Tasks is disabled
 - `InternalEmailController` validates `X-CloudTasks-QueueName` header presence (returns 403 without it)
-- In production, nginx must NOT proxy `/internal/*` to prevent external access; Cloud Run receives the request directly from Cloud Tasks
+- In production, nginx must NOT proxy `/internal/*` to prevent external access; Cloud Tasks calls the backend service directly, bypassing nginx
 
 **Error Handling:**
 - `GlobalExceptionHandler` (`@RestControllerAdvice`) maps `EntityNotFoundException` → 404, `IllegalStateException` → 409 Conflict
@@ -209,17 +209,17 @@ The application models a four-entity system:
 **Nginx** (`frontend/nginx.conf`) acts as reverse proxy:
 - Routes `/api/*`, `/auth/*`, `/admin/*`, `/actuator` → `http://api-gateway:8080`
 - All other paths → Angular SPA (`try_files $uri $uri/ /index.html`)
-- `/internal/*` is intentionally NOT proxied — Cloud Tasks calls Cloud Run directly
+- `/internal/*` is intentionally NOT proxied — Cloud Tasks calls the backend service directly
 
 In production the frontend uses same-origin requests (empty `apiUrl`), so all API calls go through nginx. In dev mode (`bun run start`), the frontend calls `http://localhost:8080` directly.
 
-## Multi-Module Gradle (feat/microservices-plan1 branch onward)
+## Multi-Module Gradle
 
-The `feat/microservices-plan1` branch restructures the project as a Gradle multi-module monorepo under `services/`. Key conventions and gotchas:
+The project is a Gradle multi-module monorepo under `services/`. Key conventions and gotchas:
 
 - **Spring Cloud version:** `2025.1.1` — compatible with Spring Boot 4.0.2; use in the root `build.gradle` BOM import
 - **`id 'java' apply false` is invalid in Gradle 9** for core plugins — omit `java` from the root plugins block; apply it via `apply plugin: 'java'` inside `subprojects {}` instead
-- **Google Cloud BOM:** use `dependencyManagement { imports { mavenBom '...' } }` in the module's `build.gradle` — NOT `implementation platform(...)` — to stay consistent with `io.spring.dependency-management`
+- **Google Cloud BOM in `calendar-service`:** uses `implementation platform('com.google.cloud:libraries-bom:...')` — this suppresses Jackson's transitive resolution from `spring-boot-starter-web`. If you add a test that imports `ObjectMapper` or `JavaTimeModule`, add `testImplementation 'com.fasterxml.jackson.core:jackson-databind'` and `testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'` explicitly
 - **`useJUnitPlatform()` is declared in the root `subprojects {}`** — individual module `tasks.named('test')` blocks only need `finalizedBy jacocoTestReport`, not `useJUnitPlatform()` again
 - **`shared` module stub:** `services/shared/build.gradle` must exist (even as an empty file) before `./gradlew` runs — Gradle 9 refuses to configure projects whose directories aren't declared
 - **Spring Cloud Gateway 5.0.0 artifact:** use `spring-cloud-starter-gateway-server-webflux` (reactive) or `spring-cloud-starter-gateway-server-webmvc` (servlet) — the old `spring-cloud-starter-gateway` was removed
@@ -275,9 +275,6 @@ Required for runtime:
 - `CLOUD_TASKS_SA_EMAIL` - Service account email for OIDC token on Cloud Tasks HTTP requests (required when Cloud Tasks is enabled)
 - `CLOUD_TASKS_WORKER_URL` - Base URL for Cloud Tasks HTTP target (defaults to APP_BASE_URL; in production, set to the Cloud Run service URL for direct GCP-to-GCP communication)
 - `CLOUD_TASKS_AUDIENCE` - Expected audience for OIDC tokens from Cloud Tasks (defaults to APP_BASE_URL; must match CLOUD_TASKS_WORKER_URL in production)
-
-Required for CI/CD (GitHub Actions secrets):
-- `SUPABASE_DB_URL` - PostgreSQL connection string for running migrations in the deploy pipeline (format: `postgresql://user:pass@host:port/dbname`)
 
 ## Dependencies
 
@@ -336,5 +333,5 @@ A Postman collection and environment file are available in `postman/` for manual
 
 ## Keeping Docs in Sync
 
-- **`AGENTS.md` line 39** lists required secrets for agentic workers — update it whenever `CLAUDE.md`'s Environment Variables section changes.
+- **`AGENTS.md`** (Services Overview table) lists test commands for agentic workers — update it whenever the module list or commands change.
 - **When deleting a `@ConfigurationProperties` class**, grep all usages before deleting (not just imports); also update `application-test.yml` alongside `application.yml`.
