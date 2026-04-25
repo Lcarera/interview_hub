@@ -2,10 +2,6 @@ app:
   jwt:
     signing-secret: test-secret-key-that-is-at-least-32-bytes-long
 
-eureka:
-  client:
-    enabled: false
-
 spring:
   cloud:
     gateway:

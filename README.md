@@ -1,6 +1,6 @@
 # Interview Hub
 
-A fullstack application for managing technical interviews and shadowing requests. Built with Spring Boot 4.0.2 (Java 25) and Angular 21, deployed on GCP Cloud Run with Cloudflare DNS.
+A fullstack application for managing technical interviews and shadowing requests. Built with Spring Boot 4.0.2 (Java 25) and Angular 21, deployed on GCP GKE with Cloudflare DNS.
 
 ## Architecture
 
@@ -13,53 +13,53 @@ A fullstack application for managing technical interviews and shadowing requests
    +-------+---------+                +-------+--------+
            |                                  |
   +--------v-----------+          +-----------v----------+
-  | GCP Cloud Run      |          | GCP Cloud Run        |
+  | GKE Pod            |          | GKE Pod              |
   | Frontend           |          | API Gateway          |
   | Angular + nginx :80|          | Spring Cloud GW :8080|
   +--------------------+          +-----------+----------+
                                               |
                                   +-----------v----------+
-                                  | GCP Cloud Run        |
+                                  | GKE Pod              |
                                   | Backend (Core)       |
                                   | Spring Boot :8082    |
                                   +-----------+----------+
                                               |
-                         +--------------------+--------------------+
-                         |                    |                    |
-             +-----------v-----+  +-----------v-----+  +----------v--------+
-             | Supabase        |  | Eureka Server   |  | Notification Svc  |
-             | PostgreSQL      |  | Service Registry|  | RabbitMQ + Resend |
-             +-----------+-----+  +-----------+-----+  +-------------------+
-                         |                    |
-                    +----+----+    +----------v--------+
-                    |         |    | Calendar Service  |
-               Google    Google    | Google Cal API v3 |
-               OAuth 2.0 Calendar  +-------------------+
-                          API v3
+                       +----------------------+--------------------+
+                       |                      |                    |
+           +-----------v-----+  +-------------v-----+  +----------v--------+
+           | Supabase        |  | Calendar Service  |  | Notification Svc  |
+           | PostgreSQL      |  | GKE Pod :8082     |  | RabbitMQ + Resend |
+           +-----------+-----+  +-------------------+  +-------------------+
+                       |
+                  +----+----+
+                  |         |
+             Google    Google
+             OAuth 2.0 Calendar
+                        API v3
 ```
+
+Services communicate via Kubernetes DNS names (or env-var URLs for local dev).
 
 ## Tech Stack
 
-| Layer          | Technology                                  |
-|----------------|---------------------------------------------|
-| API Gateway    | Spring Cloud Gateway (WebFlux), Java 25     |
-| Backend        | Spring Boot 4.0.2, Java 25, PostgreSQL      |
-| Frontend       | Angular 21, Angular Material 21, TypeScript 5.9 |
-| Service Discovery | Netflix Eureka                           |
-| Messaging      | RabbitMQ (CloudAMQP in prod)                |
-| Infrastructure | Pulumi (Python), GCP Cloud Run              |
-| DNS/CDN        | Cloudflare (DNS proxy)                      |
-| Auth           | Google OAuth 2.0 (@gm2dev.com), HMAC-SHA256 JWT |
-| CI/CD          | GitHub Actions                              |
-| Database       | Supabase (PostgreSQL with JSONB)            |
-| Package Mgr    | Gradle (backend), Bun 1.2 (frontend)       |
+| Layer          | Technology                                       |
+|----------------|--------------------------------------------------|
+| API Gateway    | Spring Cloud Gateway (WebFlux), Java 25          |
+| Backend        | Spring Boot 4.0.2, Java 25, PostgreSQL           |
+| Frontend       | Angular 21, Angular Material 21, TypeScript 5.9  |
+| Messaging      | RabbitMQ (CloudAMQP in prod)                     |
+| Infrastructure | Terraform (GCP GKE), kubectl manifests           |
+| DNS/CDN        | Cloudflare (DNS proxy)                           |
+| Auth           | Google OAuth 2.0 (@gm2dev.com), HMAC-SHA256 JWT  |
+| CI/CD          | GitHub Actions (app), Cloud Build (infra)        |
+| Database       | Supabase (PostgreSQL)                            |
+| Package Mgr    | Gradle (backend), Bun 1.2 (frontend)             |
 
 ## Prerequisites
 
 - Java 25 (Eclipse Temurin)
 - Bun 1.2+
 - Docker & Docker Compose
-- Pulumi CLI (for infrastructure changes)
 - Cloudflare account (for DNS management)
 
 ## Quick Start
@@ -72,20 +72,21 @@ A fullstack application for managing technical interviews and shadowing requests
 
 2. **Create a `.env` file** in the project root with required environment variables (see [Environment Variables](#environment-variables)).
 
-3. **Build the backend Docker image:**
+3. **Build the backend Docker images:**
    ```bash
    ./gradlew bootBuildImage
    ```
 
-4. **Start both services:**
+4. **Start all services:**
    ```bash
    docker compose up
    ```
 
    This starts:
    - **API Gateway** on `http://localhost:8080` (public entry point for all API traffic)
-   - **Backend (Core)** on internal port 8082 (not exposed externally — reached via Eureka)
-   - **Eureka Server** on `http://localhost:8761` (service discovery dashboard)
+   - **Backend (Core)** on internal port 8082
+   - **Calendar Service** on internal port 8082
+   - **Notification Service** (email via RabbitMQ)
    - **Frontend** on `http://localhost` (port 80)
 
 5. **For frontend-only development** (assumes backend is running on port 8080):
@@ -97,17 +98,20 @@ A fullstack application for managing technical interviews and shadowing requests
 
 ## Environment Variables
 
-| Variable               | Description                                    | Default                  |
-|------------------------|------------------------------------------------|--------------------------|
-| `DB_URL`               | PostgreSQL JDBC URL                            | -                        |
-| `DB_USERNAME`          | Database username                              | -                        |
-| `DB_PASSWORD`          | Database password                              | -                        |
-| `GOOGLE_CLIENT_ID`     | Google OAuth 2.0 client ID                     | -                        |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 client secret                 | -                        |
-| `JWT_SIGNING_SECRET`   | HMAC-SHA256 key for JWT signing (min 32 bytes) | -                        |
-| `TOKEN_ENCRYPTION_KEY` | AES key for encrypting Google tokens at rest   | -                        |
-| `APP_BASE_URL`         | Backend base URL for OAuth callbacks           | `http://localhost:8080`  |
-| `FRONTEND_URL`         | Frontend URL for post-auth redirects           | `http://localhost`       |
+| Variable                      | Description                                    | Default                  |
+|-------------------------------|------------------------------------------------|--------------------------|
+| `DB_URL`                      | PostgreSQL JDBC URL                            | -                        |
+| `DB_USERNAME`                 | Database username                              | -                        |
+| `DB_PASSWORD`                 | Database password                              | -                        |
+| `GOOGLE_CLIENT_ID`            | Google OAuth 2.0 client ID                     | -                        |
+| `GOOGLE_CLIENT_SECRET`        | Google OAuth 2.0 client secret                 | -                        |
+| `JWT_SIGNING_SECRET`          | HMAC-SHA256 key for JWT signing (min 32 bytes) | -                        |
+| `APP_BASE_URL`                | Backend base URL for OAuth callbacks           | `http://localhost:8080`  |
+| `FRONTEND_URL`                | Frontend URL for post-auth redirects           | `http://localhost`       |
+| `CORE_URL`                    | URL for api-gateway → core routing             | `http://localhost:8082`  |
+| `CALENDAR_SERVICE_URL`        | URL for core → calendar-service calls          | `http://localhost:8082`  |
+| `GOOGLE_CALENDAR_REFRESH_TOKEN` | Calendar OAuth refresh token                 | -                        |
+| `RESEND_API_KEY`              | Resend API key for sending emails              | -                        |
 
 ## Project Structure
 
@@ -116,15 +120,13 @@ interview_hub/
 ├── services/
 │   ├── core/                 # Spring Boot backend (Java 25, MVC)
 │   ├── api-gateway/          # Spring Cloud Gateway (WebFlux, JWT validation)
-│   ├── eureka-server/        # Netflix Eureka service registry
 │   ├── notification-service/ # Email processing via RabbitMQ + Resend
 │   ├── calendar-service/     # Google Calendar API microservice
 │   └── shared/               # Shared DTOs between services
 ├── frontend/                 # Angular 21 SPA
-├── infra/                    # Pulumi IaC (GCP Cloud Run, Secret Manager, etc.)
+├── k8s/                      # Kubernetes manifests (GKE deployment)
 ├── supabase/migrations/      # PostgreSQL schema migrations
 ├── postman/                  # Postman collection for API testing
-├── .github/workflows/        # CI/CD pipeline (GitHub Actions)
 ├── compose.yaml              # Local Docker Compose (all services)
 ├── build.gradle              # Root Gradle config (multi-module monorepo)
 └── CLAUDE.md                 # AI assistant instructions
@@ -133,32 +135,26 @@ interview_hub/
 See per-module documentation:
 - [Backend (core)](services/core/src/README.md)
 - [Frontend](frontend/README.md)
-- [Infrastructure](infra/README.md)
 
 ## CI/CD
 
-The GitHub Actions workflow (`.github/workflows/deploy.yml`) triggers on every push to `prod`:
-
-1. Detects which services changed (backend, frontend, eureka, notification, gateway, calendar, infra, migrations)
-2. Builds only changed service images with `./gradlew :services:<module>:bootBuildImage`
-3. Pushes images to GCP Artifact Registry (tagged with git SHA)
-4. Runs Supabase migrations if new SQL files were added
-5. Deploys to GCP Cloud Run via `pulumi up`
-
-**Required GitHub Secrets:**
-- `GCP_SA_KEY` — GCP service account JSON key
-- `GCP_PROJECT_ID` — GCP project ID
-- `PULUMI_ACCESS_TOKEN` — Pulumi API token
+CI/CD pipeline is being rebuilt as part of the GKE migration (#97). The new model uses two repos:
+- **App repo** (this repo) — GitHub Actions builds and pushes Docker images on push to `prod`
+- **Infra repo** (`tf-infra-cio-interview-hub`) — Cloud Build deploys via Terraform on git tag
 
 ## Database Migrations
 
 Schema is managed via SQL migration files in `supabase/migrations/`:
 
-| File                                      | Description                                |
-|-------------------------------------------|--------------------------------------------|
-| `001_create_schema.sql`                   | profiles, interviews, shadowing_requests   |
-| `002_add_reason_to_shadowing_requests.sql`| Adds `reason` column for rejections        |
-| `003_add_google_oauth_columns.sql`        | Adds Google OAuth token columns to profiles|
+| File                                        | Description                                              |
+|---------------------------------------------|----------------------------------------------------------|
+| `001_create_schema.sql`                     | profiles, interviews, shadowing_requests tables          |
+| `002_add_reason_to_shadowing_requests.sql`  | Adds `reason` column for rejections                      |
+| `003_add_google_oauth_columns.sql`          | Adds Google OAuth token columns to profiles              |
+| `004_create_candidates_table.sql`           | Creates candidates table, adds candidate_id FK           |
+| `005_add_email_password_auth.sql`           | Adds password_hash, email_verified, verification_tokens  |
+| `006_seed_admin_user.sql`                   | Promotes luciano.carera@gm2dev.com to admin role         |
+| `007_drop_calendar_and_token_columns.sql`   | Drops legacy Google token columns from profiles          |
 
 Hibernate runs in `validate` mode — it will **not** create or modify the schema. Apply migrations directly via Supabase.
 

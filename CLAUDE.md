@@ -22,7 +22,7 @@ Interview Hub is a fullstack application for managing technical interviews and s
 ```bash
 docker compose up
 ```
-This starts two services: `app` (Spring Boot on port 8080) and `frontend` (Angular + nginx on port 80).
+This starts: `api-gateway` (port 8080), `app` (internal 8082), `calendar-service` (internal 8082), `notification-service`, `rabbitmq`, and `frontend` (port 80).
 
 **Run backend tests:**
 ```bash
@@ -45,11 +45,10 @@ If test results seem stale or inconsistent, use `./gradlew clean test --no-build
 ./gradlew clean
 ```
 
-**Run tests for a specific module (multi-module monorepo on `feat/microservices-plan1`+):**
+**Run tests for a specific module:**
 ```bash
 ./gradlew :services:core:test          # core only
 ./gradlew :services:shared:test        # shared DTOs only
-./gradlew :services:eureka-server:test # Eureka server only
 ./gradlew :services:calendar-service:test  # calendar-service only
 ./gradlew :services:core:bootBuildImage # build core Docker image
 ./gradlew :services:api-gateway:test   # api-gateway only
@@ -74,7 +73,7 @@ All under `src/main/java/com/gm2dev/interview_hub/`:
 - `domain/` - JPA entities (Candidate, Interview, Profile, ShadowingRequest) and enums (InterviewStatus, ShadowingRequestStatus)
 - `repository/` - Spring Data JPA repositories (CandidateRepository, InterviewRepository, ProfileRepository, ShadowingRequestRepository)
 - `service/` - Business logic (CandidateService, InterviewService, ShadowingRequestService, AuthService, EmailPasswordAuthService, EmailService, EmailQueueService, JwtService, HmacJwtService)
-- `client/` - OpenFeign clients (CalendarServiceClient — calls calendar-service by Eureka name)
+- `client/` - OpenFeign clients (CalendarServiceClient — calls calendar-service via `CALENDAR_SERVICE_URL` env var)
 - `dto/` - Data transfer objects (AuthResponse, CandidateDto, CandidateRequest, CreateInterviewRequest, UpdateInterviewRequest, InterviewDto, ProfileDto, RejectShadowingRequest, CurrentUser, etc.)
 - `mapper/` - MapStruct mappers (CandidateMapper, InterviewMapper, ProfileMapper, ShadowingRequestMapper)
 - `controller/` - REST controllers (CandidateController, InterviewController, ShadowingRequestController, AuthController, InternalEmailController, GlobalExceptionHandler)
@@ -102,7 +101,7 @@ All under `services/api-gateway/src/main/java/com/gm2dev/api_gateway/`:
 - `config/JwtProperties` — `@ConfigurationProperties("app.jwt")` record for HMAC-SHA256 signing secret
 - `ApiGatewayApplication` — `@SpringBootApplication` + `@EnableConfigurationProperties(JwtProperties.class)`
 
-Routes defined in `application.yml`: all traffic goes to `lb://core` via Eureka. Gateway validates JWTs (defense in depth — core validates too).
+Routes defined in `application.yml`: all traffic goes to `${CORE_URL}` (env var, defaults to `http://localhost:8082`). Gateway validates JWTs (defense in depth — core validates too).
 
 ### Core Domain Model
 
@@ -164,7 +163,7 @@ The application models a four-entity system:
 - `CurrentUserArgumentResolver` automatically resolves `CurrentUser` record from JWT claims in controller method parameters
 
 **Google Calendar Integration:**
-- Calendar operations are handled by the `calendar-service` microservice (port 8082). `core` calls it via OpenFeign (`CalendarServiceClient`) using Eureka service discovery.
+- Calendar operations are handled by the `calendar-service` microservice (port 8082). `core` calls it via OpenFeign (`CalendarServiceClient`) using the `CALENDAR_SERVICE_URL` env var (configured via `app.calendar-service.url` property).
 - `calendar-service` uses OAuth2 user credentials (`GOOGLE_CALENDAR_REFRESH_TOKEN`) to manage events on a shared calendar (configurable via `GOOGLE_CALENDAR_ID`, defaults to `"primary"`)
 - `GoogleCalendarService.buildCalendarClient()` in `calendar-service` builds a `UserCredentials` instance from `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALENDAR_REFRESH_TOKEN`; obtain the refresh token via `scripts/get-calendar-token.ts`
 - **Google API client in core:** `google-api-client` and `google-http-client-jackson2` must stay in core's `build.gradle` — `AuthService` uses them for OAuth token exchange. Only `google-api-services-calendar` and `google-auth-library-oauth2-http` moved to `calendar-service`.
@@ -183,7 +182,7 @@ The application models a four-entity system:
 - `ShadowingApprovedEmail.startTime` and `endTime` are `String` (not `Instant`) — used for display in email body only, no time arithmetic needed; the shared `EmailMessage.ShadowingApprovedEmailMessage` mirrors this
 - `EmailQueueService` is `@ConditionalOnProperty(name = "app.cloud-tasks.enabled", havingValue = "true")` — not created when Cloud Tasks is disabled
 - `InternalEmailController` validates `X-CloudTasks-QueueName` header presence (returns 403 without it)
-- In production, nginx must NOT proxy `/internal/*` to prevent external access; Cloud Run receives the request directly from Cloud Tasks
+- In production, nginx must NOT proxy `/internal/*` to prevent external access; Cloud Tasks calls the backend service directly, bypassing nginx
 
 **Error Handling:**
 - `GlobalExceptionHandler` (`@RestControllerAdvice`) maps `EntityNotFoundException` → 404, `IllegalStateException` → 409 Conflict
@@ -202,8 +201,7 @@ The application models a four-entity system:
 
 **Docker Compose** (`compose.yaml`) runs these services:
 - `api-gateway` — Spring Cloud Gateway at port 8080 (public entry point for all API traffic, image `api-gateway:0.0.1-SNAPSHOT`)
-- `app` — Spring Boot backend on internal port 8082 (no external port mapping — only reachable via Eureka `lb://core`, image `interview-hub:0.0.1-SNAPSHOT`)
-- `eureka-server` — Service discovery at port 8761
+- `app` — Spring Boot backend on internal port 8082 (no external port mapping — reachable by api-gateway via `CORE_URL=http://app:8082`, image `interview-hub:0.0.1-SNAPSHOT`)
 - `notification-service` — Async email processing via RabbitMQ
 - `rabbitmq` — Message broker for notification-service
 - `frontend` — Angular app built via multi-stage Dockerfile (Bun 1.2 → nginx 1.27) on port 80
@@ -211,26 +209,19 @@ The application models a four-entity system:
 **Nginx** (`frontend/nginx.conf`) acts as reverse proxy:
 - Routes `/api/*`, `/auth/*`, `/admin/*`, `/actuator` → `http://api-gateway:8080`
 - All other paths → Angular SPA (`try_files $uri $uri/ /index.html`)
-- `/internal/*` is intentionally NOT proxied — Cloud Tasks calls Cloud Run directly
+- `/internal/*` is intentionally NOT proxied — Cloud Tasks calls the backend service directly
 
 In production the frontend uses same-origin requests (empty `apiUrl`), so all API calls go through nginx. In dev mode (`bun run start`), the frontend calls `http://localhost:8080` directly.
 
-## Microservices Deploy Strategy
+## Multi-Module Gradle
 
-Deploy all 4 microservices plans to `prod` together after Plan 4 completes. Intermediate deploys create broken states:
-- Plan 1 alone: Eureka running but nothing registers with it (no value, ~$5/month wasted)
-- Plan 2 alone: `cloudtasks.py` deleted → Cloud Tasks queue destroyed before RabbitMQ is wired → emails stop working
-
-## Multi-Module Gradle (feat/microservices-plan1 branch onward)
-
-The `feat/microservices-plan1` branch restructures the project as a Gradle multi-module monorepo under `services/`. Key conventions and gotchas:
+The project is a Gradle multi-module monorepo under `services/`. Key conventions and gotchas:
 
 - **Spring Cloud version:** `2025.1.1` — compatible with Spring Boot 4.0.2; use in the root `build.gradle` BOM import
 - **`id 'java' apply false` is invalid in Gradle 9** for core plugins — omit `java` from the root plugins block; apply it via `apply plugin: 'java'` inside `subprojects {}` instead
-- **Google Cloud BOM:** use `dependencyManagement { imports { mavenBom '...' } }` in the module's `build.gradle` — NOT `implementation platform(...)` — to stay consistent with `io.spring.dependency-management`
+- **Google Cloud BOM in `calendar-service`:** uses `implementation platform('com.google.cloud:libraries-bom:...')` — this suppresses Jackson's transitive resolution from `spring-boot-starter-web`. If you add a test that imports `ObjectMapper` or `JavaTimeModule`, add `testImplementation 'com.fasterxml.jackson.core:jackson-databind'` and `testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'` explicitly
 - **`useJUnitPlatform()` is declared in the root `subprojects {}`** — individual module `tasks.named('test')` blocks only need `finalizedBy jacocoTestReport`, not `useJUnitPlatform()` again
-- **Eureka server context test:** do NOT add `eureka.client.enabled: false` to `application-test.yml` for `eureka-server` — the server's autoconfiguration depends on client beans; disabling the client breaks the server context. Use `register-with-eureka: false` + `fetch-registry: false` instead
-- **`shared` module stub:** `services/eureka-server/build.gradle` and `services/shared/build.gradle` must exist (even as empty files) before `./gradlew` runs — Gradle 9 refuses to configure projects whose directories aren't declared
+- **`shared` module stub:** `services/shared/build.gradle` must exist (even as an empty file) before `./gradlew` runs — Gradle 9 refuses to configure projects whose directories aren't declared
 - **Spring Cloud Gateway 5.0.0 artifact:** use `spring-cloud-starter-gateway-server-webflux` (reactive) or `spring-cloud-starter-gateway-server-webmvc` (servlet) — the old `spring-cloud-starter-gateway` was removed
 
 ## Testing
@@ -284,9 +275,6 @@ Required for runtime:
 - `CLOUD_TASKS_SA_EMAIL` - Service account email for OIDC token on Cloud Tasks HTTP requests (required when Cloud Tasks is enabled)
 - `CLOUD_TASKS_WORKER_URL` - Base URL for Cloud Tasks HTTP target (defaults to APP_BASE_URL; in production, set to the Cloud Run service URL for direct GCP-to-GCP communication)
 - `CLOUD_TASKS_AUDIENCE` - Expected audience for OIDC tokens from Cloud Tasks (defaults to APP_BASE_URL; must match CLOUD_TASKS_WORKER_URL in production)
-
-Required for CI/CD (GitHub Actions secrets):
-- `SUPABASE_DB_URL` - PostgreSQL connection string for running migrations in the deploy pipeline (format: `postgresql://user:pass@host:port/dbname`)
 
 ## Dependencies
 
@@ -345,5 +333,5 @@ A Postman collection and environment file are available in `postman/` for manual
 
 ## Keeping Docs in Sync
 
-- **`AGENTS.md` line 39** lists required secrets for agentic workers — update it whenever `CLAUDE.md`'s Environment Variables section changes.
+- **`AGENTS.md`** (Services Overview table) lists test commands for agentic workers — update it whenever the module list or commands change.
 - **When deleting a `@ConfigurationProperties` class**, grep all usages before deleting (not just imports); also update `application-test.yml` alongside `application.yml`.

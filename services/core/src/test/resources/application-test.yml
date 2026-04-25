@@ -25,9 +25,8 @@ app:
   jwt:
     signing-secret: test-signing-secret-that-is-at-least-32-bytes-long
     expiration-seconds: 3600
-eureka:
-  client:
-    enabled: false
+  calendar-service:
+    url: http://localhost:8082
 
 logging:
   level:

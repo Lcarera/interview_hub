@@ -6,7 +6,6 @@ dependencies {
     implementation project(':services:shared')
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
     // Google Calendar API
     implementation platform('com.google.cloud:libraries-bom:26.77.0')
@@ -20,6 +19,8 @@ dependencies {
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

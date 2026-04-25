@@ -11,9 +11,9 @@
 
 | Service | How to run | Notes |
 |---------|-----------|-------|
-| All tests | `./gradlew test` | Runs core, api-gateway, eureka-server, notification-service, calendar-service, shared tests. |
+| All tests | `./gradlew test` | Runs core, api-gateway, notification-service, calendar-service, shared tests. |
 | Backend (core) tests | `./gradlew :services:core:test` | Uses H2 in-memory DB; no external services needed. `CalendarServiceClient` is always mocked. |
-| API Gateway tests | `./gradlew :services:api-gateway:test` | WebFlux/reactive tests; Eureka disabled in test profile. |
+| API Gateway tests | `./gradlew :services:api-gateway:test` | WebFlux/reactive tests. |
 | Backend full build | `./gradlew :services:core:build` | Includes tests + JaCoCo coverage verification (95% branch min). |
 | Frontend dev server | `cd frontend && bun run start` | Serves on port 4200; calls backend on `localhost:8080` in dev mode. |
 | Frontend tests | `cd frontend && bun run test` | Vitest with jsdom; no backend required. |
@@ -24,7 +24,7 @@
 To run the full stack via Docker Compose:
 1. Build backend image: `./gradlew bootBuildImage` (requires Docker daemon running)
 2. Create `.env` in project root with all required secrets (see `CLAUDE.md` Environment Variables)
-3. `docker compose up -d` starts all services: api-gateway (port 8080), backend (internal 8082), eureka (8761), notification-service, rabbitmq, frontend+nginx (port 80)
+3. `docker compose up -d` starts all services: api-gateway (port 8080), backend (internal 8082), calendar-service (8082), notification-service, rabbitmq, frontend+nginx (port 80)
 4. Health check: `curl http://localhost:8080/actuator/health` (goes through api-gateway → core)
 5. Frontend at `http://localhost` proxies API calls through nginx to api-gateway
 

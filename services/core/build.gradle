@@ -29,9 +29,6 @@ dependencies {
     // Actuator
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
-    // Eureka Client
-    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-
     // OpenFeign (calls calendar-service)
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
