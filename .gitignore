@@ -57,3 +57,6 @@ infra/venv/
 ### Cloudflare ###
 cloudflare/.wrangler/
 .worktrees/
+
+### Kubernetes ###
+k8s/secrets.yaml
