@@ -72,12 +72,12 @@ All under `src/main/java/com/gm2dev/interview_hub/`:
 
 - `domain/` - JPA entities (Candidate, Interview, Profile, ShadowingRequest) and enums (InterviewStatus, ShadowingRequestStatus)
 - `repository/` - Spring Data JPA repositories (CandidateRepository, InterviewRepository, ProfileRepository, ShadowingRequestRepository)
-- `service/` - Business logic (CandidateService, InterviewService, ShadowingRequestService, AuthService, EmailPasswordAuthService, EmailService, EmailQueueService, JwtService, HmacJwtService)
+- `service/` - Business logic (CandidateService, InterviewService, ShadowingRequestService, AuthService, EmailPasswordAuthService, AdminService, ProfileService, EmailPublisher, JwtService, HmacJwtService)
 - `client/` - OpenFeign clients (CalendarServiceClient — calls calendar-service via `CALENDAR_SERVICE_URL` env var)
 - `dto/` - Data transfer objects (AuthResponse, CandidateDto, CandidateRequest, CreateInterviewRequest, UpdateInterviewRequest, InterviewDto, ProfileDto, RejectShadowingRequest, CurrentUser, etc.)
 - `mapper/` - MapStruct mappers (CandidateMapper, InterviewMapper, ProfileMapper, ShadowingRequestMapper)
-- `controller/` - REST controllers (CandidateController, InterviewController, ShadowingRequestController, AuthController, InternalEmailController, GlobalExceptionHandler)
-- `config/` - Spring configuration (SecurityConfig, GoogleOAuthProperties, JwtProperties, AllowedDomains, CloudTasksConfig, CloudTasksProperties, WebConfig, CurrentUserArgumentResolver)
+- `controller/` - REST controllers (CandidateController, InterviewController, ShadowingRequestController, AuthController, EmailPasswordAuthController, AdminController, ProfileController, GlobalExceptionHandler)
+- `config/` - Spring configuration (SecurityConfig, GoogleOAuthProperties, JwtProperties, AllowedDomains, WebConfig, CurrentUserArgumentResolver)
 
 ### Frontend Structure
 
@@ -87,11 +87,22 @@ All under `frontend/src/`:
 - `app/core/services/` - HTTP services (AuthService, InterviewService, ShadowingRequestService)
 - `app/core/guards/` - Route guards (authGuard)
 - `app/core/interceptors/` - HTTP interceptors (authInterceptor — adds Bearer token)
-- `app/features/auth/` - Login page and OAuth callback handler
-- `app/features/home/` - Main authenticated page
+- `app/features/auth/` - Login, register, verify, forgot-password, reset-password, and OAuth callback pages
+- `app/features/shell/` - Layout wrapper (sidenav + toolbar); all `authGuard` routes are nested as children of `ShellComponent` at path `''`
+- `app/features/dashboard/` - Default child route at `/`
+- `app/features/shadowing/` - Shadowing request reject-dialog
 - `environments/` - Environment configs (dev points to `localhost:8080`; prod uses empty string for same-origin via nginx proxy)
 
 Routes use lazy loading. The auth guard redirects unauthenticated users to `/login`.
+
+### Notification Service Structure
+
+All under `services/notification-service/src/main/java/com/gm2dev/notification_service/`:
+
+- `EmailConsumer` — Spring Cloud Stream `Consumer<EmailMessage>` bean; bound to `notification.emails` queue (binding name `processEmail-in-0`)
+- `EmailRenderer` — renders `EmailMessage` subtypes to HTML via string templates
+- `ResendEmailSender` — calls Resend HTTP API with rendered subject + body
+- `ResendProperties` — `@ConfigurationProperties` for `RESEND_API_KEY` and `MAIL_FROM`
 
 ### API Gateway Structure
 
@@ -157,7 +168,7 @@ The application models a four-entity system:
 - OAuth2 Resource Server with HMAC-SHA256 JWT validation (app-issued tokens)
 - Custom JWT converter extracts "role" claim and prefixes with "ROLE_"
 - Stateless sessions (no server-side session management)
-- Public endpoints: `/actuator/health`, `/auth/**`, `/internal/**` (Cloud Tasks worker — guarded by `X-CloudTasks-QueueName` header check, not JWT)
+- Public endpoints: `/actuator/health`, `/auth/**`
 - `/admin/**` endpoints require `ROLE_admin`
 - All other endpoints require `Authorization: Bearer <token>`
 - `CurrentUserArgumentResolver` automatically resolves `CurrentUser` record from JWT claims in controller method parameters
@@ -175,14 +186,12 @@ The application models a four-entity system:
 - Cancelling or rejecting an approved shadowing request → removes shadower from the Calendar event
 - Calendar failures are logged but don't block the primary operation
 
-**Email Queue (Cloud Tasks):**
-- Email sending is async via Google Cloud Tasks when `CLOUD_TASKS_ENABLED=true`; falls back to synchronous Resend calls when disabled
-- Flow: callers inject `EmailSender` and call `emailSender.send(payload)` → `EmailService.send()` either enqueues to Cloud Tasks (via `EmailQueueService`) or calls `sendDirectly()` synchronously → Cloud Tasks calls `POST /internal/email-worker` → `InternalEmailController` calls `emailService.sendDirectly(payload)` (no switch dispatch — polymorphism on the payload handles rendering via `payload.subject()` / `payload.htmlBody()`)
-- `EmailTaskPayload` is a sealed interface with Jackson `@JsonTypeInfo` polymorphism (discriminator: `"type"` field with values `VERIFICATION`, `PASSWORD_RESET`, `TEMPORARY_PASSWORD`, `SHADOWING_APPROVED`)
-- `ShadowingApprovedEmail.startTime` and `endTime` are `String` (not `Instant`) — used for display in email body only, no time arithmetic needed; the shared `EmailMessage.ShadowingApprovedEmailMessage` mirrors this
-- `EmailQueueService` is `@ConditionalOnProperty(name = "app.cloud-tasks.enabled", havingValue = "true")` — not created when Cloud Tasks is disabled
-- `InternalEmailController` validates `X-CloudTasks-QueueName` header presence (returns 403 without it)
-- In production, nginx must NOT proxy `/internal/*` to prevent external access; Cloud Tasks calls the backend service directly, bypassing nginx
+**Email (Spring Cloud Stream + RabbitMQ):**
+- `EmailPublisher` in core uses Spring Cloud Stream `StreamBridge` to publish `EmailMessage` records to binding `email-out-0` → RabbitMQ exchange/queue `notification.emails`
+- `notification-service` declares a Spring Cloud Stream consumer binding `processEmail-in-0` on `notification.emails`; `EmailConsumer` bean (`Consumer<EmailMessage>`) delegates to `ResendEmailSender`
+- `EmailMessage` is a sealed interface in the `shared` module with subtypes: `VerificationEmail`, `PasswordResetEmail`, `TemporaryPasswordEmail`, `ShadowingApprovedEmailMessage`
+- `ShadowingApprovedEmailMessage.startTime` / `endTime` are `String` — display-only, no time arithmetic
+- Consumer group: `notification-service`; max-attempts: 3 with 1s back-off
 
 **Error Handling:**
 - `GlobalExceptionHandler` (`@RestControllerAdvice`) maps `EntityNotFoundException` → 404, `IllegalStateException` → 409 Conflict
@@ -209,9 +218,34 @@ The application models a four-entity system:
 **Nginx** (`frontend/nginx.conf`) acts as reverse proxy:
 - Routes `/api/*`, `/auth/*`, `/admin/*`, `/actuator` → `http://api-gateway:8080`
 - All other paths → Angular SPA (`try_files $uri $uri/ /index.html`)
-- `/internal/*` is intentionally NOT proxied — Cloud Tasks calls the backend service directly
+- `/internal/*` is intentionally NOT proxied (reserved for future internal use)
 
 In production the frontend uses same-origin requests (empty `apiUrl`), so all API calls go through nginx. In dev mode (`bun run start`), the frontend calls `http://localhost:8080` directly.
+
+## Kubernetes (minikube local)
+
+**Rebuild from scratch:**
+```bash
+# Copy secrets template before first apply:
+cp k8s/secrets.example.yaml k8s/secrets.yaml  # then fill in real values
+minikube delete && minikube start --driver=docker
+minikube addons enable ingress && minikube addons enable metrics-server
+eval $(minikube docker-env)   # redirect Docker to minikube daemon — must be in same shell as builds
+./gradlew bootBuildImage && docker build -t frontend:0.0.1-SNAPSHOT --build-arg NG_CONFIG=docker ./frontend
+kubectl apply -f k8s/namespace.yaml && kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/service-accounts.yaml -f k8s/deployments.yaml -f k8s/services.yaml -f k8s/ingress.yaml -f k8s/hpa.yaml
+```
+
+**Access from macOS (Docker driver):** `192.168.49.2` is not routable from host. Use port-forward:
+```bash
+kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 80:80
+```
+Then add `127.0.0.1 interview-hub.local i-hub-be.local` to `/etc/hosts`.
+
+**K8s probe gotchas:**
+- All Spring Boot services use `startupProbe (failureThreshold: 30, period: 10s)` — JVM takes 60-90s under resource pressure; fixed `initialDelaySeconds` races with startup and gets liveness-killed
+- RabbitMQ uses `tcpSocket: port: 5672` — never `exec: rabbitmq-diagnostics ping`; the exec probe has a 1s default timeout, kills the container during feature-flag init, and corrupts mnesia state on the next restart
+- Supabase JDBC URL in `k8s/secrets.yaml` must include `?sslmode=require` — the session pooler identifies the tenant via TLS SNI; without SSL it returns `ENOIDENTIFIER` (works in docker-compose because host network has different SSL defaults)
 
 ## Multi-Module Gradle
 
@@ -239,7 +273,7 @@ Two distinct test styles are used — never mix them:
 - `@SpringBootTest` + `@ActiveProfiles("test")` + `@Transactional` + `@Rollback` — full Spring context with H2
 - **`application-test.yml` must stay in sync with `application.yml`** — when adding/removing `@ConfigurationProperties` classes, update both files; Spring Boot silently ignores unrecognized YAML keys, so stale test config never fails
 - `CalendarServiceClient` (Feign interface) must be `@MockitoBean`'d in ALL `@SpringBootTest` classes in core (not just service tests — `CandidateServiceTest` needs it too)
-- `AuthServiceTest`, `GoogleCalendarServiceTest`, `EmailQueueServiceTest`, `HmacJwtServiceTest`, and `CurrentUserArgumentResolverTest` use pure `@ExtendWith(MockitoExtension.class)` (no Spring context)
+- `AuthServiceTest`, `HmacJwtServiceTest`, and `CurrentUserArgumentResolverTest` use pure `@ExtendWith(MockitoExtension.class)` (no Spring context); `GoogleCalendarServiceTest` lives in `calendar-service` and follows the same pattern
 - `AuthService` and `GoogleCalendarService` have package-private methods (`exchangeCodeForTokens`, `buildCalendarClient`) specifically to enable `spy()`-based interception without reflection
 - `AuthService` and `EmailPasswordAuthService` tests mock `JwtService` instead of `JwtEncoder`/`JwtProperties`
 
@@ -268,13 +302,7 @@ Required for runtime:
 - `MAIL_FROM` - From email address (default: noreply@lcarera.dev)
 - `GOOGLE_CALENDAR_REFRESH_TOKEN` - OAuth2 refresh token for Google Calendar access (obtained via `scripts/get-calendar-token.ts`) — **configured on `calendar-service`, not core**
 - `GOOGLE_CALENDAR_ID` - Google Calendar ID for shared event calendar (default: `primary`) — **configured on `calendar-service`, not core**
-- `GCP_PROJECT_ID` - GCP project ID for Cloud Tasks queue path
-- `GCP_LOCATION` - GCP region for Cloud Tasks (default: us-central1)
-- `CLOUD_TASKS_QUEUE_ID` - Cloud Tasks queue name (default: email-queue)
-- `CLOUD_TASKS_ENABLED` - Enable async email via Cloud Tasks (default: false)
-- `CLOUD_TASKS_SA_EMAIL` - Service account email for OIDC token on Cloud Tasks HTTP requests (required when Cloud Tasks is enabled)
-- `CLOUD_TASKS_WORKER_URL` - Base URL for Cloud Tasks HTTP target (defaults to APP_BASE_URL; in production, set to the Cloud Run service URL for direct GCP-to-GCP communication)
-- `CLOUD_TASKS_AUDIENCE` - Expected audience for OIDC tokens from Cloud Tasks (defaults to APP_BASE_URL; must match CLOUD_TASKS_WORKER_URL in production)
+- `RABBITMQ_URL` - AMQP URL for Spring Cloud Stream broker (format: `amqp://user:pass@host:5672`; in k8s, built from `rabbitmq-secret` via variable interpolation)
 
 ## Dependencies
 
@@ -289,7 +317,7 @@ Required for runtime:
 - Lombok (code generation)
 - MapStruct (DTO mapping)
 - Jackson (JSON processing)
-- Google Cloud Tasks client (async email queue)
+- Spring Cloud Stream with RabbitMQ binder (async email via notification-service)
 - H2 (test database)
 
 **Frontend:**

@@ -57,13 +57,21 @@ src/
         │   │   ├── login.ts
         │   │   ├── login.html
         │   │   └── login.scss
-        │   └── callback/
-        │       └── auth-callback.ts  # Parses token from URL hash, stores in localStorage
+        │   ├── callback/
+        │   │   └── auth-callback.ts  # Parses token from URL hash, stores in localStorage
+        │   ├── register/             # Email/password registration form
+        │   ├── verify/               # Email verification landing page
+        │   ├── forgot-password/      # Password reset request form
+        │   └── reset-password/       # Password reset form (token from email link)
+        ├── shell/
+        │   └── shell.ts              # Layout wrapper (sidenav + toolbar); all authGuard routes nested here
+        ├── dashboard/
+        │   └── dashboard.ts          # Default child at `/`
         ├── candidates/
         │   ├── candidate-list/       # Table with create/edit/delete actions
         │   └── candidate-form-dialog/ # Create/edit candidate dialog
-        └── home/
-            └── home.ts               # Shows email, logout button (placeholder)
+        └── shadowing/
+            └── reject-dialog/        # Reject reason dialog for shadowing requests
 ```
 
 ## Routing
@@ -73,8 +81,12 @@ All routes use lazy loading (`loadComponent`):
 | Path | Component | Guard | Purpose |
 |------|-----------|-------|---------|
 | `/login` | LoginComponent | — | Google sign-in |
+| `/register` | RegisterComponent | — | Email/password registration |
 | `/auth/callback` | AuthCallbackComponent | — | Processes OAuth redirect |
-| `/` (default) | DashboardComponent | authGuard | Main dashboard |
+| `/auth/verify` | VerifyComponent | — | Email verification link landing |
+| `/auth/forgot-password` | ForgotPasswordComponent | — | Password reset request |
+| `/auth/reset-password` | ResetPasswordComponent | — | Password reset link landing |
+| `/` (nested in ShellComponent) | DashboardComponent | authGuard | Main dashboard |
 | `/interviews` | InterviewListComponent | authGuard | Paginated interview list |
 | `/interviews/:id` | InterviewDetailComponent | authGuard | Interview detail + shadowing |
 | `/candidates` | CandidateListComponent | authGuard | Candidate CRUD list |
@@ -145,12 +157,14 @@ All routes use lazy loading (`loadComponent`):
 
 ## Environment Configuration
 
-| Variable | Dev | Prod |
-|----------|-----|------|
-| `apiUrl` | `http://localhost:8080` | `''` (empty — same-origin) |
-| `production` | `false` | `true` |
+| Variable | Dev | Prod | Docker/K8s |
+|----------|-----|------|------------|
+| `apiUrl` | `http://localhost:8080` | `''` (empty — same-origin) | `''` (same-origin) |
+| `production` | `false` | `true` | `true` |
 
-In production, nginx proxies `/auth/*`, `/interviews`, `/shadowing-requests`, `/actuator` to the backend container. The empty `apiUrl` means all fetch calls are relative (same-origin).
+The `docker` build configuration (`NG_CONFIG=docker`) is used for K8s image builds — identical to `prod`. The Dockerfile passes `--build-arg NG_CONFIG=docker`; `angular.json` maps this to `src/environments/environment.docker.ts`.
+
+In production/docker, nginx proxies `/auth/*`, `/interviews`, `/shadowing-requests`, `/actuator` to the backend container. The empty `apiUrl` means all fetch calls are relative (same-origin).
 
 In development, the Angular dev server (`bun start` on port 4200) calls the backend directly on port 8080.
 

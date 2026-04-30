@@ -30,6 +30,16 @@ To run the full stack via Docker Compose:
 
 Docker must be started before building: `sudo dockerd &` (and `sudo chmod 666 /var/run/docker.sock` if needed for permissions).
 
+### Running on minikube (local K8s)
+
+1. `minikube delete && minikube start --driver=docker`
+2. `minikube addons enable ingress && minikube addons enable metrics-server`
+3. `eval $(minikube docker-env)` — **must be in the same shell** as the next build step
+4. `./gradlew bootBuildImage && docker build -t frontend:0.0.1-SNAPSHOT --build-arg NG_CONFIG=docker ./frontend`
+5. `kubectl apply -f k8s/namespace.yaml && kubectl apply -f k8s/secrets.yaml`
+6. `kubectl apply -f k8s/service-accounts.yaml -f k8s/deployments.yaml -f k8s/services.yaml -f k8s/ingress.yaml -f k8s/hpa.yaml`
+7. Access: `kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 80:80` + `127.0.0.1 interview-hub.local i-hub-be.local` in `/etc/hosts`
+
 ### Key Gotchas
 
 - **Do NOT use `./gradlew bootRun`** — the `spring-boot-docker-compose` devtools dependency will try to manage Docker and fail in this environment. Use `docker compose up` for running the full backend.
@@ -39,6 +49,8 @@ Docker must be started before building: `sudo dockerd &` (and `sudo chmod 666 /v
 - Frontend has a duplicate `@angular/material` entry in `package.json` (dependencies + devDependencies); `bun install` warns but works fine.
 - JaCoCo coverage threshold is 95% branch coverage (excludes `InterviewHubApplication`, `OpenApiConfig`, `SecurityConfig`, and MapStruct-generated `*MapperImpl` classes).
 - Running the full application requires external secrets (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `JWT_SIGNING_SECRET`) — see `CLAUDE.md` for the full list. Calendar secrets (`GOOGLE_CALENDAR_REFRESH_TOKEN`, `GOOGLE_CALENDAR_ID`) are configured on `calendar-service`, not core.
+- **minikube start failure recovery** — if `minikube start` leaves kubelet/apiserver in Stopped state after two attempts, run `minikube delete && minikube start --driver=docker`; do not retry on a corrupted cluster
+- **HPA feedback loop on cold start** — JVM startup CPU spikes trigger HPA scale-up before the app is ready; temporarily patch `kubectl patch hpa core-hpa -n interview-hub-ns1 --patch '{"spec":{"maxReplicas":1}}'` during initial rollout, then restore
 - **This line and `CLAUDE.md` Environment Variables must stay in sync** — if env vars change, update both files.
 - **Config class deletions** — when removing a `@ConfigurationProperties` class, grep all usages (not just imports) before deleting; also update `application-test.yml` alongside `application.yml`.
 - Login requires a Google account with a domain in the `AllowedDomains.ALLOWED_DOMAINS` allowlist (`@gm2dev.com`, `@lcarera.dev`).

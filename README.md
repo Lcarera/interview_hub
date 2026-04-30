@@ -47,7 +47,7 @@ Services communicate via Kubernetes DNS names (or env-var URLs for local dev).
 | API Gateway    | Spring Cloud Gateway (WebFlux), Java 25          |
 | Backend        | Spring Boot 4.0.2, Java 25, PostgreSQL           |
 | Frontend       | Angular 21, Angular Material 21, TypeScript 5.9  |
-| Messaging      | RabbitMQ (CloudAMQP in prod)                     |
+| Messaging      | RabbitMQ (in-cluster, `rabbitmq:4-management`)   |
 | Infrastructure | Terraform (GCP GKE), kubectl manifests           |
 | DNS/CDN        | Cloudflare (DNS proxy)                           |
 | Auth           | Google OAuth 2.0 (@gm2dev.com), HMAC-SHA256 JWT  |
@@ -124,7 +124,7 @@ interview_hub/
 │   ├── calendar-service/     # Google Calendar API microservice
 │   └── shared/               # Shared DTOs between services
 ├── frontend/                 # Angular 21 SPA
-├── k8s/                      # Kubernetes manifests (GKE deployment)
+├── k8s/                      # Kubernetes manifests (minikube local + GKE deployment)
 ├── supabase/migrations/      # PostgreSQL schema migrations
 ├── postman/                  # Postman collection for API testing
 ├── compose.yaml              # Local Docker Compose (all services)
