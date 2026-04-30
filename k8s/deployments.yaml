@@ -26,6 +26,38 @@ spec:
           env:
             - name: CORE_URL
               value: "http://core:8080"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: interview-hub-ns1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:4-management
+          ports:
+            - containerPort: 5672
+            - containerPort: 15672
+          readinessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "ping"]
+            initialDelaySeconds: 20
+            periodSeconds: 15
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -73,6 +105,8 @@ spec:
               value: "http://interview-hub.local"
             - name: CALENDAR_SERVICE_URL
               value: "http://calendar-service:8082"
+            - name: RABBITMQ_URL
+              value: "amqp://guest:guest@rabbitmq:5672"
           resources:
             requests:
               cpu: "250m"
@@ -153,6 +187,9 @@ spec:
           envFrom:
             - secretRef:
                 name: notification-secret
+          env:
+            - name: RABBITMQ_URL
+              value: "amqp://guest:guest@rabbitmq:5672"
           readinessProbe:
             httpGet:
               path: /actuator/health
