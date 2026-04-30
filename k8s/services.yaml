@@ -45,3 +45,19 @@ spec:
   ports:
     - port: 80
       targetPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: interview-hub-ns1
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    # Management UI (15672) intentionally NOT exposed as a Service port for security.
+    # For debugging, use: kubectl port-forward -n interview-hub-ns1 svc/rabbitmq 15672:15672
+    # or: kubectl port-forward -n interview-hub-ns1 pod/<rabbitmq-pod-name> 15672:15672
